@@ -189,8 +189,10 @@ async def scan_channels(calback : CallbackQuery):
 
 
 
+from datetime import datetime, timedelta, timezone
+
 async def forward_recent_posts():
-    # Дата 2 недели назад (aware UTC)
+    # aware-датa в UTC
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=14)
 
     entity = await telethon_client.get_entity(int(GROUP_ID))
@@ -201,12 +203,12 @@ async def forward_recent_posts():
             if message.date < cutoff_date:
                 break
 
-            # Пересылаем сообщение в целевой канал
             try:
                 await telethon_client.forward_messages(entity, message)
                 print(f"Переслал из {source}: {message.id}")
             except Exception as e:
                 print(f"Ошибка при пересылке из {source}: {e}")
+
 
 
 
