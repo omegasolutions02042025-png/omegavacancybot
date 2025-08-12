@@ -220,7 +220,7 @@ async def forward_recent_posts():
                 
 
                 try:
-                    text_gpt = del_contacts_gpt(text)
+                    text_gpt = await del_contacts_gpt(text)
                 except Exception as e:
                     print(e)
                     return
@@ -335,7 +335,7 @@ async def register_handler():
 
         
         try:
-            text_gpt = del_contacts_gpt(text)
+            text_gpt = await del_contacts_gpt(text)
         except Exception as e:
             print(e)
             return
