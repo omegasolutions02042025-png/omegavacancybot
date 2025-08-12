@@ -256,7 +256,7 @@ async def forward_recent_posts():
                         print(e)
                         continue
 
-                await telethon_client.forward_messages(entity, message)
+                await telethon_client.forward_messages(entity, text)
                 print(f"Переслал из {source}: {message.id}")
                 await asyncio.sleep(0.5)
             except Exception as e:
