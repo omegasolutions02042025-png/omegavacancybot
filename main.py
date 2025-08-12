@@ -1,5 +1,8 @@
 import asyncio
+from decimal import Rounded
+import json
 import random
+import math
 import re
 from calendar import c
 from telethon import TelegramClient, events
@@ -31,6 +34,7 @@ from kb import main_kb, channels_kb, channel_kb, filters_kb, filter_kb, back_to_
 from teleton_client import get_channel_info, leave_channel_listening, generate_all_case_forms, message_to_html_safe
 import os
 from dotenv import load_dotenv
+from googlesheets import find_rate_in_sheet_gspread
 
 load_dotenv()
 
@@ -53,12 +57,18 @@ dp = Dispatcher()
 # --- FSM States ---
 class AddChannel(StatesGroup):
     waiting_for_id = State()
+    waiting_for_name = State()
 
 class FiltersChannels(StatesGroup):
     add_filter = State()
 
 class SlovaChannels(StatesGroup):
     add_slovo = State()
+
+
+SPREADSHEET_ID = "1pIrNhJ9Fr7Ickp9X0ao73rRwlqDp1QbTzMn5ULzVjuw"
+SHEET_NAME = "Для Бота"
+CREDS_PATH = "creds.json"
 
 
 # --- Aiogram Handlers ---
@@ -78,7 +88,7 @@ async def get_filters_info(callback: CallbackQuery):
 
 @dp.callback_query(F.data == "add_channel")
 async def add_channel_fsm(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text(text='Введите ID (число) или @username канала.')
+    await callback.message.edit_text(text='Введите ID (число) канала')
     await state.set_state(AddChannel.waiting_for_id)
 
 @dp.message(AddChannel.waiting_for_id)
@@ -103,7 +113,20 @@ async def add_channel_to_db(message: types.Message, state: FSMContext):
         await message.answer("Неверный формат! Введите ID (число) или @username канала.")
         return
 
-    result = await add_channel(channel_id=channel_id, channel_name=channel_username)
+    await state.set_state(AddChannel.waiting_for_name)
+    await message.answer("Введите название канала")
+    await state.update_data(channel_id=channel_id)
+
+
+@dp.message(AddChannel.waiting_for_name)
+async def add_channel_to_db(message: types.Message, state: FSMContext):
+    channel_name = message.text
+    channel_id = await state.get_data()
+    channel_id = channel_id.get('channel_id')
+    if channel_id == None:
+        await message.answer("Не удалось добавить канал")
+        return
+    result = await add_channel(channel_id=channel_id, channel_name=channel_name)
     if result:
         await message.answer(text=f"{result}")
     else:
@@ -113,7 +136,7 @@ async def add_channel_to_db(message: types.Message, state: FSMContext):
         for channel in channels:
             channel_ids.append(channel.channel_id)
         await update_channels_and_restart_handler(new_channels=channel_ids)
-
+    await state.clear()
 
 
     await message.answer(text='Укправление каналами', reply_markup = await channels_kb())
@@ -161,132 +184,132 @@ async def back_to_сhannel_menu(callback: CallbackQuery, state: FSMContext, bot 
 
 
 
-@dp.callback_query(F.data == 'filters_info')
-async def reklama(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text("Управление фильтрами", reply_markup=await filters_kb())
+# @dp.callback_query(F.data == 'filters_info')
+# async def reklama(callback: CallbackQuery, state: FSMContext):
+#     await callback.message.edit_text("Управление фильтрами", reply_markup=await filters_kb())
 
 
 
-@dp.callback_query(F.data == 'add_filter')
-async def add_reklama(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text("Введите фильтр")
-    await state.set_state(FiltersChannels.add_filter)
+# @dp.callback_query(F.data == 'add_filter')
+# async def add_reklama(callback: CallbackQuery, state: FSMContext):
+#     await callback.message.edit_text("Введите фильтр")
+#     await state.set_state(FiltersChannels.add_filter)
 
 
-@dp.message(FiltersChannels.add_filter)
-async def add_reklama_filter(message: types.Message, state: FSMContext):
-    chek = await add_filter(filter_text=message.text)
+# @dp.message(FiltersChannels.add_filter)
+# async def add_reklama_filter(message: types.Message, state: FSMContext):
+#     chek = await add_filter(filter_text=message.text)
 
-    if chek:
-        await message.answer("Такой фильтр уже существует")
-        await asyncio.sleep(2)
-        await message.delete()
-        return
-    await message.answer("Фильтр добавлен", reply_markup=await filters_kb())
-    await state.clear()
-
-
-@dp.callback_query(F.data == 'all_filters')
-async def show_reklama(callback: CallbackQuery, state: FSMContext):
-    filters = await get_all_filters()
-    message_ids = []
-    await callback.message.delete()
-    for filter in filters:
-        a = await callback.message.answer(filter.filter_text, reply_markup=await filter_kb(filter.id))
-        message_ids.append(a.message_id)
-    await callback.message.answer("Нажмите чтобы вернутся в меню", reply_markup=await back_to_filter_menu_kb())
-    await state.update_data(message_ids=message_ids)
+#     if chek:
+#         await message.answer("Такой фильтр уже существует")
+#         await asyncio.sleep(2)
+#         await message.delete()
+#         return
+#     await message.answer("Фильтр добавлен", reply_markup=await filters_kb())
+#     await state.clear()
 
 
-
-@dp.callback_query(F.data.startswith('delete_filter'))
-async def delete_reklama(callback: CallbackQuery):
-    filter_id = int(callback.data.split(":")[1])
-    await remove_filter(id=filter_id)
-    await callback.message.edit_text("Фильтр удален")
-    await asyncio.sleep(1)
-    await callback.message.delete()
-
-
-@dp.callback_query(F.data == 'back_to_filter_menu')
-async def back_to_filter_menu(callback: CallbackQuery, state: FSMContext, bot : Bot):
-    await callback.message.delete()
-    ids = await state.get_data()
-    ids = ids.get('message_ids')
-    try:
-        for id in ids:
-            await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=id)
-        await callback.message.answer("Управление обязательными словами", reply_markup=await filters_kb())
-    except:
-        await callback.message.answer("Управление обязательными словами", reply_markup=await filters_kb())
-    await state.clear()
+# @dp.callback_query(F.data == 'all_filters')
+# async def show_reklama(callback: CallbackQuery, state: FSMContext):
+#     filters = await get_all_filters()
+#     message_ids = []
+#     await callback.message.delete()
+#     for filter in filters:
+#         a = await callback.message.answer(filter.filter_text, reply_markup=await filter_kb(filter.id))
+#         message_ids.append(a.message_id)
+#     await callback.message.answer("Нажмите чтобы вернутся в меню", reply_markup=await back_to_filter_menu_kb())
+#     await state.update_data(message_ids=message_ids)
 
 
 
+# @dp.callback_query(F.data.startswith('delete_filter'))
+# async def delete_reklama(callback: CallbackQuery):
+#     filter_id = int(callback.data.split(":")[1])
+#     await remove_filter(id=filter_id)
+#     await callback.message.edit_text("Фильтр удален")
+#     await asyncio.sleep(1)
+#     await callback.message.delete()
 
+
+# @dp.callback_query(F.data == 'back_to_filter_menu')
+# async def back_to_filter_menu(callback: CallbackQuery, state: FSMContext, bot : Bot):
+#     await callback.message.delete()
+#     ids = await state.get_data()
+#     ids = ids.get('message_ids')
+#     try:
+#         for id in ids:
+#             await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=id)
+#         await callback.message.answer("Управление обязательными словами", reply_markup=await filters_kb())
+#     except:
+#         await callback.message.answer("Управление обязательными словами", reply_markup=await filters_kb())
+#     await state.clear()
 
 
 
 
-@dp.callback_query(F.data == 'slova_info')
-async def slova(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text("Управление словами", reply_markup=await slova_kb())
 
 
 
-@dp.callback_query(F.data == 'add_slovo')
-async def add_slovo_start(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text("Введите обязательное слово")
-    await state.set_state(SlovaChannels.add_slovo)
 
-
-@dp.message(SlovaChannels.add_slovo)
-async def add_slovo_fsm(message: types.Message, state: FSMContext):
-    chek = await add_slovo(filter_text=message.text)
-
-    if chek:
-        await message.answer("Такое слово уже существует")
-        await asyncio.sleep(2)
-        await message.delete()
-        return
-    await message.answer("Слово добавлено", reply_markup=await slova_kb())
-    await state.clear()
-
-
-@dp.callback_query(F.data == 'all_slova')
-async def show_slova(callback: CallbackQuery, state: FSMContext):
-    filters = await get_all_slova()
-    message_ids = []
-    await callback.message.delete()
-    for filter in filters:
-        a = await callback.message.answer(filter.filter_text, reply_markup=await slovo_kb(filter.id))
-        message_ids.append(a.message_id)
-    await callback.message.answer("Нажмите чтобы вернутся в меню", reply_markup=await back_to_slova_menu_kb())
-    await state.update_data(message_ids=message_ids)
+# @dp.callback_query(F.data == 'slova_info')
+# async def slova(callback: CallbackQuery, state: FSMContext):
+#     await callback.message.edit_text("Управление словами", reply_markup=await slova_kb())
 
 
 
-@dp.callback_query(F.data.startswith('delete_slovo'))
-async def delete_slovo_bot(callback: CallbackQuery):
-    filter_id = int(callback.data.split(":")[1])
-    await remove_slovo(id=filter_id)
-    await callback.message.edit_text("Слово удалено")
-    await asyncio.sleep(1)
-    await callback.message.delete()
+# @dp.callback_query(F.data == 'add_slovo')
+# async def add_slovo_start(callback: CallbackQuery, state: FSMContext):
+#     await callback.message.edit_text("Введите обязательное слово")
+#     await state.set_state(SlovaChannels.add_slovo)
 
 
-@dp.callback_query(F.data == 'back_to_slova_menu')
-async def back_to_slova_menu(callback: CallbackQuery, state: FSMContext, bot : Bot):
-    await callback.message.delete()
-    ids = await state.get_data()
-    ids = ids.get('message_ids')
-    try:
-        for id in ids:
-            await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=id)
-        await callback.message.answer("Управление обязательными словами", reply_markup=await slova_kb())
-    except:
-        await callback.message.answer("Управление обязательными словами", reply_markup=await slova_kb())
-    await state.clear()
+# @dp.message(SlovaChannels.add_slovo)
+# async def add_slovo_fsm(message: types.Message, state: FSMContext):
+#     chek = await add_slovo(filter_text=message.text)
+
+#     if chek:
+#         await message.answer("Такое слово уже существует")
+#         await asyncio.sleep(2)
+#         await message.delete()
+#         return
+#     await message.answer("Слово добавлено", reply_markup=await slova_kb())
+#     await state.clear()
+
+
+# @dp.callback_query(F.data == 'all_slova')
+# async def show_slova(callback: CallbackQuery, state: FSMContext):
+#     filters = await get_all_slova()
+#     message_ids = []
+#     await callback.message.delete()
+#     for filter in filters:
+#         a = await callback.message.answer(filter.filter_text, reply_markup=await slovo_kb(filter.id))
+#         message_ids.append(a.message_id)
+#     await callback.message.answer("Нажмите чтобы вернутся в меню", reply_markup=await back_to_slova_menu_kb())
+#     await state.update_data(message_ids=message_ids)
+
+
+
+# @dp.callback_query(F.data.startswith('delete_slovo'))
+# async def delete_slovo_bot(callback: CallbackQuery):
+#     filter_id = int(callback.data.split(":")[1])
+#     await remove_slovo(id=filter_id)
+#     await callback.message.edit_text("Слово удалено")
+#     await asyncio.sleep(1)
+#     await callback.message.delete()
+
+
+# @dp.callback_query(F.data == 'back_to_slova_menu')
+# async def back_to_slova_menu(callback: CallbackQuery, state: FSMContext, bot : Bot):
+#     await callback.message.delete()
+#     ids = await state.get_data()
+#     ids = ids.get('message_ids')
+#     try:
+#         for id in ids:
+#             await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=id)
+#         await callback.message.answer("Управление обязательными словами", reply_markup=await slova_kb())
+#     except:
+#         await callback.message.answer("Управление обязательными словами", reply_markup=await slova_kb())
+#     await state.clear()
 
 
 
@@ -336,45 +359,79 @@ async def register_handler():
         if not text:
             return
 
-        print(text)
+        #print(text)
 
         # Проверка зачёркнутого текста
         if has_strikethrough(event.message):
             print(f"❌ Сообщение {event.message.id} в канале {event.chat_id} содержит зачёркнутый текст — пропускаем")
             return
 
-        text_lower = text.lower().strip()
+        # text_lower = text.lower().strip()
 
-        # Получаем фильтры
-        required_filters = await get_all_slova()  # обязательные слова
-        black_filters = await get_all_filters()   # фильтры пропуска (black filters)
+        # # Получаем фильтры
+        # required_filters = await get_all_slova()  # обязательные слова
+        # black_filters = await get_all_filters()   # фильтры пропуска (black filters)
 
-        # Проверка black фильтров - если есть совпадение, то пропускаем сообщение
-        for bf in black_filters:
-            bf_text = bf.filter_text.lower().strip()
-            if bf_text in text_lower:
-                print(f"❌ В сообщении {event.message.id} найден black фильтр '{bf_text}' — пропускаем")
+        # # Проверка black фильтров - если есть совпадение, то пропускаем сообщение
+        # for bf in black_filters:
+        #     bf_text = bf.filter_text.lower().strip()
+        #     if bf_text in text_lower:
+        #         print(f"❌ В сообщении {event.message.id} найден black фильтр '{bf_text}' — пропускаем")
+        #         return
+
+        # # Проверка обязательных фильтров
+        # for pf in required_filters:
+        #     pf_text = pf.filter_text.lower().strip()
+        #     pf_forms = await generate_all_case_forms(pf_text)
+        #     if any(form in text_lower for form in pf_forms):
+        #         print(f"✅ Найдено обязательное слово: {pf_text}")
+        entity = await telethon_client.get_entity(int(GROUP_ID))
+        #         #safe_text = await message_to_html_safe(text)
+
+        
+        try:
+            text_gpt = del_contacts_gpt(text)
+        except Exception as e:
+            print(e)
+            return
+        if text_gpt == None:
+            return
+        else:
+            
+            try:
+                text_gpt = json.loads(text_gpt)
+                text = text_gpt.get("text")
+                rate = text_gpt.get("rate")
+                rate = int(rate)
+                rate = round(rate /5) * 5
+                print(rate)
+                if rate == None:
+                    return
+                else:
+                    rate = find_rate_in_sheet_gspread(rate)
+                    rate = re.sub(r'\s+', '', rate)
+                    rounded = math.ceil(int(rate) / 100) * 100  
+
+
+                    rate = f"{rounded:,}".replace(",", " ")
+                    print(rate)
+
+                    if rate == None:
+                        return
+                    else:
+                        bd_id = await generate_bd_id()
+                        text = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                        
+            except Exception as e:
+                print(e)
                 return
-
-        # Проверка обязательных фильтров
-        for pf in required_filters:
-            pf_text = pf.filter_text.lower().strip()
-            pf_forms = await generate_all_case_forms(pf_text)
-            if any(form in text_lower for form in pf_forms):
-                print(f"✅ Найдено обязательное слово: {pf_text}")
-                entity = await telethon_client.get_entity(int(GROUP_ID))
-                #safe_text = await message_to_html_safe(text)
-
-                bd_id = await generate_bd_id()
-                text = f"🆔{bd_id}\n{text}"
-                text = del_contacts_gpt(text)
-                try:
+        try:
                     forwarded_msg = await telethon_client.send_message(entity=entity, message=text, parse_mode='html')
-                except Exception:
+        except Exception:
                     forwarded_msg = await telethon_client.send_message(entity=entity, message=text)
 
                 # Сохраняем сопоставление
-                async with AsyncSessionLocal() as session:
+        async with AsyncSessionLocal() as session:
                     await add_message_mapping(
                         session,
                         src_chat_id=event.chat_id,
