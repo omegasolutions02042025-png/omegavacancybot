@@ -13,7 +13,7 @@ AUTH_TOKEN = os.getenv('AUTH_TOKEN')
 FOLDER_ID = os.getenv('FOLDER_ID')
 
 
-async def del_contacts_gpt(text):
+def del_contacts_gpt(text):
     
     messages = [
         {
@@ -109,7 +109,7 @@ async def del_contacts_gpt(text):
 
 
 
-    result =(sdk.models.completions("yandexgpt").configure(temperature=0.5).run_deferred(messages, timeout = 180)).wait()
+    result = sdk.models.completions("yandexgpt").configure(temperature=0.5).run(messages)
     clean_text = result.alternatives[0].text
     cleaned = clean_text.strip("`\n '")
     print(cleaned)
