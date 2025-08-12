@@ -1,4 +1,6 @@
 import asyncio
+from datetime import timedelta
+import datetime
 from decimal import Rounded
 import json
 import random
@@ -180,6 +182,30 @@ async def back_to_сhannel_menu(callback: CallbackQuery, state: FSMContext, bot 
         await callback.message.answer("Управление каналами", reply_markup=await channels_kb())
     await state.clear()
 
+
+@dp.callback_query(F.data == 'scan_channels')
+async def scan_channels(calback : CallbackQuery):
+    await calback.message.answer('Начинаю сканирование...')
+    await forward_recent_posts()
+
+
+
+async def forward_recent_posts():
+    # Дата 2 недели назад
+    cutoff_date = datetime.utcnow() - timedelta(days=14)
+    entity = await telethon_client.get_entity(int(GROUP_ID))
+    for source in CHANNELS:
+        async for message in telethon_client.iter_messages(source):
+            # Если сообщение старше 2 недель — прекращаем итерацию
+            if message.date < cutoff_date:
+                break
+
+            # Пересылаем сообщение в целевой канал
+            try:
+                await telethon_client.forward_messages(entity, message)
+                print(f"Переслал из {source}: {message.id}")
+            except Exception as e:
+                print(f"Ошибка при пересылке из {source}: {e}")
 
 
 
