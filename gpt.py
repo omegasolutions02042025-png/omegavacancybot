@@ -109,7 +109,7 @@ async def del_contacts_gpt(text):
 
 
 
-    result = sdk.models.completions("yandexgpt").configure(temperature=0.5).run_deferred(messages, timeout = 180)
+    result =(sdk.models.completions("yandexgpt").configure(temperature=0.5).run_deferred(messages, timeout = 180)).wait()
     clean_text = result.alternatives[0].text
     cleaned = clean_text.strip("`\n '")
     print(cleaned)
