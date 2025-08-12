@@ -204,148 +204,63 @@ async def forward_recent_posts():
                 break
 
             try:
+
+                text_orig = message.message or ""
+                if not text_orig:
+                    continue
+                
+
+                text = remove_request_id(text_orig)
+                if not text:
+                    continue
+
+                if has_strikethrough(message):
+                    print(f"❌ Сообщение {message.id} в канале {entity} содержит зачёркнутый текст — пропускаем")
+                    continue
+                
+
+                try:
+                    text_gpt = await del_contacts_gpt(text)
+                except Exception as e:
+                    print(e)
+                    return
+                if text_gpt == None:
+                    return
+                else:
+                    
+                    try:
+                        text_gpt = json.loads(text_gpt)
+                        text = text_gpt.get("text")
+                        rate = text_gpt.get("rate")
+                        rate = int(rate)
+                        rate = round(rate /5) * 5
+                        print(rate)
+                        if rate == None:
+                            return
+                        else:
+                            rate = find_rate_in_sheet_gspread(rate)
+                            rate = re.sub(r'\s+', '', rate)
+                            rounded = math.ceil(int(rate) / 100) * 100  
+
+
+                            rate = f"{rounded:,}".replace(",", " ")
+                            print(rate)
+
+                            if rate == None:
+                                return
+                            else:
+                                bd_id = await generate_bd_id()
+                                text = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                                
+                    except Exception as e:
+                        print(e)
+                        return
+
                 await telethon_client.forward_messages(entity, message)
                 print(f"Переслал из {source}: {message.id}")
                 await asyncio.sleep(0.5)
             except Exception as e:
                 print(f"Ошибка при пересылке из {source}: {e}")
-
-
-
-
-
-# @dp.callback_query(F.data == 'filters_info')
-# async def reklama(callback: CallbackQuery, state: FSMContext):
-#     await callback.message.edit_text("Управление фильтрами", reply_markup=await filters_kb())
-
-
-
-# @dp.callback_query(F.data == 'add_filter')
-# async def add_reklama(callback: CallbackQuery, state: FSMContext):
-#     await callback.message.edit_text("Введите фильтр")
-#     await state.set_state(FiltersChannels.add_filter)
-
-
-# @dp.message(FiltersChannels.add_filter)
-# async def add_reklama_filter(message: types.Message, state: FSMContext):
-#     chek = await add_filter(filter_text=message.text)
-
-#     if chek:
-#         await message.answer("Такой фильтр уже существует")
-#         await asyncio.sleep(2)
-#         await message.delete()
-#         return
-#     await message.answer("Фильтр добавлен", reply_markup=await filters_kb())
-#     await state.clear()
-
-
-# @dp.callback_query(F.data == 'all_filters')
-# async def show_reklama(callback: CallbackQuery, state: FSMContext):
-#     filters = await get_all_filters()
-#     message_ids = []
-#     await callback.message.delete()
-#     for filter in filters:
-#         a = await callback.message.answer(filter.filter_text, reply_markup=await filter_kb(filter.id))
-#         message_ids.append(a.message_id)
-#     await callback.message.answer("Нажмите чтобы вернутся в меню", reply_markup=await back_to_filter_menu_kb())
-#     await state.update_data(message_ids=message_ids)
-
-
-
-# @dp.callback_query(F.data.startswith('delete_filter'))
-# async def delete_reklama(callback: CallbackQuery):
-#     filter_id = int(callback.data.split(":")[1])
-#     await remove_filter(id=filter_id)
-#     await callback.message.edit_text("Фильтр удален")
-#     await asyncio.sleep(1)
-#     await callback.message.delete()
-
-
-# @dp.callback_query(F.data == 'back_to_filter_menu')
-# async def back_to_filter_menu(callback: CallbackQuery, state: FSMContext, bot : Bot):
-#     await callback.message.delete()
-#     ids = await state.get_data()
-#     ids = ids.get('message_ids')
-#     try:
-#         for id in ids:
-#             await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=id)
-#         await callback.message.answer("Управление обязательными словами", reply_markup=await filters_kb())
-#     except:
-#         await callback.message.answer("Управление обязательными словами", reply_markup=await filters_kb())
-#     await state.clear()
-
-
-
-
-
-
-
-
-# @dp.callback_query(F.data == 'slova_info')
-# async def slova(callback: CallbackQuery, state: FSMContext):
-#     await callback.message.edit_text("Управление словами", reply_markup=await slova_kb())
-
-
-
-# @dp.callback_query(F.data == 'add_slovo')
-# async def add_slovo_start(callback: CallbackQuery, state: FSMContext):
-#     await callback.message.edit_text("Введите обязательное слово")
-#     await state.set_state(SlovaChannels.add_slovo)
-
-
-# @dp.message(SlovaChannels.add_slovo)
-# async def add_slovo_fsm(message: types.Message, state: FSMContext):
-#     chek = await add_slovo(filter_text=message.text)
-
-#     if chek:
-#         await message.answer("Такое слово уже существует")
-#         await asyncio.sleep(2)
-#         await message.delete()
-#         return
-#     await message.answer("Слово добавлено", reply_markup=await slova_kb())
-#     await state.clear()
-
-
-# @dp.callback_query(F.data == 'all_slova')
-# async def show_slova(callback: CallbackQuery, state: FSMContext):
-#     filters = await get_all_slova()
-#     message_ids = []
-#     await callback.message.delete()
-#     for filter in filters:
-#         a = await callback.message.answer(filter.filter_text, reply_markup=await slovo_kb(filter.id))
-#         message_ids.append(a.message_id)
-#     await callback.message.answer("Нажмите чтобы вернутся в меню", reply_markup=await back_to_slova_menu_kb())
-#     await state.update_data(message_ids=message_ids)
-
-
-
-# @dp.callback_query(F.data.startswith('delete_slovo'))
-# async def delete_slovo_bot(callback: CallbackQuery):
-#     filter_id = int(callback.data.split(":")[1])
-#     await remove_slovo(id=filter_id)
-#     await callback.message.edit_text("Слово удалено")
-#     await asyncio.sleep(1)
-#     await callback.message.delete()
-
-
-# @dp.callback_query(F.data == 'back_to_slova_menu')
-# async def back_to_slova_menu(callback: CallbackQuery, state: FSMContext, bot : Bot):
-#     await callback.message.delete()
-#     ids = await state.get_data()
-#     ids = ids.get('message_ids')
-#     try:
-#         for id in ids:
-#             await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=id)
-#         await callback.message.answer("Управление обязательными словами", reply_markup=await slova_kb())
-#     except:
-#         await callback.message.answer("Управление обязательными словами", reply_markup=await slova_kb())
-#     await state.clear()
-
-
-
-
-
-
 
 
 
@@ -420,7 +335,7 @@ async def register_handler():
 
         
         try:
-            text_gpt = del_contacts_gpt(text)
+            text_gpt = await del_contacts_gpt(text)
         except Exception as e:
             print(e)
             return
