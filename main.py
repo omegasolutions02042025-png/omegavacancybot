@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Rounded
 import json
 import random
@@ -190,9 +190,11 @@ async def scan_channels(calback : CallbackQuery):
 
 
 async def forward_recent_posts():
-    # Дата 2 недели назад
-    cutoff_date = datetime.utcnow() - timedelta(days=14)
+    # Дата 2 недели назад (aware UTC)
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=14)
+
     entity = await telethon_client.get_entity(int(GROUP_ID))
+
     for source in CHANNELS:
         async for message in telethon_client.iter_messages(source):
             # Если сообщение старше 2 недель — прекращаем итерацию
