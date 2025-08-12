@@ -223,9 +223,9 @@ async def forward_recent_posts():
                     text_gpt = await del_contacts_gpt(text)
                 except Exception as e:
                     print(e)
-                    return
+                    continue
                 if text_gpt == None:
-                    return
+                    continue
                 else:
                     
                     try:
@@ -236,7 +236,7 @@ async def forward_recent_posts():
                         rate = round(rate /5) * 5
                         print(rate)
                         if rate == None:
-                            return
+                            continue
                         else:
                             rate = find_rate_in_sheet_gspread(rate)
                             rate = re.sub(r'\s+', '', rate)
@@ -247,14 +247,14 @@ async def forward_recent_posts():
                             print(rate)
 
                             if rate == None:
-                                return
+                                continue
                             else:
                                 bd_id = await generate_bd_id()
                                 text = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
                                 
                     except Exception as e:
                         print(e)
-                        return
+                        continue
 
                 await telethon_client.forward_messages(entity, message)
                 print(f"Переслал из {source}: {message.id}")
