@@ -58,7 +58,7 @@ async def leave_channel_listening(channel_id, client, phone_number):
     channel_id = int(channel_id)
     try:
         channel = await client.get_entity(PeerChannel(channel_id))
-        await client(LeaveChannelRequest(channel))
+        #await client(LeaveChannelRequest(channel))
     except Exception as e:
         print(f"❌ Ошибка при выходе: {e}")
         
