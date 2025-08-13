@@ -125,6 +125,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                         #text_gpt = json.loads(text_gpt)
                         text = text_gpt.get("text")
                         text , vac_id = remove_request_id(text=text)
+                        print(vac_id)
                         rate = text_gpt.get("rate")
                         
                         deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
@@ -155,7 +156,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                                 continue
                             else:
                                     
-                                text_cleaned = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                                text_cleaned = f"🆔{bd_id+ vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
                                 
                     except Exception as e:
                         print(e)
