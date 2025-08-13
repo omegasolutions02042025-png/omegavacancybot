@@ -120,12 +120,13 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     continue
                 else:
                     try:
-                        text_gpt , vac_id = remove_request_id(text=text_gpt)
+                        
                         bd_id = await generate_bd_id()
                         #text_gpt = json.loads(text_gpt)
                         text = text_gpt.get("text")
+                        text , vac_id = remove_request_id(text=text)
                         rate = text_gpt.get("rate")
-                        vac_id = text_gpt.get('vacancy_id')
+                        
                         deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
                         deadline_time = text_gpt.get("deadline_time") 
                         
