@@ -396,23 +396,44 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
             return
 
         try:
-            bd_id = await generate_bd_id()
-            text_gpt = json.loads(text_gpt)
             text = text_gpt.get("text")
+                        
+            vac_id = text_gpt.get('vacancy_id')
+            print(vac_id)
             rate = text_gpt.get("rate")
-            deadline_date = text_gpt.get("deadline_date")
-            deadline_time = text_gpt.get("deadline_time")
+            vacancy = text_gpt.get('vacancy_title')
+                        
+            deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
+            deadline_time = text_gpt.get("deadline_time") 
+                        
+                         
 
-            if rate in (None, 0):
-                text = f"🆔{bd_id}\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n{text}"
+            if rate == None:
+                            
+                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+                            
+
+            if int(rate) == 0:
+                text_cleaned = f"🆔{vac_id}\n\n🆔{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
             else:
                 rate = int(rate)
-                rate = round(rate / 5) * 5
-                rate = find_rate_in_sheet_gspread(rate)
-                rate = re.sub(r'\s+', '', rate)
-                rounded = math.ceil(int(rate) / 100) * 100
-                rate = f"{rounded:,}".replace(",", " ")
-                text = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                rate = round(rate /5) * 5
+                print(rate)
+                if rate == None:
+                    return
+                else:
+                    rate = find_rate_in_sheet_gspread(rate)
+                    rate = re.sub(r'\s+', '', rate)
+                    rounded = math.ceil(int(rate) / 100) * 100  
+
+                    rate = f"{rounded:,}".replace(",", " ")
+                    print(rate)
+
+                    if rate == None:
+                        return
+                    else:
+                                    
+                        text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
 
         except Exception as e:
             print(e)
