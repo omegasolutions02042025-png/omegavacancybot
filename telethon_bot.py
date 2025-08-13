@@ -107,7 +107,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                 text = msg.text
                 if is_russia_only_citizenship(text):
                     print('Гражданство не подходит')
-                    return
+                    continue
                 #text , vac_id = remove_request_id(text=text)
                 if not text:
                     continue
