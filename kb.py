@@ -4,8 +4,10 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 async def main_kb():
     builder = InlineKeyboardBuilder()
     #builder.button(text="Управление обязательными словами", callback_data='slova_info')
-    builder.button(text='Сканировать каналы', callback_data='scan_channels' )
+    
     builder.button(text="Подключение канала", callback_data='channels_info')
+    builder.button(text='Сканировать каналы', callback_data='scan_channels')
+    builder.button(text='Сканировать RedlabPartners', callback_data='scan_redlab' )
     builder.adjust(1)
     return builder.as_markup()
     

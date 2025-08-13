@@ -1,41 +1,33 @@
 import asyncio
-from datetime import datetime, timedelta, timezone
-from decimal import Rounded
-import json
-import random
-import math
-import re
-from calendar import c
-from telethon import TelegramClient, events
-from telethon.tl.functions.channels import JoinChannelRequest
 
-from db import get_all_slova, remove_slovo, add_message_mapping, remove_message_mapping, \
-    get_all_message_mappings, get_next_sequence_number
-from gpt import del_contacts_gpt
-from kb import slova_kb, back_to_slova_menu_kb, slovo_kb
+from telethon import TelegramClient
+
+
+
+
+
 from db import (
     init_db,
     add_channel,
     remove_channel,
     get_all_channels,
     AsyncSessionLocal,
-    Channel,
-    add_filter,
-    get_all_filters,
-    remove_filter, add_slovo,
-
 )
-from telethon.tl.types import Channel, Chat, User
+
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, CallbackQuery, ReplyKeyboardRemove
+from aiogram.types import CallbackQuery
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart
-from kb import main_kb, channels_kb, channel_kb, filters_kb, filter_kb, back_to_filter_menu_kb, back_to_channel_menu_kb
-from teleton_client import get_channel_info, leave_channel_listening, generate_all_case_forms, message_to_html_safe
+from kb import main_kb, channels_kb, channel_kb, back_to_channel_menu_kb
+from teleton_client import get_channel_info, leave_channel_listening, forward_messages_from_topics
+from telethon_bot import (
+    forward_recent_posts, register_handler, list_all_dialogs, monitor_and_cleanup
+)
+from funcs import update_channels_and_restart_handler
 import os
 from dotenv import load_dotenv
-from googlesheets import find_rate_in_sheet_gspread
+
 
 load_dotenv()
 
@@ -46,6 +38,15 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 PHONE_NUMBER = os.getenv("PHONE_NUMBER")
 GROUP_ID = os.getenv("GROUP_ID")
 current_handler = None  # Храним текущий обработчик
+
+async def register_handler_wrapper():
+    global current_handler
+    if current_handler:
+        telethon_client.remove_event_handler(current_handler)
+        print("❌ Старый обработчик удалён")
+    
+    current_handler = await register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLocal)
+    print(f"✅ Новый обработчик событий зарегистрирован для {len(CHANNELS)} каналов")
 CHANNELS = []  # Текущий список каналов для слежения
 
 # --- Telethon клиент ---
@@ -60,16 +61,12 @@ class AddChannel(StatesGroup):
     waiting_for_id = State()
     waiting_for_name = State()
 
-class FiltersChannels(StatesGroup):
-    add_filter = State()
 
-class SlovaChannels(StatesGroup):
-    add_slovo = State()
+TOPIC_MAP = {
+    (-1002189931727, 3): (-1002658129391, 4),
+}
 
 
-SPREADSHEET_ID = "1pIrNhJ9Fr7Ickp9X0ao73rRwlqDp1QbTzMn5ULzVjuw"
-SHEET_NAME = "Для Бота"
-CREDS_PATH = "creds.json"
 
 
 # --- Aiogram Handlers ---
@@ -136,7 +133,7 @@ async def add_channel_to_db(message: types.Message, state: FSMContext):
         channel_ids = []
         for channel in channels:
             channel_ids.append(channel.channel_id)
-        await update_channels_and_restart_handler(new_channels=channel_ids)
+        await update_channels_and_restart_handler(channel_ids, CHANNELS, register_handler_wrapper)
     await state.clear()
 
 
@@ -165,7 +162,7 @@ async def get_filters_info(callback: CallbackQuery):
     await leave_channel_listening(channel_id=channel_id, phone_number=PHONE_NUMBER, client=telethon_client)
     await callback.message.delete()
     CHANNELS.remove(channel_id)
-    await update_channels_and_restart_handler(CHANNELS)
+    await update_channels_and_restart_handler(CHANNELS, CHANNELS, register_handler_wrapper)
 
 
 @dp.callback_query(F.data == 'back_to_channel_menu')
@@ -185,83 +182,13 @@ async def back_to_сhannel_menu(callback: CallbackQuery, state: FSMContext, bot 
 @dp.callback_query(F.data == 'scan_channels')
 async def scan_channels(calback : CallbackQuery):
     await calback.message.answer('Начинаю сканирование...')
-    await forward_recent_posts()
+    await forward_recent_posts(telethon_client, CHANNELS, GROUP_ID)
 
 
-
-from datetime import datetime, timedelta, timezone
-
-async def forward_recent_posts():
-    # aware-датa в UTC
-    cutoff_date = datetime.now(timezone.utc) - timedelta(days=14)
-
-    entity = await telethon_client.get_entity(int(GROUP_ID))
-
-    for source in CHANNELS:
-        async for message in telethon_client.iter_messages(source):
-            # Если сообщение старше 2 недель — прекращаем итерацию
-            if message.date < cutoff_date:
-                break
-
-            try:
-
-                text_orig = message.message or ""
-                if not text_orig:
-                    continue
-                
-
-                text = remove_request_id(text_orig)
-                if not text:
-                    continue
-
-                if has_strikethrough(message):
-                    print(f"❌ Сообщение {message.id} в канале {entity} содержит зачёркнутый текст — пропускаем")
-                    continue
-                
-
-                try:
-                    text_gpt = await del_contacts_gpt(text)
-                except Exception as e:
-                    print(e)
-                    continue
-                if text_gpt == None:
-                    continue
-                else:
-                    
-                    try:
-                        text_gpt = json.loads(text_gpt)
-                        text = text_gpt.get("text")
-                        rate = text_gpt.get("rate")
-                        rate = int(rate)
-                        rate = round(rate /5) * 5
-                        print(rate)
-                        if rate == None:
-                            continue
-                        else:
-                            rate = find_rate_in_sheet_gspread(rate)
-                            rate = re.sub(r'\s+', '', rate)
-                            rounded = math.ceil(int(rate) / 100) * 100  
-
-
-                            rate = f"{rounded:,}".replace(",", " ")
-                            print(rate)
-
-                            if rate == None:
-                                continue
-                            else:
-                                bd_id = await generate_bd_id()
-                                text_cleaned = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
-                                
-                    except Exception as e:
-                        print(e)
-                        continue
-
-                await telethon_client.send_message(entity, text_cleaned)
-                print(f"Переслал из {source}: {message.id}")
-                await asyncio.sleep(0.5)
-            except Exception as e:
-                print(f"Ошибка при пересылке из {source}: {e}")
-
+@dp.callback_query(F.data == 'scan_redlab')
+async def scan_redlab(calback : CallbackQuery):
+    await calback.message.answer('Начинаю сканирование...')
+    await forward_messages_from_topics(telethon_client, TOPIC_MAP)
 
 
 
@@ -275,161 +202,42 @@ async def back_to_menu(callback: CallbackQuery):
 
 
 
-# --- Функция создания обработчика ---
 
 
 
-def has_strikethrough(message):
-    if not message.entities:
-        return False
-    for entity in message.entities:
-        if entity.__class__.__name__ == 'MessageEntityStrike':
-            return True
-    return False
-
-async def register_handler():
-    global current_handler
-
-    if current_handler:
-        telethon_client.remove_event_handler(current_handler)
-        print("❌ Старый обработчик удалённ")
-
-    @telethon_client.on(events.NewMessage(chats=CHANNELS))
-    async def new_channel_message_handler(event):
-        text_orig = event.message.message or ""
-        if not text_orig:
-            return
-
-        text = remove_request_id(text_orig)
-        if not text:
-            return
-
-        #print(text)
-
-        # Проверка зачёркнутого текста
-        if has_strikethrough(event.message):
-            print(f"❌ Сообщение {event.message.id} в канале {event.chat_id} содержит зачёркнутый текст — пропускаем")
-            return
-
-        entity = await telethon_client.get_entity(int(GROUP_ID))
-        
-
-        
-        try:
-            text_gpt = await del_contacts_gpt(text)
-        except Exception as e:
-            print(e)
-            return
-        if text_gpt == None:
-            return
-        else:
-            
-            try:
-                text_gpt = json.loads(text_gpt)
-                text = text_gpt.get("text")
-                rate = text_gpt.get("rate")
-                rate = int(rate)
-                rate = round(rate /5) * 5
-                print(rate)
-                if rate == None:
-                    return
-                else:
-                    rate = find_rate_in_sheet_gspread(rate)
-                    rate = re.sub(r'\s+', '', rate)
-                    rounded = math.ceil(int(rate) / 100) * 100  
-
-
-                    rate = f"{rounded:,}".replace(",", " ")
-                    print(rate)
-
-                    if rate == None:
-                        return
-                    else:
-                        bd_id = await generate_bd_id()
-                        text = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
-                        
-            except Exception as e:
-                print(e)
-                return
-        try:
-                    forwarded_msg = await telethon_client.send_message(entity=entity, message=text, parse_mode='html')
-        except Exception:
-                    forwarded_msg = await telethon_client.send_message(entity=entity, message=text)
-
-                # Сохраняем сопоставление
-        async with AsyncSessionLocal() as session:
-                    await add_message_mapping(
-                        session,
-                        src_chat_id=event.chat_id,
-                        src_msg_id=event.message.id,
-                        dst_chat_id=int(GROUP_ID),
-                        dst_msg_id=forwarded_msg.id
-                    )
-
-        print("❌ Ни одно обязательное слово не найдено")
-
-
-    current_handler = new_channel_message_handler
-    print(f"✅ Новый обработчик событий зарегистрирован для {len(CHANNELS)} каналов")
-
-async def list_all_dialogs():
-    await telethon_client.start(phone=PHONE_NUMBER)
-
-    async for dialog in telethon_client.iter_dialogs():
-        entity = dialog.entity
-
-        if isinstance(entity, Channel):
-            kind = 'Канал'
-        elif isinstance(entity, Chat):
-            kind = 'Группа'
-        elif isinstance(entity, User):
-            kind = 'Пользователь'
-        else:
-            kind = 'Другое'
-
-        print(f"{kind}: {dialog.name} — ID: {entity.id}")
-
-
-def remove_request_id(text: str) -> str:
-    # Удаляем шаблон: 🆔 + буквы/цифры, например "🆔BD-8563"
-    return re.sub(r'🆔[A-Z0-9-]+', '', text).strip()
 
 
 
-async def monitor_and_cleanup():
-    while True:
-        async with AsyncSessionLocal() as session:
-            mappings = await get_all_message_mappings(session)
 
-            to_delete = []
-            for mapping in mappings:
-                try:
-                    msg = await telethon_client.get_messages(mapping.src_chat_id, ids=mapping.src_msg_id)
-                    if msg is None or has_strikethrough(msg):
-                        print(f"Удаляем пересланное сообщение {mapping.dst_msg_id} из {mapping.dst_chat_id}")
-                        await telethon_client.delete_messages(mapping.dst_chat_id, message_ids=mapping.dst_msg_id)
-                        to_delete.append(mapping)
-                except Exception as e:
-                    print(f"Ошибка проверки сообщения {mapping.src_msg_id} в {mapping.src_chat_id}: {e}")
 
-            for mapping in to_delete:
-                await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
 
-        await asyncio.sleep(60)
 
-async def generate_bd_id() -> str:
 
-    sequence_num = await get_next_sequence_number()
-    seq_str = str(sequence_num).zfill(4)
-    rand_digits = ''.join(str(random.randint(0, 9)) for _ in range(4))
-    return f"BD{seq_str}{rand_digits}"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # --- Функция обновления списка каналов ---
 
-async def update_channels_and_restart_handler(new_channels):
-    global CHANNELS
-    CHANNELS = new_channels
-    await register_handler()
+
 
 
 
@@ -437,14 +245,14 @@ async def update_channels_and_restart_handler(new_channels):
 async def main():
     await init_db()
     await telethon_client.start(phone=PHONE_NUMBER)
-    await list_all_dialogs()
+    await list_all_dialogs(telethon_client, PHONE_NUMBER)
     channels = await get_all_channels()
     channels = [channel.channel_id for channel in channels]
     print(channels)
-    await update_channels_and_restart_handler(channels)
+    await update_channels_and_restart_handler(channels, CHANNELS, register_handler_wrapper)
 
     # Запускаем мониторинг зачёркнутых сообщений
-    asyncio.create_task(monitor_and_cleanup())
+    asyncio.create_task(monitor_and_cleanup(telethon_client, AsyncSessionLocal))
 
     # Запускаем Telethon клиента
     asyncio.create_task(telethon_client.run_until_disconnected())
