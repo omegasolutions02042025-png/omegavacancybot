@@ -135,7 +135,7 @@ async def correct_message_and_send(message, telethon_client, GROUP_ID):
         print(f"Ошибка при отправке сообщения: {e}")
 
 async def forward_messages_from_topics(telethon_client, TOPIC_MAP):
-    cutoff_date = datetime.now(timezone.utc) - timedelta(days=1)
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=14)
 
     for (src_chat, src_topic_id), (dst_chat, dst_topic_id) in TOPIC_MAP.items():
         async for msg in telethon_client.iter_messages(
