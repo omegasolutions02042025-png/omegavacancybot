@@ -9,6 +9,7 @@ from telethon.tl.types import Channel, Chat, User
 from db import get_all_channels, add_message_mapping, remove_message_mapping, get_all_message_mappings, get_next_sequence_number
 from gpt import del_contacts_gpt
 from googlesheets import find_rate_in_sheet_gspread
+from typing import Tuple, Optional
 
 # --- Telethon функции ---
 
@@ -119,6 +120,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     continue
                 else:
                     try:
+                        text_gpt , vac_id = remove_request_id(text=text_gpt)
                         bd_id = await generate_bd_id()
                         #text_gpt = json.loads(text_gpt)
                         text = text_gpt.get("text")
@@ -342,9 +344,18 @@ async def generate_bd_id() -> str:
     seq_str = str(sequence_num).zfill(4)
     return f"BD{seq_str}"
 
-def remove_request_id(text: str) -> str:
-    # Удаляем шаблон: 🆔 + буквы/цифры, например "🆔BD-8563"
-    return re.sub(r'🆔[A-Z0-9-]+', '', text).strip()
+def remove_request_id(text: str) -> Tuple[str, Optional[str]]:
+    """
+    Удаляет из текста идентификатор вакансии вида:
+    🆔 XX-1234 или 🆔 1234
+    Возвращает:
+        - очищенный текст
+        - 4-значный ID как строку (или None, если не найден)
+    """
+    match = re.search(r'🆔(?:[A-Z]{2}-)?(\d{4})', text)
+    vacancy_id = match.group(1) if match else None
+    cleaned_text = re.sub(r'🆔(?:[A-Z]{2}-)?\d{4}', '', text).strip()
+    return cleaned_text, vacancy_id
 
 
 async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal):
