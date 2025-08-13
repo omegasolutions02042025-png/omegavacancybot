@@ -104,7 +104,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     await asyncio.sleep(5)
                     break  # старые сообщения не нужны
                 text = msg.text
-                text , vac_id = remove_request_id(text=text)
+                #text , vac_id = remove_request_id(text=text)
                 if not text:
                     continue
 
@@ -126,7 +126,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                         #text_gpt = json.loads(text_gpt)
                         text = text_gpt.get("text")
                         
-                        print(vac_id)
+                        vac_id = text_gpt.get('vacancy_id')
                         rate = text_gpt.get("rate")
                         
                         deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
