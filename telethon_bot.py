@@ -143,9 +143,9 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP):
             reply_to=src_topic_id,
             reverse=True
         ):
-            # проверяем дату
-            # if msg.date < cutoff_date:
-            #     break
+            
+            if msg.date < cutoff_date:
+                break
 
             try:
                 await telethon_client.send_message(
@@ -201,6 +201,8 @@ async def register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLoca
                 print(rate)
                 if rate == None:
                     return
+                if rate == 0:
+                    text = f"🆔{bd_id}\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n{text}"
                 else:
                     rate = find_rate_in_sheet_gspread(rate)
                     rate = re.sub(r'\s+', '', rate)
