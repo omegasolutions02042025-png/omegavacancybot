@@ -157,6 +157,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP):
                 print(f"[+] Переслано {msg.id} из {src_chat}/{src_topic_id} → {dst_chat}/{dst_topic_id}")
             except Exception as e:
                 print(f"[!] Ошибка при пересылке {msg.id}: {e}")
+            await asyncio.sleep(1)
 
 def has_strikethrough(message):
     if not message.entities:
