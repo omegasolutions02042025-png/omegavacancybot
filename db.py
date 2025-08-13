@@ -52,6 +52,8 @@ class MessageMapping(Base):
     src_msg_id = Column(BigInteger, index=True)
     dst_chat_id = Column(BigInteger, index=True)
     dst_msg_id = Column(BigInteger, index=True)
+    deadline_date = Column(String, nullable=True)  
+    deadline_time = Column(String, nullable=True) 
 
 async def init_db():
     async with async_engine.begin() as conn:
