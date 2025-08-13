@@ -104,6 +104,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     await asyncio.sleep(5)
                     break  # старые сообщения не нужны
                 text = msg.text
+                text , vac_id = remove_request_id(text=text)
                 if not text:
                     continue
 
@@ -124,7 +125,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                         bd_id = await generate_bd_id()
                         #text_gpt = json.loads(text_gpt)
                         text = text_gpt.get("text")
-                        text , vac_id = remove_request_id(text=text)
+                        
                         print(vac_id)
                         rate = text_gpt.get("rate")
                         
