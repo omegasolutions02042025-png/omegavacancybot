@@ -120,7 +120,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                 else:
                     try:
                         bd_id = await generate_bd_id()
-                        text_gpt = json.loads(text_gpt)
+                        #text_gpt = json.loads(text_gpt)
                         text = text_gpt.get("text")
                         rate = text_gpt.get("rate")
                         deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
@@ -209,7 +209,7 @@ async def register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLoca
         else:
             try:
                 bd_id = await generate_bd_id()
-                text_gpt = json.loads(text_gpt)
+                #text_gpt = json.loads(text_gpt)
                 text = text_gpt.get("text")
                 rate = text_gpt.get("rate")
                 deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
@@ -378,7 +378,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
 
         try:
             bd_id = await generate_bd_id()
-            text_gpt = json.loads(text_gpt)
+            #text_gpt = json.loads(text_gpt)
             text = text_gpt.get("text")
             rate = text_gpt.get("rate")
             deadline_date = text_gpt.get("deadline_date")
