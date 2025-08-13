@@ -10,6 +10,7 @@ from db import get_all_channels, add_message_mapping, remove_message_mapping, ge
 from gpt import del_contacts_gpt
 from googlesheets import find_rate_in_sheet_gspread
 from typing import Tuple, Optional
+from funcs import is_russia_only_citizenship
 
 # --- Telethon функции ---
 
@@ -104,6 +105,9 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     await asyncio.sleep(5)
                     break  # старые сообщения не нужны
                 text = msg.text
+                if is_russia_only_citizenship(text):
+                    print('Гражданство не подходит')
+                    return
                 #text , vac_id = remove_request_id(text=text)
                 if not text:
                     continue
