@@ -128,6 +128,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                         
                         vac_id = text_gpt.get('vacancy_id')
                         rate = text_gpt.get("rate")
+                        vacancy = text_gpt.get("vacancy_title")
                         
                         deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
                         deadline_time = text_gpt.get("deadline_time") 
@@ -135,10 +136,10 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                          
 
                         if rate == None:
-                            text_cleaned = f"🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                            text_cleaned = f"{vacancy}\n🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
 
                         if rate == 0:
-                           text_cleaned = f"🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                           text_cleaned = f"{vacancy}\n🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
                         else:
                             rate = int(rate)
                             rate = round(rate /5) * 5
@@ -157,7 +158,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                                 continue
                             else:
                                     
-                                text_cleaned = f"🆔{bd_id+ vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                                text_cleaned = f"{vacancy}\n🆔{bd_id+ vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
                                 
                     except Exception as e:
                         print(e)
@@ -215,13 +216,14 @@ async def register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLoca
         else:
             try:
                 bd_id = await generate_bd_id()
-                text_gpt = json.loads(text_gpt)
+                
                 text = text_gpt.get("text")
                 rate = text_gpt.get("rate")
+                vac_id = text_gpt.get('vacancy_id')
                 deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
                 deadline_time = text_gpt.get("deadline_time") 
                 if rate == None:
-                    text = f"🆔{bd_id}\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n{text}"
+                    text = f"🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n{text}"
 
                 if rate == 0:
                     text = f"🆔{bd_id}\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n{text}"
