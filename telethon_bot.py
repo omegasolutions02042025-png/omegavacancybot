@@ -134,33 +134,34 @@ async def correct_message_and_send(message, telethon_client, GROUP_ID):
     except Exception as e:
         print(f"Ошибка при отправке сообщения: {e}")
 
-async def forward_messages_from_topics(telethon_client, TOPIC_MAP):
-    cutoff_date = datetime.now(timezone.utc) - timedelta(days=14)
-    print(cutoff_date)
-    for (src_chat, src_topic_id), (dst_chat, dst_topic_id) in TOPIC_MAP.items():
-        async for msg in telethon_client.iter_messages(
-            src_chat,
-            reply_to=src_topic_id,
-            reverse=True
-        ):
-            print(src_chat, src_topic_id)
-            print(dst_chat, dst_topic_id)
-            if msg.date < cutoff_date:
-                print(msg.date)
-                await asyncio.sleep(10)
-                break
+async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+    print(f"[i] Берем сообщения с {cutoff_date}")
 
-            try:
-                await telethon_client.send_message(
-                    dst_chat,
-                    msg.text or "",
-                    file=msg.media,
-                    reply_to=dst_topic_id
-                )
-                print(f"[+] Переслано {msg.id} из {src_chat}/{src_topic_id} → {dst_chat}/{dst_topic_id}")
-            except Exception as e:
-                print(f"[!] Ошибка при пересылке {msg.id}: {e}")
-            await asyncio.sleep(1)
+    for (src_chat, src_topic_id), (dst_chat, dst_topic_id) in TOPIC_MAP.items():
+        print(f"[i] Проверяем топик {src_topic_id} в чате {src_chat}")
+        try:
+            async for msg in telethon_client.iter_messages(
+                src_chat,
+                thread_id=src_topic_id,   # <-- вот тут обязательно thread_id
+                reverse=False,            # чтобы идти от новых к старым
+            ):
+                if msg.date < cutoff_date:
+                    break  # старые сообщения не нужны
+
+                try:
+                    await telethon_client.send_message(
+                        dst_chat,
+                        msg.text or "",
+                        file=msg.media,
+                        reply_to=dst_topic_id  # пересылаем в топик приёмника
+                    )
+                    print(f"[+] Переслано {msg.id} из {src_chat}/{src_topic_id} → {dst_chat}/{dst_topic_id}")
+                except Exception as e:
+                    print(f"[!] Ошибка при пересылке {msg.id}: {e}")
+                await asyncio.sleep(1)  # небольшой таймаут между отправками
+        except Exception as e:
+            print(f"[!] Ошибка при чтении топика {src_topic_id} в чате {src_chat}: {e}")
 
 def has_strikethrough(message):
     if not message.entities:

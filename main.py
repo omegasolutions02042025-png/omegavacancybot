@@ -203,7 +203,7 @@ async def scan_channels(calback : CallbackQuery):
 @dp.callback_query(F.data == 'scan_redlab')
 async def scan_redlab(calback : CallbackQuery):
     await calback.message.answer('Начинаю сканирование...')
-    await forward_messages_from_topics(telethon_client, TOPIC_MAP)
+    await forward_messages_from_topics(telethon_client, TOPIC_MAP, days=5)
 
 
 
