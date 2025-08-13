@@ -161,7 +161,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     print(f"[+] Переслано {msg.id} из {src_chat}/{src_topic_id} → {dst_chat}/{dst_topic_id}")
                 except Exception as e:
                     print(f"[!] Ошибка при пересылке {msg.id}: {e}")
-                await asyncio.sleep(1)  # небольшой таймаут между отправками
+                await asyncio.sleep(random.uniform(2, 5))  # небольшой таймаут между отправками
         except Exception as e:
             print(f"[!] Ошибка при чтении топика {src_topic_id} в чате {src_chat}: {e}")
 
