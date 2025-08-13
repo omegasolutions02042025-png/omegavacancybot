@@ -141,7 +141,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                             text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
                             
 
-                        if rate == 0:
+                        if int(rate) == 0:
                            text_cleaned = f"🆔{vac_id}\n\n🆔{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
                         else:
                             rate = int(rate)
