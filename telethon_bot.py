@@ -357,7 +357,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
 async def generate_bd_id() -> str:
     sequence_num = await get_next_sequence_number()
     seq_str = str(sequence_num).zfill(4)
-    return f"BD{seq_str}"
+    return f"{seq_str}"
 
 def remove_request_id(text: str) -> Tuple[str, Optional[str]]:
     """
