@@ -104,11 +104,11 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     break  # старые сообщения не нужны
                 text = remove_request_id(msg.text)
                 if not text:
-                    return
+                    continue
 
                 if has_strikethrough(msg):
                     print(f"❌ Сообщение {msg.id} содержит зачёркнутый текст — пропускаем")
-                    return
+                    continue
                 try:
                     text_gpt = await del_contacts_gpt(text)
                 except Exception as e:
