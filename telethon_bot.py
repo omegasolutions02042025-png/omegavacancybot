@@ -146,6 +146,8 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP):
             print(src_chat, src_topic_id)
             print(dst_chat, dst_topic_id)
             if msg.date < cutoff_date:
+                print(msg.date)
+                await asyncio.sleep(10)
                 break
 
             try:
