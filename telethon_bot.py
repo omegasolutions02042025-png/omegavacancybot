@@ -143,10 +143,12 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
         try:
             async for msg in telethon_client.iter_messages(
                 src_chat,
-                thread_id=src_topic_id,   # <-- вот тут обязательно thread_id
+                reply_to=src_topic_id,   # <-- вот тут обязательно thread_id
                 reverse=False,            # чтобы идти от новых к старым
             ):
                 if msg.date < cutoff_date:
+                    print(msg.date)
+                    await asyncio.sleep(5)
                     break  # старые сообщения не нужны
 
                 try:
