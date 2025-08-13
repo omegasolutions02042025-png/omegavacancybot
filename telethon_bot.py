@@ -143,7 +143,8 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP):
             reply_to=src_topic_id,
             reverse=True
         ):
-            
+            print(src_chat, src_topic_id)
+            print(dst_chat, dst_topic_id)
             if msg.date < cutoff_date:
                 break
 
