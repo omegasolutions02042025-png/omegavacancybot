@@ -102,7 +102,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     print(msg.date)
                     await asyncio.sleep(5)
                     break  # старые сообщения не нужны
-                text = remove_request_id(msg.text)
+                text = msg.text
                 if not text:
                     continue
 
@@ -123,16 +123,17 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                         #text_gpt = json.loads(text_gpt)
                         text = text_gpt.get("text")
                         rate = text_gpt.get("rate")
+                        vac_id = text_gpt.get('vacancy_id')
                         deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
                         deadline_time = text_gpt.get("deadline_time") 
                         
                          
 
                         if rate == None:
-                            text_cleaned = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                            text_cleaned = f"🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
 
                         if rate == 0:
-                           text_cleaned = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                           text_cleaned = f"🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
                         else:
                             rate = int(rate)
                             rate = round(rate /5) * 5
@@ -339,8 +340,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
 async def generate_bd_id() -> str:
     sequence_num = await get_next_sequence_number()
     seq_str = str(sequence_num).zfill(4)
-    rand_digits = ''.join(str(random.randint(0, 9)) for _ in range(4))
-    return f"BD{seq_str}{rand_digits}"
+    return f"BD{seq_str}"
 
 def remove_request_id(text: str) -> str:
     # Удаляем шаблон: 🆔 + буквы/цифры, например "🆔BD-8563"
