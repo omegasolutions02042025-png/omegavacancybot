@@ -111,7 +111,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     continue
                 try:
                     text_gpt = await del_contacts_gpt(text)
-                    print(text)
+                    #print(text)
                 except Exception as e:
                     print(e)
                     continue
