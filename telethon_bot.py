@@ -136,7 +136,7 @@ async def correct_message_and_send(message, telethon_client, GROUP_ID):
 
 async def forward_messages_from_topics(telethon_client, TOPIC_MAP):
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=14)
-
+    print(cutoff_date)
     for (src_chat, src_topic_id), (dst_chat, dst_topic_id) in TOPIC_MAP.items():
         async for msg in telethon_client.iter_messages(
             src_chat,
@@ -144,8 +144,8 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP):
             reverse=True
         ):
             # проверяем дату
-            if msg.date < cutoff_date:
-                break
+            # if msg.date < cutoff_date:
+            #     break
 
             try:
                 await telethon_client.send_message(
