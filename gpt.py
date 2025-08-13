@@ -118,6 +118,7 @@ G) Сохрани ВСЕ исходные переносы строк и абз�
     result =(sdk.models.completions("yandexgpt").configure(temperature=0.5).run_deferred(messages, timeout = 180)).wait()
     clean_text = result.alternatives[0].text
     cleaned = clean_text.strip("`\n '")
+    print(cleaned)
     cleaned = ast.literal_eval(cleaned)
     print(cleaned)
     print(type(cleaned))
