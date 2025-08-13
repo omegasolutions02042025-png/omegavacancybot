@@ -101,43 +101,6 @@ G) Сохрани ВСЕ исходные переносы строк и абз�
 Не добавляй вокруг JSON никаких комментариев и форматируй ровно как JSON.
 """
 
-
-# --------------------------- SDK ИНИЦИАЛИЗАЦИЯ ---------------------------
-
-def get_sdk() -> YCloudML:
-    return YCloudML(folder_id=FOLDER_ID, auth=AUTH_TOKEN)
-
-
-# --------------------------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---------------------------
-
-def hard_filter_ru_only(text: str) -> bool:
-    """
-    Возвращает True, если найден явный запрет (РФ-only по локации или гражданству).
-    В таком случае вакансия отбраковывается без вызова модели.
-    """
-    if RE_RU_ONLY_LOCATION.search(text):
-        logger.debug("Hard filter: РФ-only location detected.")
-        return True
-    if RE_RU_ONLY_CITIZENSHIP.search(text):
-        logger.debug("Hard filter: РФ-only citizenship detected.")
-        return True
-    return False
-
-
-def safe_parse_json(s: str) -> Optional[Dict[str, Any]]:
-    """
-    Безопасный разбор ответа модели. Ожидаем чистый JSON.
-    Fallback на ast.literal_eval для редких кейсов с одиночными кавычками.
-    Возвращает dict или None.
-    """
-    s = s.strip().strip("`")
-    # Быстрый путь — стандартный JSON
-    try:
-        return json.loads(s)
-    except json.JSONDecodeError:
-        pass
-
-            """
         },
         {
             "role": "user",
