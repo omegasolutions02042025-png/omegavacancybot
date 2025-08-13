@@ -250,13 +250,13 @@ async def forward_recent_posts():
                                 continue
                             else:
                                 bd_id = await generate_bd_id()
-                                text = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                                text_cleaned = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
                                 
                     except Exception as e:
                         print(e)
                         continue
 
-                await telethon_client.forward_messages(entity, text)
+                await telethon_client.send_message(entity, text_cleaned)
                 print(f"Переслал из {source}: {message.id}")
                 await asyncio.sleep(0.5)
             except Exception as e:
@@ -311,27 +311,8 @@ async def register_handler():
             print(f"❌ Сообщение {event.message.id} в канале {event.chat_id} содержит зачёркнутый текст — пропускаем")
             return
 
-        # text_lower = text.lower().strip()
-
-        # # Получаем фильтры
-        # required_filters = await get_all_slova()  # обязательные слова
-        # black_filters = await get_all_filters()   # фильтры пропуска (black filters)
-
-        # # Проверка black фильтров - если есть совпадение, то пропускаем сообщение
-        # for bf in black_filters:
-        #     bf_text = bf.filter_text.lower().strip()
-        #     if bf_text in text_lower:
-        #         print(f"❌ В сообщении {event.message.id} найден black фильтр '{bf_text}' — пропускаем")
-        #         return
-
-        # # Проверка обязательных фильтров
-        # for pf in required_filters:
-        #     pf_text = pf.filter_text.lower().strip()
-        #     pf_forms = await generate_all_case_forms(pf_text)
-        #     if any(form in text_lower for form in pf_forms):
-        #         print(f"✅ Найдено обязательное слово: {pf_text}")
         entity = await telethon_client.get_entity(int(GROUP_ID))
-        #         #safe_text = await message_to_html_safe(text)
+        
 
         
         try:
