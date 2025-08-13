@@ -129,6 +129,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                         vac_id = text_gpt.get('vacancy_id')
                         rate = text_gpt.get("rate")
                         vacancy = text_gpt.get("vacancy_title")
+                        prefix = text_gpt.get("vacancy_prefix")
                         
                         deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
                         deadline_time = text_gpt.get("deadline_time") 
@@ -136,10 +137,16 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                          
 
                         if rate == None:
-                            text_cleaned = f"{vacancy}\n🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                            if prefix:
+                                text_cleaned = f"{vacancy}\n\n🆔{prefix+bd_id+vac_id}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+                            else:
+                                text_cleaned = f"{vacancy}\n🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
 
                         if rate == 0:
-                           text_cleaned = f"{vacancy}\n🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                            if prefix:
+                                text_cleaned = f"{vacancy}\n\n🆔{prefix+bd_id+vac_id}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+                            else:
+                                text_cleaned = f"{vacancy}\n🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
                         else:
                             rate = int(rate)
                             rate = round(rate /5) * 5
@@ -158,7 +165,10 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                                 continue
                             else:
                                     
-                                text_cleaned = f"{vacancy}\n🆔{bd_id+ vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                                if prefix:
+                                    text_cleaned = f"{vacancy}\n\n🆔{prefix+bd_id+vac_id}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+                                else:
+                                    text_cleaned = f"{vacancy}\n🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
                                 
                     except Exception as e:
                         print(e)
