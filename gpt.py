@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import os
-import re
-import json
+
 from yandex_cloud_ml_sdk import YCloudML
 from dotenv import load_dotenv
 
@@ -139,39 +138,12 @@ async def del_contacts_gpt(text):
 
 
     result =(sdk.models.completions("yandexgpt").configure(temperature=0.5).run_deferred(messages, timeout = 180)).wait()
-    raw_text = result.alternatives[0].text
-
-    # Чистим обрамляющие символы
-    raw_text = raw_text.strip("`\n '")
-
-    # Попытка безопасного парсинга JSON
-    # Заменяем реальные переносы строк на \n
-    fixed_text = re.sub(r'(?<!\\)\n', '\\n', raw_text)
-
-    try:
-        data = json.loads(fixed_text)
-    except json.JSONDecodeError as e:
-        print("Ошибка JSON:", e)
-        # Возвращаем словарь с None для всех ключей, если парсинг не удался
-        return {
-            "text": None,
-            "rate": None,
-            "deadline_date": None,
-            "deadline_time": None
-        }
-
-    # Извлекаем значения с безопасным fallback
-    text_clean = data.get("text")
-    rate = data.get("rate")
-    deadline_date = data.get("deadline_date")  # "DD.MM.YYYY" или None
-    deadline_time = data.get("deadline_time")  # "HH:MM" или None
-
-    return {
-        "text": text_clean,
-        "rate": rate,
-        "deadline_date": deadline_date,
-        "deadline_time": deadline_time
-    }
+    clean_text = result.alternatives[0].text
+    cleaned = clean_text.strip("`\n '")
+    print(cleaned)
+    print(type(cleaned))
+    
+    return cleaned
 
 
 
