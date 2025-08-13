@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 import os
-
+import json
 from yandex_cloud_ml_sdk import YCloudML
 from dotenv import load_dotenv
 
@@ -118,7 +118,7 @@ G) Сохрани ВСЕ исходные переносы строк и абз�
     result =(sdk.models.completions("yandexgpt").configure(temperature=0.5).run_deferred(messages, timeout = 180)).wait()
     clean_text = result.alternatives[0].text
     cleaned = clean_text.strip("`\n '")
-    cleaned = ast.literal_eval(cleaned)
+    cleaned = json.loads(clean_text.strip())
     print(cleaned)
     print(type(cleaned))
     
