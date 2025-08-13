@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import os
 
 from yandex_cloud_ml_sdk import YCloudML
@@ -78,13 +79,7 @@ async def del_contacts_gpt(text):
 3. Если указано время, добавь его под ключ "deadline_time" (если есть).  
 4. Остальной текст вакансии оставь как есть.  
 
-Формат результата: словарь вида:  
-{
-  "text": "<очищенный текст вакансии>",
-  "rate": "<ставка>",
-  "deadline_date": "DD.MM.YYYY" или None,  # если указано, иначе None
-  "deadline_time": "HH:MM" или None        # если указано, иначе None
-}
+
 
 
 Если вакансия проходит, полностью удали из текста упоминания об условиях оплаты.
@@ -121,6 +116,14 @@ async def del_contacts_gpt(text):
 Не выдумывай данные. Если ставка не указана или написано например "Смотрим вашу" то верни "rate": 0
 
 Всегда возвращай все ключи: text, rate, deadline_date, deadline_time. Если данных нет — ставь None.
+Формат результата: словарь вида:  
+{
+  "text": "<очищенный текст вакансии>",
+  "rate": "<ставка>",
+  "deadline_date": "DD.MM.YYYY" или None,  # если указано, иначе None
+  "deadline_time": "HH:MM" или None        # если указано, иначе None
+}
+
 
             """
         },
@@ -140,7 +143,8 @@ async def del_contacts_gpt(text):
     result =(sdk.models.completions("yandexgpt").configure(temperature=0.5).run_deferred(messages, timeout = 180)).wait()
     clean_text = result.alternatives[0].text
     cleaned = clean_text.strip("`\n '")
-    #print(cleaned)
+    cleaned = ast.literal_eval(cleaned)
+    print(cleaned)
     print(type(cleaned))
     
     return cleaned
