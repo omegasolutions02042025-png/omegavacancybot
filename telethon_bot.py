@@ -127,6 +127,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                         text = text_gpt.get("text")
                         
                         vac_id = text_gpt.get('vacancy_id')
+                        print(vac_id)
                         rate = text_gpt.get("rate")
                         vacancy = text_gpt.get('vacancy_title')
                         
@@ -137,11 +138,11 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
 
                         if rate == None:
                             
-                            text_cleaned = f"{vacancy}\n\n🆔{vac_id}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+                            text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
                             
 
                         if rate == 0:
-                           text_cleaned = f"{vacancy}\n\n🆔{vac_id}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+                           text_cleaned = f"🆔{vac_id}\n\n🆔{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
                         else:
                             rate = int(rate)
                             rate = round(rate /5) * 5
@@ -160,7 +161,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                                 continue
                             else:
                                     
-                                text_cleaned = f"{vacancy}\n\n🆔{vac_id}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+                                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
                                 
                     except Exception as e:
                         print(e)
