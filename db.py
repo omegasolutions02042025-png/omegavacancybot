@@ -165,15 +165,26 @@ async def remove_slovo(id):
 
 
 
-async def add_message_mapping(session: AsyncSession, src_chat_id: int, src_msg_id: int, dst_chat_id: int, dst_msg_id: int):
+async def add_message_mapping(
+    session: AsyncSession,
+    src_chat_id: int,
+    src_msg_id: int,
+    dst_chat_id: int,
+    dst_msg_id: int,
+    deadline_date: str | None = None,
+    deadline_time: str | None = None
+):
     mapping = MessageMapping(
         src_chat_id=src_chat_id,
         src_msg_id=src_msg_id,
         dst_chat_id=dst_chat_id,
-        dst_msg_id=dst_msg_id
+        dst_msg_id=dst_msg_id,
+        deadline_date=deadline_date,
+        deadline_time=deadline_time
     )
     session.add(mapping)
     await session.commit()
+
 
 async def get_all_message_mappings(session: AsyncSession):
     result = await session.execute(select(MessageMapping))

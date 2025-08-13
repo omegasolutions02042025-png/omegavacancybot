@@ -22,7 +22,7 @@ from aiogram.filters import CommandStart
 from kb import main_kb, channels_kb, channel_kb, back_to_channel_menu_kb
 from teleton_client import get_channel_info, leave_channel_listening
 from telethon_bot import (
-    forward_recent_posts, register_handler, list_all_dialogs, monitor_and_cleanup, forward_messages_from_topics
+    forward_recent_posts, register_handler, list_all_dialogs, monitor_and_cleanup, forward_messages_from_topics,register_topic_listener
 )
 from funcs import update_channels_and_restart_handler
 import os
@@ -77,7 +77,7 @@ TOPIC_MAP = {
     (-1002189931727, 22): (-1002658129391, 25),
     (-1002189931727, 29): (-1002658129391, 27),
     (-1002189931727, 18): (-1002658129391, 29),
-    #(-1002494215756, 0): (-1002658129391, 31),
+    
 
 }
 
@@ -265,6 +265,7 @@ async def main():
     channels = [channel.channel_id for channel in channels]
     print(channels)
     await update_channels_and_restart_handler(channels, CHANNELS, register_handler_wrapper)
+    await register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
 
     # Запускаем мониторинг зачёркнутых сообщений
     asyncio.create_task(monitor_and_cleanup(telethon_client, AsyncSessionLocal))
