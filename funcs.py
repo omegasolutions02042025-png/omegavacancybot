@@ -1,5 +1,19 @@
 # --- Обычные функции ---
 
+import inspect
+from collections import namedtuple
+if not hasattr(inspect, "getargspec"):
+    ArgSpec = namedtuple('ArgSpec', ['args', 'varargs', 'keywords', 'defaults'])
+    def getargspec(func):
+        spec = inspect.getfullargspec(func)
+        return ArgSpec(
+            args=spec.args,
+            varargs=spec.varargs,
+            keywords=spec.varkw,
+            defaults=spec.defaults,
+        )
+    inspect.getargspec = getargspec
+
 import re
 
 async def update_channels_and_restart_handler(new_channels, CHANNELS, register_handler):
@@ -46,3 +60,42 @@ def is_russia_only_citizenship(text: str) -> bool:
             if re.search(pattern, citizenship):
                 return True
     return False
+
+
+
+import pymorphy2
+
+def oplata_filter(text: str) -> bool:
+    morph = pymorphy2.MorphAnalyzer()
+    filters_raw = [
+        "акты поквартально", "квартальное актирование",
+        "поквартальная оплата", "актирование",
+        "поквартально", "квартальная оплата", "поквартальная"
+    ]
+
+    # нормализуем фильтры
+    filters_normalized = []
+    for phrase in filters_raw:
+        normal_words = [morph.parse(w)[0].normal_form for w in phrase.lower().split()]
+        filters_normalized.append(" ".join(normal_words))
+
+    # нормализуем текст
+    normal_text_words = [morph.parse(w)[0].normal_form for w in text.lower().split()]
+    normal_text_set = set(normal_text_words)
+
+    # проверяем: все слова фильтра должны входить в текст
+    return any(set(f.split()) <= normal_text_set for f in filters_normalized)
+
+
+# Пример
+examples = [
+    "Нужно актирование объектов по кварталам",       # True
+    "Произвели поквартальную оплату",                 # True
+    "Акты поквартально отправлены",                   # True
+    "Просто ежемесячная оплата",
+    'Поквартальная оплата',
+    'Акты поквартально'                       # False
+]
+
+for e in examples:
+    print(e, "->", oplata_filter(e))
