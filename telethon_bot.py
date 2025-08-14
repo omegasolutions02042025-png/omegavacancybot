@@ -382,7 +382,9 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
         text_orig = event.message.message or ""
         if not text_orig:
             return
-
+        if is_russia_only_citizenship(text):
+                    print('Гражданство не подходит')
+                    return
         text = remove_request_id(text_orig)
         if not text:
             return
