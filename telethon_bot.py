@@ -1,16 +1,3 @@
-import inspect
-from collections import namedtuple
-if not hasattr(inspect, "getargspec"):
-    ArgSpec = namedtuple('ArgSpec', ['args', 'varargs', 'keywords', 'defaults'])
-    def getargspec(func):
-        spec = inspect.getfullargspec(func)
-        return ArgSpec(
-            args=spec.args,
-            varargs=spec.varargs,
-            keywords=spec.varkw,
-            defaults=spec.defaults,
-        )
-    inspect.getargspec = getargspec
 
 import asyncio
 from datetime import datetime, timedelta, timezone
@@ -24,7 +11,7 @@ from db import get_all_channels, add_message_mapping, remove_message_mapping, ge
 from gpt import del_contacts_gpt
 from googlesheets import find_rate_in_sheet_gspread
 from typing import Tuple, Optional
-from funcs import is_russia_only_citizenship, oplata_filter
+from funcs import is_russia_only_citizenship
 
 # --- Telethon функции ---
 
@@ -47,10 +34,6 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
                 
                 if is_russia_only_citizenship(text):
                     print('Гражданство не подходит')
-                    continue
-            
-                if oplata_filter(text):
-                    print('Условия оплаты не подходят')
                     continue
 
                 if has_strikethrough(message):
@@ -137,17 +120,11 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     await asyncio.sleep(5)
                     break  # старые сообщения не нужны
                 text = msg.text
-
-                if not text:
-                    continue
-
                 if is_russia_only_citizenship(text):
                     print('Гражданство не подходит')
                     continue
-                
-                
-                if oplata_filter(text):
-                    print('Условия оплаты не подходят')
+                #text , vac_id = remove_request_id(text=text)
+                if not text:
                     continue
 
                 if has_strikethrough(msg):
@@ -243,9 +220,7 @@ async def register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLoca
         if is_russia_only_citizenship(text):
                     print('Гражданство не подходит')
                     return
-        if oplata_filter(text):
-                    print('Условия оплаты не подходят')
-                    return
+
         # Проверка зачёркнутого текста
         if has_strikethrough(event.message):
             print(f"❌ Сообщение {event.message.id} в канале {event.chat_id} содержит зачёркнутый текст — пропускаем")
@@ -434,9 +409,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
         if is_russia_only_citizenship(text):
                     print('Гражданство не подходит')
                     return
-        if oplata_filter(text):
-                    print('Условия оплаты не подходят')
-                    return
+        
 
         if has_strikethrough(event.message):
             print(f"❌ Сообщение {event.message.id} в канале {event.chat_id} содержит зачёркнутый текст — пропускаем")

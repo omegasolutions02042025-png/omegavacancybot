@@ -1,21 +1,17 @@
 import inspect
 import functools
 from collections import namedtuple
-from telethon.errors import UserAlreadyParticipantError
-
-ArgSpec = namedtuple('ArgSpec', ['args', 'varargs', 'keywords', 'defaults'])
-
-def getargspec(func):
-    """Legacy wrapper for inspect.getfullargspec()."""
-    spec = inspect.getfullargspec(func)
-    return ArgSpec(
-        args=spec.args,
-        varargs=spec.varargs,
-        keywords=spec.varkw,
-        defaults=spec.defaults,
-    )
-
-inspect.getargspec = getargspec
+if not hasattr(inspect, "getargspec"):
+    ArgSpec = namedtuple('ArgSpec', ['args', 'varargs', 'keywords', 'defaults'])
+    def getargspec(func):
+        spec = inspect.getfullargspec(func)
+        return ArgSpec(
+            args=spec.args,
+            varargs=spec.varargs,
+            keywords=spec.varkw,
+            defaults=spec.defaults,
+        )
+    inspect.getargspec = getargspec
 
 import db
 from telethon import TelegramClient

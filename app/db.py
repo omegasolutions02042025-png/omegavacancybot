@@ -1,3 +1,17 @@
+import inspect
+from collections import namedtuple
+if not hasattr(inspect, "getargspec"):
+    ArgSpec = namedtuple('ArgSpec', ['args', 'varargs', 'keywords', 'defaults'])
+    def getargspec(func):
+        spec = inspect.getfullargspec(func)
+        return ArgSpec(
+            args=spec.args,
+            varargs=spec.varargs,
+            keywords=spec.varkw,
+            defaults=spec.defaults,
+        )
+    inspect.getargspec = getargspec
+
 i
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
