@@ -111,7 +111,7 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
 
 
 
-async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
+async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=14):
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
     print(f"[i] Берем сообщения с {cutoff_date}")
 
