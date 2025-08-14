@@ -8,7 +8,7 @@ import random
 from telethon import TelegramClient, events
 from telethon.tl.types import Channel, Chat, User
 from db import get_all_channels, add_message_mapping, remove_message_mapping, get_all_message_mappings, get_next_sequence_number
-from gpt import del_contacts_gpt
+from gpt import del_contacts_gpt, process_vacancy
 from googlesheets import find_rate_in_sheet_gspread
 from typing import Tuple, Optional
 from funcs import is_russia_only_citizenship, oplata_filter, check_project_duration
@@ -47,7 +47,7 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
                     asyncio.sleep(3)
                     continue
                 try:
-                    text_gpt = await del_contacts_gpt(text)
+                    text_gpt = await process_vacancy(text)
                     #print(text)
                 except Exception as e:
                     print(e)
@@ -149,7 +149,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     print(f"❌ Сообщение {msg.id} содержит зачёркнутый текст — пропускаем")
                     continue
                 try:
-                    text_gpt = await del_contacts_gpt(text)
+                    text_gpt = await process_vacancy(text)
                     #print(text)
                 except Exception as e:
                     print(e)
@@ -251,7 +251,7 @@ async def register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLoca
         entity = await telethon_client.get_entity(int(GROUP_ID))
         
         try:
-            text_gpt = await del_contacts_gpt(text)
+            text_gpt = await process_vacancy(text)
         except Exception as e:
             print(e)
             return
@@ -452,7 +452,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
             return
 
         try:
-            text_gpt = await del_contacts_gpt(text)
+            text_gpt = await process_vacancy(text)
         except Exception as e:
             print(e)
             return
