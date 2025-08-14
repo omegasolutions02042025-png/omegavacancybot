@@ -126,7 +126,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                 print(text)
                 if oplata_filter(text):
                     print('Оплата не подходит')
-                    return
+                    continue
 
 
                 if not text:
