@@ -11,7 +11,7 @@ from db import get_all_channels, add_message_mapping, remove_message_mapping, ge
 from gpt import del_contacts_gpt
 from googlesheets import find_rate_in_sheet_gspread
 from typing import Tuple, Optional
-from funcs import is_russia_only_citizenship, oplata_filter
+from funcs import is_russia_only_citizenship, oplata_filter, check_project_duration
 
 # --- Telethon функции ---
 
@@ -41,6 +41,10 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
                     continue
                 if oplata_filter(text):
                     print('Оплата не подходит')
+                    continue
+                if check_project_duration(text):
+                    print('Маленькая продолжителность проекта')
+                    asyncio.sleep(3)
                     continue
                 try:
                     text_gpt = await del_contacts_gpt(text)
@@ -122,6 +126,9 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     await asyncio.sleep(5)
                     break  # старые сообщения не нужны
                 text = msg.text
+
+                if not text:
+                    continue
                 if is_russia_only_citizenship(text):
                     print('Гражданство не подходит')
                     continue
@@ -129,10 +136,12 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                 if oplata_filter(text):
                     print('Оплата не подходит')
                     continue
-
-
-                if not text:
+                if check_project_duration(text):
+                    print('Маленькая продолжителность проекта')
+                    asyncio.sleep(3)
                     continue
+ 
+               
 
                 if has_strikethrough(msg):
                     print(f"❌ Сообщение {msg.id} содержит зачёркнутый текст — пропускаем")
