@@ -31,8 +31,8 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
                 if not text_orig:
                     continue
                 
-                text = remove_request_id(text_orig)
-                if not text:
+                if is_russia_only_citizenship(text):
+                    print('Гражданство не подходит')
                     continue
 
                 if has_strikethrough(message):
@@ -41,27 +41,41 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
                 
                 try:
                     text_gpt = await del_contacts_gpt(text)
+                    #print(text)
                 except Exception as e:
                     print(e)
                     continue
                 if text_gpt == None:
                     continue
                 else:
+
+
                     try:
-                        bd_id = await generate_bd_id()
-                        text_gpt = json.loads(text_gpt)
                         text = text_gpt.get("text")
+                                    
+                        vac_id = text_gpt.get('vacancy_id')
+                        print(vac_id)
                         rate = text_gpt.get("rate")
+                        vacancy = text_gpt.get('vacancy_title')
+                                    
+                        deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
+                        deadline_time = text_gpt.get("deadline_time") 
+                                    
+                                    
+
                         if rate == None:
-                            text_cleaned = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
-                        if rate == 0:
-                            text_cleaned = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                                        
+                            text_cleaned = f"🆔{vac_id}\n\n🆔{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
+                                        
+
+                        if int(rate) == 0:
+                            text_cleaned = f"🆔{vac_id}\n\n🆔{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
                         else:
                             rate = int(rate)
                             rate = round(rate /5) * 5
                             print(rate)
                             if rate == None:
-                                continue
+                                return
                             else:
                                 rate = find_rate_in_sheet_gspread(rate)
                                 rate = re.sub(r'\s+', '', rate)
@@ -71,14 +85,14 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
                                 print(rate)
 
                                 if rate == None:
-                                    continue
+                                    return
                                 else:
+                                                
+                                    text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
                                     
-                                    text_cleaned = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
-                                
                     except Exception as e:
-                        print(e)
-                        continue
+                            print(e)
+                            continue
 
                 await telethon_client.send_message(entity, text_cleaned)
                 print(f"Переслал из {source}: {message.id}")
@@ -202,9 +216,9 @@ async def register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLoca
         if not text_orig:
             return
 
-        text = remove_request_id(text_orig)
-        if not text:
-            return
+        if is_russia_only_citizenship(text):
+                    print('Гражданство не подходит')
+                    return
 
         # Проверка зачёркнутого текста
         if has_strikethrough(event.message):
@@ -222,47 +236,55 @@ async def register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLoca
             return
         else:
             try:
-                bd_id = await generate_bd_id()
-                
-                text = text_gpt.get("text")
-                rate = text_gpt.get("rate")
-                vac_id = text_gpt.get('vacancy_id')
-                deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
-                deadline_time = text_gpt.get("deadline_time") 
-                if rate == None:
-                    text = f"🆔{bd_id+vac_id}\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n{text}"
-
-                if rate == 0:
-                    text = f"🆔{bd_id}\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n{text}"
-                else:
-                    rate = int(rate)
-                    rate = round(rate /5) * 5
-                    print(rate)
-                    if rate == None:
-                        return
-                    
-                    else:
-                        rate = find_rate_in_sheet_gspread(rate)
-                        rate = re.sub(r'\s+', '', rate)
-                        rounded = math.ceil(int(rate) / 100) * 100  
-
-                        rate = f"{rounded:,}".replace(",", " ")
-                        print(rate)
+                        
+                        
+                        #text_gpt = json.loads(text_gpt)
+                        text = text_gpt.get("text")
+                        
+                        vac_id = text_gpt.get('vacancy_id')
+                        print(vac_id)
+                        rate = text_gpt.get("rate")
+                        vacancy = text_gpt.get('vacancy_title')
+                        
+                        deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
+                        deadline_time = text_gpt.get("deadline_time") 
+                        
+                         
 
                         if rate == None:
-                            return
-                        
+                            
+                            text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
+                            
+
+                        if int(rate) == 0:
+                           text_cleaned = f"🆔{vac_id}\n\n🆔{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
                         else:
+                            rate = int(rate)
+                            rate = round(rate /5) * 5
+                            print(rate)
+                            if rate == None:
+                                return
+                            else:
+                                rate = find_rate_in_sheet_gspread(rate)
+                                rate = re.sub(r'\s+', '', rate)
+                                rounded = math.ceil(int(rate) / 100) * 100  
+
+                                rate = f"{rounded:,}".replace(",", " ")
+                                print(rate)
+
+                            if rate == None:
+                                return
+                            else:
                                     
-                            text = f"🆔{bd_id}\nМесячная ставка(на руки) до: {rate} RUB\n{text}"
+                                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
 
             except Exception as e:
                 print(e)
                 return
         try:
-            forwarded_msg = await telethon_client.send_message(entity=entity, message=text, parse_mode='html')
+            forwarded_msg = await telethon_client.send_message(entity=entity, message=text_cleaned, parse_mode='html')
         except Exception:
-            forwarded_msg = await telethon_client.send_message(entity=entity, message=text)
+            forwarded_msg = await telethon_client.send_message(entity=entity, message=text_cleaned)
 
         # Сохраняем сопоставление
         async with AsyncSessionLocal() as session:
@@ -379,15 +401,14 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
 
         dst_chat_id, dst_topic_id = TOPIC_MAP[key]
 
-        text_orig = event.message.message or ""
-        if not text_orig:
+        text = event.message.message or ""
+        if not text:
             return
+        
         if is_russia_only_citizenship(text):
                     print('Гражданство не подходит')
                     return
-        text = remove_request_id(text_orig)
-        if not text:
-            return
+        
 
         if has_strikethrough(event.message):
             print(f"❌ Сообщение {event.message.id} в канале {event.chat_id} содержит зачёркнутый текст — пропускаем")
@@ -416,11 +437,11 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
 
             if rate == None:
                             
-                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+                text_cleaned = f"🆔{vac_id}\n\n🆔{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
                             
 
             if int(rate) == 0:
-                text_cleaned = f"🆔{vac_id}\n\n🆔{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+                text_cleaned = f"🆔{vac_id}\n\n🆔{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
             else:
                 rate = int(rate)
                 rate = round(rate /5) * 5
@@ -448,13 +469,13 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
         try:
             forwarded_msg = await telethon_client.send_message(
                 dst_chat_id,
-                message=text,
+                message=text_cleaned,
                 parse_mode='html'
             )
         except Exception:
             forwarded_msg = await telethon_client.send_message(
                 dst_chat_id,
-                message=text
+                message=text_cleaned
             )
 
         # Сохраняем сопоставление
