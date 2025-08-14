@@ -39,7 +39,9 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
                 if has_strikethrough(message):
                     print(f"❌ Сообщение {message.id} в канале {entity} содержит зачёркнутый текст — пропускаем")
                     continue
-                
+                if oplata_filter(text):
+                    print('Оплата не подходит')
+                    continue
                 try:
                     text_gpt = await del_contacts_gpt(text)
                     #print(text)
@@ -230,7 +232,9 @@ async def register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLoca
         if has_strikethrough(event.message):
             print(f"❌ Сообщение {event.message.id} в канале {event.chat_id} содержит зачёркнутый текст — пропускаем")
             return
-
+        if oplata_filter(text):
+                    print('Оплата не подходит')
+                    return
         entity = await telethon_client.get_entity(int(GROUP_ID))
         
         try:
@@ -419,7 +423,9 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
         if has_strikethrough(event.message):
             print(f"❌ Сообщение {event.message.id} в канале {event.chat_id} содержит зачёркнутый текст — пропускаем")
             return
-
+        if oplata_filter(text):
+                    print('Оплата не подходит')
+                    return
         try:
             text_gpt = await del_contacts_gpt(text)
         except Exception as e:

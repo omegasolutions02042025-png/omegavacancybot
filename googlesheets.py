@@ -18,6 +18,7 @@ def find_rate_in_sheet_gspread(search_value_usd: int) -> Optional[str]:
     """
     Ищет значение в столбце J (Ставка из вакансии, USD) и возвращает
     соответствующее значение из столбца B (Верхнее значение зарплаты вилки, RUB).
+    Если точное совпадение не найдено, ищет ближайшее число.
 
     Args:
         search_value_usd (int): Искомое число в столбце J.
@@ -44,6 +45,9 @@ def find_rate_in_sheet_gspread(search_value_usd: int) -> Optional[str]:
         # Итерируемся по значениям, чтобы найти совпадение как по числу
         # Пропускаем первую строку (часто содержит заголовки)
         target_value = int(search_value_usd)
+        closest_value = None
+        min_difference = float('inf')
+        
         for row_index, value in enumerate(j_column_values, start=1):
             if row_index == 1:
                 continue
@@ -53,14 +57,29 @@ def find_rate_in_sheet_gspread(search_value_usd: int) -> Optional[str]:
                 cell_number = int(float(cell_text)) if ('.' in cell_text) else int(cell_text)
             except ValueError:
                 continue
+                
+            # Если найдено точное совпадение - сразу возвращаем
             if cell_number == target_value:
                 # Получаем всю строку, в которой найдено совпадение
                 row_values = worksheet.row_values(row_index)
                 # Столбец B - это второй элемент (индекс 1)
                 if len(row_values) > 1 and row_values[1] != "":
                     return row_values[1]
+            
+            # Если точное совпадение не найдено, ищем ближайшее
+            difference = abs(cell_number - target_value)
+            if difference < min_difference:
+                min_difference = difference
+                closest_value = (row_index, cell_number)
+        
+        # Если точное совпадение не найдено, но есть ближайшее число
+        if closest_value:
+            row_index, cell_number = closest_value
+            row_values = worksheet.row_values(row_index)
+            if len(row_values) > 1 and row_values[1] != "":
+                return row_values[1]
 
-        # Если цикл завершился и совпадение не найдено
+        # Если ничего не найдено
         return None
 
     except gspread.exceptions.APIError as e:
