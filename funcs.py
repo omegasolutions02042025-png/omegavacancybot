@@ -25,41 +25,69 @@ async def update_channels_and_restart_handler(new_channels, CHANNELS, register_h
 
 
 def is_russia_only_citizenship(text: str) -> bool:
-    """
-    Проверяет гражданство строго после слова 'Гражданство'.
-    ОТСЕКАЕТ, если указано только Россия/РФ без упоминания РБ.
-    ПРОХОДИТ, если есть РБ вместе с РФ.
-    """
-    # Расширенные шаблоны для отсечения РФ
-    russia_only_patterns = [
-        r"\bрф\b",
-        r"\bроссия\b",
-        r"только\s*рф",
-        r"только\s*россия",
-        r"только\s*гражданство\s*рф",
-        r"паспорт\s*рф\s*обязателен",
-        r"только\s*россияне",
-        r"только\s*граждане\s*рф",
-        r"налоговое\s*резидентство\s*рф\s*обязательно",
-        r"из\s*рф",
-        r"жители\s*рф",
-        r"работа\s*из\s*любой\s*точки\s*рф",
-        r"лок:\s*рф",
-        r"оформление\s*в\s*рф"
-    ]
+	"""
+	Проверяет:
+	- Гражданство: отсечь, если строго РФ/Россия без дружественных/разрешающих формулировок
+	- Локация специалиста: отсечь, если строго РФ/Россия без дружественных/разрешающих формулировок
+	"""
+	text_lower = text.lower()
 
-    # Ищем строку после слова "Гражданство"
-    match = re.search(r"Гражданство\s*[:\-]?\s*(.+)", text, flags=re.IGNORECASE)
-    if match:
-        citizenship = match.group(1).lower()
-        # Если упоминается Беларусь — НЕ отсекать
-        if "рб" in citizenship or "беларусь" in citizenship:
-            return False
-        # Проверяем все шаблоны РФ
-        for pattern in russia_only_patterns:
-            if re.search(pattern, citizenship):
-                return True
-    return False
+	# Ключевые слова
+	friendly_keywords = [
+		"рб", "беларусь", "казахстан", "армения", "киргизия", "кыргызстан",
+		"узбекистан", "таджикистан", "азербайджан", "сербия", "турция", "снг", "еаэс",
+		"рф/рб", "рф и рб", "рф либо рб", "рф, рб"
+	]
+	broad_allow_keywords = [
+		"любой", "любая", "без ограничений", "any", "worldwide", "global",
+		"любая локация", "любой регион", "без привязки"
+	]
+	strict_russia_patterns = [
+		r"только\s*(?:рф|россия)",
+		r"только\s*гражданство\s*рф",
+		r"паспорт\s*рф\s*обязателен",
+		r"налоговое\s*резидентство\s*рф\s*обязательно",
+		r"жители\s*рф",
+		r"из\s*рф",
+		r"лок:\s*рф",
+		r"оформление\s*в\s*рф"
+	]
+
+	def contains_any(segment: str, keywords: list[str]) -> bool:
+		return any(kw in segment for kw in keywords)
+
+	def has_strict_russia(segment: str) -> bool:
+		# Явные строгость/обязательность
+		for p in strict_russia_patterns:
+			if re.search(p, segment):
+				return True
+		# Просто упоминание РФ/Россия БЕЗ дружественных/разрешающих формулировок — считаем строгим
+		if re.search(r"\bрф\b|\bроссия\b", segment):
+			if not contains_any(segment, friendly_keywords) and not contains_any(segment, broad_allow_keywords):
+				return True
+		return False
+
+	# 1) Гражданство
+	citizenship_match = re.search(r"гражданство\s*[:\-]?\s*(.+)", text_lower, flags=re.IGNORECASE)
+	if citizenship_match:
+		segment = citizenship_match.group(1)
+		# Если явно разрешающие/дружественные — не отсекаем
+		if contains_any(segment, friendly_keywords) or contains_any(segment, broad_allow_keywords):
+			return False
+		# Если строгая РФ — отсекаем
+		if has_strict_russia(segment):
+			return True
+
+	# 2) Локация специалиста
+	location_match = re.search(r"локация\s*специалиста\s*[:\-]?\s*(.+)", text_lower, flags=re.IGNORECASE)
+	if location_match:
+		segment = location_match.group(1)
+		if contains_any(segment, friendly_keywords) or contains_any(segment, broad_allow_keywords):
+			return False
+		if has_strict_russia(segment):
+			return True
+
+	return False
 
 
 
