@@ -59,7 +59,9 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
 
                     try:
                         text = text_gpt.get("text")
-                                    
+                        if text == None:
+                           print('Вакансия отсеяна')
+                           continue            
                         vac_id = text_gpt.get('vacancy_id')
                         print(vac_id)
                         rate = text_gpt.get("rate")
@@ -154,20 +156,22 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=1):
                     continue
                 if text_gpt == None:
                     continue
+
                 else:
                     try:
                         
                         
                         #text_gpt = json.loads(text_gpt)
                         text = text_gpt.get("text")
+                        if text == None:
+                           print('Вакансия отсеяна')
+                           continue
                         
                         vac_id = text_gpt.get('vacancy_id')
                         print(vac_id)
                         rate = text_gpt.get("rate")
                         vacancy = text_gpt.get('vacancy_title')
-                        
-                        deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
-                        deadline_time = text_gpt.get("deadline_time") 
+                         
                         
                          
 
@@ -259,7 +263,9 @@ async def register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLoca
                         
                         #text_gpt = json.loads(text_gpt)
                         text = text_gpt.get("text")
-                        
+                        if text == None:
+                           print('Вакансия отсеяна')
+                           return
                         vac_id = text_gpt.get('vacancy_id')
                         print(vac_id)
                         rate = text_gpt.get("rate")
@@ -456,6 +462,9 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
 
         try:
             text = text_gpt.get("text")
+            if text == None:
+                print('Вакансия отсеяна')
+                return
             vac_id = text_gpt.get('vacancy_id')
             print(vac_id)
             rate = text_gpt.get("rate")
