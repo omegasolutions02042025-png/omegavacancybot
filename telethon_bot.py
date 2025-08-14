@@ -403,76 +403,68 @@ def remove_request_id(text: str) -> Tuple[str, Optional[str]]:
 
 
 async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal):
-    @telethon_client.on(events.NewMessage(chats=list({chat_id for chat_id, _ in TOPIC_MAP.keys()})))
-    async def new_topic_message(event):
-        key = (event.chat_id, getattr(event.message, 'message_thread_id', 0))
-        if key not in TOPIC_MAP:
-            return  # этот топик не отслеживаем
+    print('Сканирование топиков включено')
 
+    # Берём все уникальные чаты из TOPIC_MAP для подписки
+    chats_to_watch = list({chat_id for chat_id, _ in TOPIC_MAP.keys()})
+
+    @telethon_client.on(events.NewMessage(chats=chats_to_watch))
+    async def new_topic_message(event):
+        # На старом Telethon топики могут не поддерживаться
+        # Ищем все ключи для этого чата
+        key_candidates = [k for k in TOPIC_MAP if k[0] == event.chat_id]
+        if not key_candidates:
+            return  # Чат не отслеживаем
+
+        # Берём первый ключ (единственный или любой)
+        key = key_candidates[0]
         dst_chat_id, dst_topic_id = TOPIC_MAP[key]
 
-        text = event.message.message or ""
+        text = getattr(event.message, 'message', '') or ""
         if not text:
             return
-        
+
         if is_russia_only_citizenship(text):
-                    print('Гражданство не подходит')
-                    return
-        
+            print('Гражданство не подходит')
+            return
 
         if has_strikethrough(event.message):
             print(f"❌ Сообщение {event.message.id} в канале {event.chat_id} содержит зачёркнутый текст — пропускаем")
             return
+
         if oplata_filter(text):
-                    print('Оплата не подходит')
-                    return
+            print('Оплата не подходит')
+            return
+
         try:
             text_gpt = await del_contacts_gpt(text)
         except Exception as e:
             print(e)
             return
+
         if text_gpt is None:
             return
 
         try:
             text = text_gpt.get("text")
-                        
             vac_id = text_gpt.get('vacancy_id')
             print(vac_id)
             rate = text_gpt.get("rate")
             vacancy = text_gpt.get('vacancy_title')
-                        
-            deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
-            deadline_time = text_gpt.get("deadline_time") 
-                        
-                         
+            deadline_date = text_gpt.get("deadline_date")
+            deadline_time = text_gpt.get("deadline_time")
 
-            if rate == None:
-                            
-                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
-                            
-
-            if int(rate) == 0:
+            # Формируем текст для пересылки
+            if not rate or int(rate) == 0:
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
             else:
                 rate = int(rate)
-                rate = round(rate /5) * 5
-                print(rate)
-                if rate == None:
-                    return
-                else:
-                    rate = find_rate_in_sheet_gspread(rate)
-                    rate = re.sub(r'\s+', '', rate)
-                    rounded = math.ceil(int(rate) / 100) * 100  
-
-                    rate = f"{rounded:,}".replace(",", " ")
-                    print(rate)
-
-                    if rate == None:
-                        return
-                    else:
-                                    
-                        text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+                rate = round(rate / 5) * 5
+                rate = find_rate_in_sheet_gspread(rate)
+                rate = re.sub(r'\s+', '', rate)
+                rounded = math.ceil(int(rate) / 100) * 100
+                rate = f"{rounded:,}".replace(",", " ")
+                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
 
         except Exception as e:
             print(e)
@@ -490,7 +482,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
                 message=text_cleaned
             )
 
-        # Сохраняем сопоставление
+        # Сохраняем сопоставление сообщений
         async with AsyncSessionLocal() as session:
             await add_message_mapping(
                 session,
