@@ -17,8 +17,8 @@ from telethon.errors import FloodWaitError
 
 VACANCY_ID_REGEX = re.compile(r"🆔\s*([A-Z]{2}-\d+|\d+)", re.UNICODE)
 
-
-
+#
+#
 # --- Telethon функции ---
 
 async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
