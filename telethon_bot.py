@@ -444,9 +444,9 @@ async def mark_inactive_and_schedule_delete(client, mapping, vacancy_id):
 
         
         if vacancy_id:
-            new_text += f"\n\n{vacancy_id} — вакансия неактивна"
+            new_text = f"\n\n{vacancy_id} — вакансия неактивна"
         else:
-            new_text += "\n\nВакансия неактивна"
+            new_text = "Вакансия неактивна"
 
         await client.edit_message(mapping.dst_chat_id, mapping.dst_msg_id, new_text)
 
