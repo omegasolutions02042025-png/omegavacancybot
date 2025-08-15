@@ -392,7 +392,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
                             vacancy_id = match.group(0)
 
                     # Если сообщение удалено или зачёркнуто
-                    if msg is None or has_strikethrough(msg):
+                    if has_strikethrough(msg):
                         await mark_inactive_and_schedule_delete(
                             telethon_client, mapping, vacancy_id
                         )
