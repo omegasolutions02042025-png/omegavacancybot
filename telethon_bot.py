@@ -21,7 +21,7 @@ VACANCY_ID_REGEX = re.compile(r"🆔\s*([A-Z]{2}-\d+|\d+)", re.UNICODE)
 #
 # --- Telethon функции ---
 
-async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
+async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLocal):
     # aware-дата в UTC
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=14)
 
@@ -109,15 +109,25 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
                             print(e)
                             continue
 
-                await telethon_client.send_message(entity, text_cleaned)
+                forwarded_msg = await telethon_client.send_message(entity, text_cleaned)
                 print(f"Переслал из {source}: {message.id}")
+                async with AsyncSessionLocal() as session:
+                    await add_message_mapping(
+                        session,
+                        src_chat_id=source,
+                        src_msg_id=message.id,
+                        dst_chat_id=entity,
+                        dst_msg_id=forwarded_msg.id,
+                        deadline_date=deadline_date,
+                        deadline_time=deadline_time
+                    )
                 await asyncio.sleep(0.5)
             except Exception as e:
                 print(f"Ошибка при пересылке из {source}: {e}")
 
 
 
-async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=14):
+async def forward_messages_from_topics(telethon_client, TOPIC_MAP,AsyncSessionLocal, days=14):
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
     print(f"[i] Берем сообщения с {cutoff_date}")
 
@@ -177,6 +187,8 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=14):
                         print(vac_id)
                         rate = text_gpt.get("rate")
                         vacancy = text_gpt.get('vacancy_title')
+                        deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
+                        deadline_time = text_gpt.get("deadline_time") 
                          
                         
                          
@@ -212,13 +224,22 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, days=14):
                         print(e)
                         continue
                     try:
-                        await telethon_client.send_message(
+                        forwarded_msg = await telethon_client.send_message(
                                     dst_chat,
                                     text_cleaned,
                                     file=msg.media,
                                     reply_to=dst_topic_id
                                 )
-                        
+                        async with AsyncSessionLocal() as session:
+                            await add_message_mapping(
+                                session,
+                                src_chat_id=src_chat,
+                                src_msg_id=msg.id,
+                                dst_chat_id=dst_chat,
+                                dst_msg_id=forwarded_msg.id,
+                                deadline_date=deadline_date,
+                                deadline_time=deadline_time
+                            )
                     except Exception as e:
                         print('Ошибка при пересылке', e)
                         continue

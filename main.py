@@ -198,13 +198,13 @@ async def back_to_сhannel_menu(callback: CallbackQuery, state: FSMContext, bot 
 @dp.callback_query(F.data == 'scan_channels')
 async def scan_channels(calback : CallbackQuery):
     await calback.message.answer('Начинаю сканирование...')
-    await forward_recent_posts(telethon_client, CHANNELS, GROUP_ID)
+    await forward_recent_posts(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLocal)
 
 
 @dp.callback_query(F.data == 'scan_redlab')
 async def scan_redlab(calback : CallbackQuery):
     await calback.message.answer('Начинаю сканирование...')
-    await forward_messages_from_topics(telethon_client, TOPIC_MAP, days=14)
+    await forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=14)
 
 
 
