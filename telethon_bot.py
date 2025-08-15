@@ -99,7 +99,7 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID, AsyncSession
                                 rate = f"{rounded:,}".replace(",", " ")
                                 print(rate)
 
-                                if rate == None:
+                                if rate is None or vacancy is None:
                                     return
                                 else:
                                                 
@@ -214,7 +214,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP,AsyncSessionLo
                                 rate = f"{rounded:,}".replace(",", " ")
                                 print(rate)
 
-                            if rate == None:
+                            if rate is None or vacancy is None:
                                 continue
                             else:
                                     
@@ -324,7 +324,7 @@ async def register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLoca
                                 rate = f"{rounded:,}".replace(",", " ")
                                 print(rate)
 
-                            if rate == None:
+                            if rate is None or vacancy is None:
                                 return
                             else:
                                     
@@ -554,7 +554,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
                 rate = int(rate)
                 rate = round(rate / 5) * 5
                 rate = find_rate_in_sheet_gspread(rate)
-                if rate or vacancy == None:
+                if rate is None or vacancy is None:
                     return
                 rate = re.sub(r'\s+', '', rate)
                 rounded = math.ceil(int(rate) / 100) * 100
