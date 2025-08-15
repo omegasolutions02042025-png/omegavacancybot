@@ -13,6 +13,12 @@ from googlesheets import find_rate_in_sheet_gspread
 from typing import Tuple, Optional
 from funcs import is_russia_only_citizenship, oplata_filter, check_project_duration
 
+from telethon.errors import FloodWaitError
+
+VACANCY_ID_REGEX = re.compile(r"🆔\s*([A-Z]{2}-\d+|\d+)", re.UNICODE)
+
+
+
 # --- Telethon функции ---
 
 async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID):
@@ -346,56 +352,104 @@ async def list_all_dialogs(telethon_client, PHONE_NUMBER):
 
 from datetime import datetime, timezone
 
+
+
 async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
     while True:
         async with AsyncSessionLocal() as session:
             mappings = await get_all_message_mappings(session)
 
-            to_delete = []
             for mapping in mappings:
                 try:
                     msg = await telethon_client.get_messages(mapping.src_chat_id, ids=mapping.src_msg_id)
-                    
-                    # Если сообщение удалено или есть зачеркивание
+                    if not msg:
+                        continue
+
+                    vacancy_id = None
+                    if msg.message:
+                        match = VACANCY_ID_REGEX.search(msg.message)
+                        if match:
+                            vacancy_id = match.group(0)
+
+                    # Если сообщение удалено или зачёркнуто
                     if msg is None or has_strikethrough(msg):
-                        print(f"Удаляем пересланное сообщение {mapping.dst_msg_id} из {mapping.dst_chat_id}")
-                        await telethon_client.delete_messages(mapping.dst_chat_id, message_ids=mapping.dst_msg_id)
-                        to_delete.append(mapping)
+                        await mark_inactive_and_schedule_delete(
+                            telethon_client, mapping, vacancy_id
+                        )
+                        await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
                         continue
 
                     # Проверка на слово "стоп"
                     if msg.message and "стоп" in msg.message.lower():
-                        print(f"Удаляем по слову 'стоп' сообщение {mapping.dst_msg_id} из {mapping.dst_chat_id}")
-                        await telethon_client.delete_messages(mapping.dst_chat_id, message_ids=mapping.dst_msg_id)
-                        to_delete.append(mapping)
+                        await mark_inactive_and_schedule_delete(
+                            telethon_client, mapping, vacancy_id
+                        )
+                        await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
                         continue
 
                     # Проверка дедлайна
                     if mapping.deadline_date:
-                        # Формируем datetime объекта дедлайна
                         if mapping.deadline_time:
-                            deadline_dt = datetime.strptime(f"{mapping.deadline_date} {mapping.deadline_time}", "%d.%m.%Y %H:%M")
+                            deadline_dt = datetime.strptime(
+                                f"{mapping.deadline_date} {mapping.deadline_time}", "%d.%m.%Y %H:%M"
+                            )
                         else:
-                            # Если время не указано, ставим конец дня
-                            deadline_dt = datetime.strptime(mapping.deadline_date, "%d.%m.%Y").replace(hour=23, minute=59)
+                            deadline_dt = datetime.strptime(
+                                mapping.deadline_date, "%d.%m.%Y"
+                            ).replace(hour=23, minute=59)
 
-                        # Сравниваем с текущим временем UTC
                         now_utc = datetime.now(timezone.utc)
                         if deadline_dt.replace(tzinfo=timezone.utc) <= now_utc:
-                            print(f"Удаляем сообщение по дедлайну {mapping.dst_msg_id} из {mapping.dst_chat_id}")
-                            await telethon_client.delete_messages(mapping.dst_chat_id, message_ids=mapping.dst_msg_id)
-                            to_delete.append(mapping)
+                            await mark_inactive_and_schedule_delete(
+                                telethon_client, mapping, vacancy_id
+                            )
+                            await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
                             continue
 
+                except FloodWaitError as e:
+                    print(f"⚠ Flood control: ждём {e.seconds} сек.")
+                    await asyncio.sleep(e.seconds)
                 except Exception as e:
-                    print(f"Ошибка проверки сообщения {mapping.src_msg_id} в {mapping.src_chat_id}: {e}")
-
-            # Удаляем записи из БД
-            for mapping in to_delete:
-                await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
+                    print(f"Ошибка проверки {mapping.src_msg_id} в {mapping.src_chat_id}: {e}")
 
         await asyncio.sleep(60)  # проверяем каждую минуту
+
+
+async def mark_inactive_and_schedule_delete(client, mapping, vacancy_id):
+    try:
+        msg = await client.get_messages(mapping.dst_chat_id, ids=mapping.dst_msg_id)
+        if not msg:
+            return
+
+        new_text = msg.message
+        if vacancy_id:
+            new_text += f"\n\n{vacancy_id} — вакансия неактивна"
+        else:
+            new_text += "\n\nВакансия неактивна"
+
+        await client.edit_message(mapping.dst_chat_id, mapping.dst_msg_id, new_text)
+
+        # Закрепляем
+        await client.pin_message(mapping.dst_chat_id, mapping.dst_msg_id, notify=False)
+        print(f"📌 Закреплено сообщение {mapping.dst_msg_id} в {mapping.dst_chat_id}")
+
+        # Ждём 24 часа
+        await asyncio.sleep(24 * 60 * 60)
+
+        # Открепляем и удаляем
+        await client.unpin_message(mapping.dst_chat_id, mapping.dst_msg_id)
+        await client.delete_messages(mapping.dst_chat_id, mapping.dst_msg_id)
+        print(f"🗑 Удалено сообщение {mapping.dst_msg_id} в {mapping.dst_chat_id}")
+
+    except FloodWaitError as e:
+        print(f"⚠ Flood control: ждём {e.seconds} сек.")
+        await asyncio.sleep(e.seconds)
+        await mark_inactive_and_schedule_delete(client, mapping, vacancy_id)
+    except Exception as e:
+        print(f"Ошибка при изменении/удалении {mapping.dst_msg_id}: {e}")
   # проверяем каждую минуту
+  # проверяем каждую минуту
+
 
 
 async def generate_bd_id() -> str:
