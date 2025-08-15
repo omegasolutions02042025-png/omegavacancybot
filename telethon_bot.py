@@ -442,7 +442,7 @@ async def mark_inactive_and_schedule_delete(client, mapping, vacancy_id):
         if not msg:
             return
 
-        new_text = msg.message
+        
         if vacancy_id:
             new_text += f"\n\n{vacancy_id} — вакансия неактивна"
         else:
