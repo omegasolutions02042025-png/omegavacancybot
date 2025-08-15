@@ -383,8 +383,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
             for mapping in mappings:
                 try:
                     msg = await telethon_client.get_messages(mapping.src_chat_id, ids=mapping.src_msg_id)
-                    if not msg:
-                        continue
+                    
 
                     vacancy_id = None
                     if msg.message:
