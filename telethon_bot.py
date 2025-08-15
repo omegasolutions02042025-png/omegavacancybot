@@ -554,6 +554,8 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
                 rate = int(rate)
                 rate = round(rate / 5) * 5
                 rate = find_rate_in_sheet_gspread(rate)
+                if rate or vacancy == None:
+                    return
                 rate = re.sub(r'\s+', '', rate)
                 rounded = math.ceil(int(rate) / 100) * 100
                 rate = f"{rounded:,}".replace(",", " ")
