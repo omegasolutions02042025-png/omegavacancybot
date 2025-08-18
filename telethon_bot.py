@@ -159,7 +159,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                 
                 if check_project_duration(text):
                     print('Маленькая продолжительность проекта')
-                    asyncio.sleep(3)
+                    
                     continue
 
                 if has_strikethrough(msg):
@@ -172,7 +172,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                     print(e)
                     continue
 
-                if text_gpt == None:
+                if text_gpt == None or text_gpt == 'None':
                     continue
 
                 try:
@@ -183,13 +183,18 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                     
                     vac_id = text_gpt.get('vacancy_id')
                     print(vac_id)
+                    print(type(vac_id))
                     rate = text_gpt.get("rate")
                     vacancy = text_gpt.get('vacancy_title')
                     deadline_date = text_gpt.get("deadline_date")
                     deadline_time = text_gpt.get("deadline_time")
+                    if vacancy is None or vacancy == 'None':
+                        print('нет вакансии')
+                        continue
                      
+
                     # Вакансия отсекается, если нет ID
-                    if vac_id is None:
+                    if vac_id is None  or vac_id == 'None':
                         print('Вакансия отсеяна, нет ID')
                         continue
 
@@ -207,7 +212,8 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         rate = f"{rounded:,}".replace(",", " ")
                         print(rate)
 
-                        if rate is None or vacancy is None:
+                        if rate is None or rate == 'None' or vacancy is None or vacancy == 'None':
+                            print('нет вакансии')
                             continue
                         
                         text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
@@ -540,20 +546,25 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
             print(e)
             return
 
-        if text_gpt is None:
+        if text_gpt is None or text_gpt == 'None':
             return
 
         try:
             text = text_gpt.get("text")
-            if text == None:
+            if text == None or text == 'None':
                 print('Вакансия отсеяна')
                 return
             vac_id = text_gpt.get('vacancy_id')
             print(vac_id)
             rate = text_gpt.get("rate")
             vacancy = text_gpt.get('vacancy_title')
-            if vacancy is None:
+            if vacancy is None or vacancy == 'None':
+                print('нет вакансии')
                 return
+            if vac_id is None or vac_id  == 'None':
+                print('нет айди')
+                return
+
             deadline_date = text_gpt.get("deadline_date")
             deadline_time = text_gpt.get("deadline_time")
 
