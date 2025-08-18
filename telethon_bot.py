@@ -129,7 +129,7 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID, AsyncSession
 
 
 
-async def forward_messages_from_topics(telethon_client, TOPIC_MAP,AsyncSessionLocal, days=14):
+async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=14):
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
     print(f"[i] Берем сообщения с {cutoff_date}")
 
@@ -138,15 +138,15 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP,AsyncSessionLo
         try:
             async for msg in telethon_client.iter_messages(
                 src_chat,
-                reply_to=src_topic_id,   # <-- вот тут обязательно thread_id
-                reverse=False,            # чтобы идти от новых к старым
+                reply_to=src_topic_id,
+                reverse=False,
             ):
                 if msg.date < cutoff_date:
                     print(msg.date)
                     await asyncio.sleep(5)
-                    break  # старые сообщения не нужны
+                    break
+                
                 text = msg.text
-
                 if not text:
                     continue
                 if is_russia_only_citizenship(text):
@@ -156,99 +156,87 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP,AsyncSessionLo
                 if oplata_filter(text):
                     print('Оплата не подходит')
                     continue
+                
                 if check_project_duration(text):
-                    print('Маленькая продолжителность проекта')
+                    print('Маленькая продолжительность проекта')
                     asyncio.sleep(3)
                     continue
- 
-               
 
                 if has_strikethrough(msg):
                     print(f"❌ Сообщение {msg.id} содержит зачёркнутый текст — пропускаем")
                     continue
+                
                 try:
                     text_gpt = await process_vacancy(text)
-                    #print(text)
                 except Exception as e:
                     print(e)
                     continue
+
                 if text_gpt == None:
                     continue
 
-                else:
-                    try:
+                try:
+                    text = text_gpt.get("text")
+                    if text is None:
+                       print('Вакансия отсеяна')
+                       continue
+                    
+                    vac_id = text_gpt.get('vacancy_id')
+                    print(vac_id)
+                    rate = text_gpt.get("rate")
+                    vacancy = text_gpt.get('vacancy_title')
+                    deadline_date = text_gpt.get("deadline_date")
+                    deadline_time = text_gpt.get("deadline_time")
+                     
+                    # Вакансия отсекается, если нет ID
+                    if vac_id is None:
+                        print('Вакансия отсеяна, нет ID')
+                        continue
+
+                    # Блок для обработки ставки
+                    if rate is None or int(rate) == 0:
+                        text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
+                    else:
+                        rate = int(rate)
+                        rate = round(rate / 5) * 5
+                        print(rate)
                         
-                        
-                        #text_gpt = json.loads(text_gpt)
-                        text = text_gpt.get("text")
-                        if text == None:
-                           print('Вакансия отсеяна')
-                           continue
-                        
-                        vac_id = text_gpt.get('vacancy_id')
-                        print(vac_id)
-                        rate = text_gpt.get("rate")
-                        vacancy = text_gpt.get('vacancy_title')
-                        deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
-                        deadline_time = text_gpt.get("deadline_time") 
-                         
-                        if vac_id is None:
+                        rate = find_rate_in_sheet_gspread(rate)
+                        rate = re.sub(r'\s+', '', rate)
+                        rounded = math.ceil(int(rate) / 100) * 100 
+                        rate = f"{rounded:,}".replace(",", " ")
+                        print(rate)
+
+                        if rate is None or vacancy is None:
                             continue
-                         
-
-                        if rate == None:
-                            
-                            text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
-                            
-
-                        if int(rate) == 0:
-                           text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
-                        else:
-                            rate = int(rate)
-                            rate = round(rate /5) * 5
-                            print(rate)
-                            if rate == None:
-                                continue
-                            else:
-                                rate = find_rate_in_sheet_gspread(rate)
-                                rate = re.sub(r'\s+', '', rate)
-                                rounded = math.ceil(int(rate) / 100) * 100  
-
-                                rate = f"{rounded:,}".replace(",", " ")
-                                print(rate)
-
-                            if rate is None or vacancy is None:
-                                continue
-                            else:
-                                    
-                                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+                        
+                        text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
                                 
-                    except Exception as e:
-                        print(e)
-                        continue
-                    try:
-                        forwarded_msg = await telethon_client.send_message(
-                                    dst_chat,
-                                    text_cleaned,
-                                    file=msg.media,
-                                    reply_to=dst_topic_id
-                                )
-                        async with AsyncSessionLocal() as session:
-                            await add_message_mapping(
-                                session,
-                                src_chat_id=src_chat,
-                                src_msg_id=msg.id,
-                                dst_chat_id=dst_chat,
-                                dst_msg_id=forwarded_msg.id,
-                                deadline_date=deadline_date,
-                                deadline_time=deadline_time
-                            )
-                    except Exception as e:
-                        print('Ошибка при пересылке', e)
-                        continue
+                    # Блок для отправки сообщения и сохранения в БД
+                    forwarded_msg = await telethon_client.send_message(
+                        dst_chat,
+                        text_cleaned,
+                        file=msg.media,
+                        reply_to=dst_topic_id
+                    )
+                    
+                    async with AsyncSessionLocal() as session:
+                        await add_message_mapping(
+                            session,
+                            src_chat_id=src_chat,
+                            src_msg_id=msg.id,
+                            dst_chat_id=dst_chat,
+                            dst_msg_id=forwarded_msg.id,
+                            deadline_date=deadline_date,
+                            deadline_time=deadline_time
+                        )
+                    
                     await asyncio.sleep(0.5)
             
-                await asyncio.sleep(random.uniform(2, 5))  # небольшой таймаут между отправками
+                except Exception as e:
+                    print(f'Ошибка при обработке и отправке: {e}')
+                    continue
+            
         except Exception as e:
             print(f"[!] Ошибка при чтении топика {src_topic_id} в чате {src_chat}: {e}")
 
