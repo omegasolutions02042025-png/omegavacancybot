@@ -72,6 +72,8 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID, AsyncSession
                         print(vac_id)
                         rate = text_gpt.get("rate")
                         vacancy = text_gpt.get('vacancy_title')
+                        if vacancy is None:
+                            continue
                                     
                         deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
                         deadline_time = text_gpt.get("deadline_time") 
@@ -384,7 +386,6 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
             for mapping in mappings:
                 try:
                     msg = await telethon_client.get_messages(mapping.src_chat_id, ids=mapping.src_msg_id)
-                    
 
                     vacancy_id = None
                     if msg.message:
@@ -409,23 +410,30 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
                         continue
 
                     # Проверка дедлайна
-                    if mapping.deadline_date:
-                        if mapping.deadline_time:
-                            deadline_dt = datetime.strptime(
-                                f"{mapping.deadline_date} {mapping.deadline_time}", "%d.%m.%Y %H:%M"
-                            )
-                        else:
-                            deadline_dt = datetime.strptime(
-                                mapping.deadline_date, "%d.%m.%Y"
-                            ).replace(hour=23, minute=59)
+                    if mapping.deadline_date:  # если даты нет -> пропускаем
+                        try:
+                            if mapping.deadline_time:
+                                deadline_dt = datetime.strptime(
+                                    f"{mapping.deadline_date} {mapping.deadline_time}", "%d.%m.%Y %H:%M"
+                                )
+                            else:
+                                deadline_dt = datetime.strptime(
+                                    mapping.deadline_date, "%d.%m.%Y"
+                                ).replace(hour=23, minute=59)
 
-                        now_utc = datetime.now(timezone.utc)
-                        if deadline_dt.replace(tzinfo=timezone.utc) <= now_utc:
-                            await mark_inactive_and_schedule_delete(
-                                telethon_client, mapping, vacancy_id
-                            )
-                            await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
-                            continue
+                            print(f"🕒 Проверка дедлайна для {mapping.src_msg_id} "
+                                  f"({mapping.src_chat_id}): {deadline_dt}")
+
+                            now_utc = datetime.now(timezone.utc)
+                            if deadline_dt.replace(tzinfo=timezone.utc) <= now_utc:
+                                await mark_inactive_and_schedule_delete(
+                                    telethon_client, mapping, vacancy_id
+                                )
+                                await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
+                                continue
+                        except Exception as e:
+                            print(f"⚠ Ошибка парсинга дедлайна для {mapping.src_msg_id} "
+                                  f"в {mapping.src_chat_id}: {e}")
 
                 except FloodWaitError as e:
                     print(f"⚠ Flood control: ждём {e.seconds} сек.")
@@ -433,7 +441,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
                 except Exception as e:
                     print(f"Ошибка проверки {mapping.src_msg_id} в {mapping.src_chat_id}: {e}")
 
-        await asyncio.sleep(60)  # проверяем каждую минуту
+        await asyncio.sleep(60)# проверяем каждую минуту
 
 
 async def mark_inactive_and_schedule_delete(client, mapping, vacancy_id):
@@ -525,7 +533,10 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
         if oplata_filter(text):
             print('Оплата не подходит')
             return
-
+        if check_project_duration(text):
+            print('Маленькая продолжителность проекта')
+            asyncio.sleep(3)
+            return
         try:
             text_gpt = await process_vacancy(text)
         except Exception as e:
@@ -544,6 +555,8 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
             print(vac_id)
             rate = text_gpt.get("rate")
             vacancy = text_gpt.get('vacancy_title')
+            if vacancy is None:
+                return
             deadline_date = text_gpt.get("deadline_date")
             deadline_time = text_gpt.get("deadline_time")
 
