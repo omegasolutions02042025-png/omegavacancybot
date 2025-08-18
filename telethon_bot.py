@@ -412,14 +412,19 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
                     # Проверка дедлайна
                     if mapping.deadline_date:  # если даты нет -> пропускаем
                         try:
+                            # Формируем строку даты
+                            date_str = mapping.deadline_date
                             if mapping.deadline_time:
-                                deadline_dt = datetime.strptime(
-                                    f"{mapping.deadline_date} {mapping.deadline_time}", "%d.%m.%Y %H:%M"
-                                )
+                                time_str = mapping.deadline_time
                             else:
-                                deadline_dt = datetime.strptime(
-                                    mapping.deadline_date, "%d.%m.%Y"
-                                ).replace(hour=23, minute=59)
+                                time_str = "23:59"
+
+                            # Разделяем день, месяц, год
+                            day, month, year = date_str.split(".")
+                            day = day.zfill(2)
+                            month = month.zfill(2)
+
+                            deadline_dt = datetime.strptime(f"{day}.{month}.{year} {time_str}", "%d.%m.%Y %H:%M")
 
                             print(f"🕒 Проверка дедлайна для {mapping.src_msg_id} "
                                   f"({mapping.src_chat_id}): {deadline_dt}")
