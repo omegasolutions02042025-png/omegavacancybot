@@ -449,7 +449,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
                 except Exception as e:
                     print(f"Ошибка проверки {mapping.src_msg_id} в {mapping.src_chat_id}: {e}")
 
-        await asyncio.sleep(60)проверяем каждую минуту
+        await asyncio.sleep(60)
 
 
 async def mark_inactive_and_schedule_delete(client, mapping, vacancy_id):
