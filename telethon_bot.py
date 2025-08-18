@@ -190,7 +190,8 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP,AsyncSessionLo
                         deadline_date = text_gpt.get("deadline_date")  # "DD.MM.YYYY"
                         deadline_time = text_gpt.get("deadline_time") 
                          
-                        
+                        if vac_id is None:
+                            continue
                          
 
                         if rate == None:
