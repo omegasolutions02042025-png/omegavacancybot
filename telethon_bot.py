@@ -152,7 +152,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP,AsyncSessionLo
                 if is_russia_only_citizenship(text):
                     print('Гражданство не подходит')
                     continue
-                print(text)
+                
                 if oplata_filter(text):
                     print('Оплата не подходит')
                     continue
@@ -251,6 +251,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP,AsyncSessionLo
                 await asyncio.sleep(random.uniform(2, 5))  # небольшой таймаут между отправками
         except Exception as e:
             print(f"[!] Ошибка при чтении топика {src_topic_id} в чате {src_chat}: {e}")
+
 
 def has_strikethrough(message):
     if not message.entities:
