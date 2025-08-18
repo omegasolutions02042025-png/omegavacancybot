@@ -410,17 +410,19 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
                         continue
 
                     # Проверка дедлайна
-                    if mapping.deadline_date:  # если даты нет -> пропускаем
+                    if mapping.deadline_date:
                         try:
-                            # Формируем строку даты
-                            date_str = mapping.deadline_date
-                            if mapping.deadline_time:
-                                time_str = mapping.deadline_time
-                            else:
-                                time_str = "23:59"
+                            date_str = mapping.deadline_date.strip() if mapping.deadline_date else None
+                            time_str = mapping.deadline_time.strip() if mapping.deadline_time else "23:59"
 
-                            # Разделяем день, месяц, год
-                            day, month, year = date_str.split(".")
+                            if not date_str or date_str.lower() == "none":
+                                continue  # дата отсутствует, пропускаем
+
+                            parts = date_str.split(".")
+                            if len(parts) != 3:
+                                raise ValueError(f"Некорректный формат даты: {date_str}")
+
+                            day, month, year = parts
                             day = day.zfill(2)
                             month = month.zfill(2)
 
@@ -436,6 +438,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
                                 )
                                 await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
                                 continue
+
                         except Exception as e:
                             print(f"⚠ Ошибка парсинга дедлайна для {mapping.src_msg_id} "
                                   f"в {mapping.src_chat_id}: {e}")
@@ -446,7 +449,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
                 except Exception as e:
                     print(f"Ошибка проверки {mapping.src_msg_id} в {mapping.src_chat_id}: {e}")
 
-        await asyncio.sleep(60)# проверяем каждую минуту
+        await asyncio.sleep(60)проверяем каждую минуту
 
 
 async def mark_inactive_and_schedule_delete(client, mapping, vacancy_id):
