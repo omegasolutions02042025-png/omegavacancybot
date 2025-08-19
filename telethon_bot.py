@@ -619,7 +619,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
                 deadline_time=deadline_time
             )
 
-async def check_and_delete_duplicates(channel_id: int):
+async def check_and_delete_duplicates(teleton_client, channel_id: int):
     """Проверяет последние сообщения канала на дубликаты по ID в тексте"""
     seen_ids = set()
     while True:

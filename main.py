@@ -277,7 +277,7 @@ async def main():
 
     # Запускаем мониторинг зачёркнутых сообщений
     asyncio.create_task(monitor_and_cleanup(telethon_client, AsyncSessionLocal))
-    asyncio.create_task(check_and_delete_duplicates(-1002658129391))
+    asyncio.create_task(check_and_delete_duplicates(telethon_client, -1002658129391))
     # Запускаем Telethon клиента
     asyncio.create_task(telethon_client.run_until_disconnected())
 
