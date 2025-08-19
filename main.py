@@ -36,6 +36,8 @@ API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 PHONE_NUMBER = os.getenv("PHONE_NUMBER")
+print(PHONE_NUMBER)
+print(API_ID)
 GROUP_ID = os.getenv("GROUP_ID")
 current_handler = None  # Храним текущий обработчик
 
@@ -63,20 +65,20 @@ class AddChannel(StatesGroup):
 
 
 TOPIC_MAP = {
-    # (-1002189931727, 3): (-1002658129391, 4),
-    # (-1002189931727, 1): (-1002658129391, 1),
-    # (-1002189931727, 14): (-1002658129391, 6),
-    # (-1002189931727, 5): (-1002658129391, 9),
-    # (-1002189931727, 8): (-1002658129391, 11),
+    (-1002189931727, 3): (-1002658129391, 4),
+    (-1002189931727, 1): (-1002658129391, 1),
+    (-1002189931727, 14): (-1002658129391, 6),
+    (-1002189931727, 5): (-1002658129391, 9),
+    (-1002189931727, 8): (-1002658129391, 11),
     (-1002189931727, 20): (-1002658129391, 13),
-    # (-1002189931727, 25): (-1002658129391, 15),
-    # (-1002189931727, 16): (-1002658129391, 17),
-    # (-1002189931727, 12): (-1002658129391, 19),
-    # (-1002189931727, 27): (-1002658129391, 21),
-    # (-1002189931727, 1573): (-1002658129391, 23),
-    # (-1002189931727, 22): (-1002658129391, 25),
-    # (-1002189931727, 29): (-1002658129391, 27),
-    # (-1002189931727, 18): (-1002658129391, 29),
+    (-1002189931727, 25): (-1002658129391, 15),
+    (-1002189931727, 16): (-1002658129391, 17),
+    (-1002189931727, 12): (-1002658129391, 19),
+    (-1002189931727, 27): (-1002658129391, 21),
+    (-1002189931727, 1573): (-1002658129391, 23),
+    (-1002189931727, 22): (-1002658129391, 25),
+    (-1002189931727, 29): (-1002658129391, 27),
+    (-1002189931727, 18): (-1002658129391, 29),
    
     
 
@@ -206,6 +208,11 @@ async def scan_redlab(calback : CallbackQuery):
     await calback.message.answer('Начинаю сканирование...')
     await forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=14)
 
+@dp.callback_query(F.data == 'scan_redlab_day')
+async def scan_redlab(calback : CallbackQuery):
+    await calback.message.answer('Начинаю сканирование...')
+    await forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=1)
+
 
 
 
@@ -260,7 +267,7 @@ async def back_to_menu(callback: CallbackQuery):
 # --- Запуск всех задач ---
 async def main():
     await init_db()
-    await telethon_client.start(phone=PHONE_NUMBER)
+    await telethon_client.start(phone='+375257224153')
     await list_all_dialogs(telethon_client, PHONE_NUMBER)
     channels = await get_all_channels()
     channels = [channel.channel_id for channel in channels]

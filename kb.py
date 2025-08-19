@@ -7,7 +7,8 @@ async def main_kb():
     
     builder.button(text="Подключение канала", callback_data='channels_info')
     builder.button(text='Сканировать каналы', callback_data='scan_channels')
-    builder.button(text='Сканировать RedlabPartners', callback_data='scan_redlab' )
+    builder.button(text='Сканировать RedlabPartners', callback_data='scan_redlab')
+    builder.button(text='Сканировать RedlabPartners(1 день)', callback_data='scan_redlab_day')
     builder.adjust(1)
     return builder.as_markup()
     

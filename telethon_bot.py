@@ -49,7 +49,7 @@ async def forward_recent_posts(telethon_client, CHANNELS, GROUP_ID, AsyncSession
                     print('Оплата не подходит')
                     continue
                 if check_project_duration(text):
-                    print('Маленькая продолжителность проекта')
+                    print('Маленькая продолжительность проекта')
                     asyncio.sleep(3)
                     continue
                 try:
@@ -252,6 +252,7 @@ def has_strikethrough(message):
         return False
     for entity in message.entities:
         if entity.__class__.__name__ == 'MessageEntityStrike':
+            print(f"🔍 Найден зачёркнутый текст в сообщении {message.id}")
             return True
     return False
 
@@ -381,7 +382,10 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
             for mapping in mappings:
                 try:
                     msg = await telethon_client.get_messages(mapping.src_chat_id, ids=mapping.src_msg_id)
-
+                    
+                    
+                    if mapping.src_msg_id == 5456 or mapping.src_msg_id == '5456':
+                       print(msg.text)
                     vacancy_id = None
                     if msg.message:
                         match = VACANCY_ID_REGEX.search(msg.message)
@@ -390,14 +394,16 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
 
                     # Если сообщение удалено или зачёркнуто
                     if has_strikethrough(msg):
+                        print(f"❌ Сообщение {mapping.src_msg_id} содержит зачёркнутый текст — удаляем")
                         await mark_inactive_and_schedule_delete(
                             telethon_client, mapping, vacancy_id
                         )
                         await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
                         continue
-
+                    stop_pattern = re.compile(r'(🛑.*СТОП.*🛑|(?:\bстоп\b))', re.IGNORECASE)
                     # Проверка на слово "стоп"
-                    if msg.message and "стоп" in msg.message.lower():
+                    if msg.message and stop_pattern.search(msg.message):
+                        print(f"🛑 Сообщение {mapping.src_msg_id} содержит слово 'стоп' — удаляем")
                         await mark_inactive_and_schedule_delete(
                             telethon_client, mapping, vacancy_id
                         )
@@ -428,6 +434,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
 
                             now_utc = datetime.now(timezone.utc)
                             if deadline_dt.replace(tzinfo=timezone.utc) <= now_utc:
+                                print(f"⏰ Дедлайн для сообщения {mapping.src_msg_id} истёк — удаляем")
                                 await mark_inactive_and_schedule_delete(
                                     telethon_client, mapping, vacancy_id
                                 )
@@ -537,7 +544,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
             print('Оплата не подходит')
             return
         if check_project_duration(text):
-            print('Маленькая продолжителность проекта')
+            print('Маленькая продолжительность проекта')
             asyncio.sleep(3)
             return
         try:
