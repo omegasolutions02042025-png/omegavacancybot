@@ -623,22 +623,24 @@ async def check_and_delete_duplicates(teleton_client, channel_id: int):
     """Проверяет последние сообщения канала на дубликаты по ID в тексте"""
     seen_ids = set()
     while True:
-        async for message in teleton_client.iter_messages(channel_id):
-            if not message.message:
-                continue
-            
-            match = VACANCY_ID_REGEX.search(message.message)
-            if match:
-                vacancy_id = match.group(0)
-            else:
-                continue
+        try:
+            async for message in teleton_client.iter_messages(channel_id):
+                if not message.message:
+                    continue
+                
+                match = VACANCY_ID_REGEX.search(message.message)
+                if match:
+                    vacancy_id = match.group(0)
+                else:
+                    continue
 
-            if vacancy_id in seen_ids:
-                print(f"❌ Дубликат найден: {vacancy_id}, удаляю сообщение {message.id}")
-                await message.delete()
-            else:
-                seen_ids.add(vacancy_id)
-
+                if vacancy_id in seen_ids:
+                    print(f"❌ Дубликат найден: {vacancy_id}, удаляю сообщение {message.id}")
+                    await message.delete()
+                else:
+                    seen_ids.add(vacancy_id)
+        except Exception as e:
+            print('Ошибка при проверке', e)
         # очищаем сет в конце итерации
         seen_ids.clear()
         print("✅ Проверка завершена, set очищен")
