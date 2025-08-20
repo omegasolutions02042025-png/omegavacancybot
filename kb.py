@@ -1,5 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 async def main_kb():
     builder = InlineKeyboardBuilder()
@@ -9,6 +10,7 @@ async def main_kb():
     builder.button(text='Сканировать каналы', callback_data='scan_channels')
     builder.button(text='Сканировать RedlabPartners', callback_data='scan_redlab')
     builder.button(text='Сканировать RedlabPartners(1 день)', callback_data='scan_redlab_day')
+    builder.button(text = 'Добавить вакансию вручную', callback_data='scan_hand')
     builder.adjust(1)
     return builder.as_markup()
     
@@ -73,3 +75,23 @@ async def back_to_filter_menu_kb():
     kb = InlineKeyboardBuilder()
     kb.button(text="Назад в меню", callback_data="back_to_filter_menu")
     return kb.as_markup()
+
+
+async def send_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="DevOps", callback_data="topic:17")
+    builder.button(text="Frontend", callback_data="topic:9")
+    builder.button(text="Backend", callback_data="topic:4")
+    builder.button(text="Аналитики", callback_data="topic:11")
+    builder.button(text="Базы данных", callback_data="topic:13")
+    builder.button(text="QA", callback_data="topic:6")
+    builder.button(text="Дизайнеры", callback_data="topic:29")
+    builder.button(text="Безопасность", callback_data="topic:23")
+    builder.button(text="Лидеры", callback_data="topic:21")
+    builder.button(text='Архитекторы', callback_data="topic:25")
+    builder.button(text='1С', callback_data="topic:15")
+    builder.button(text='Support', callback_data="topic:27")
+    builder.button(text='Mobile', callback_data="topic:19")
+    builder.button(text='General', callback_data="topic:1")
+    builder.adjust(3)
+    return builder.as_markup()

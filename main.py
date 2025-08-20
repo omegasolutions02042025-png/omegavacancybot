@@ -63,6 +63,10 @@ class AddChannel(StatesGroup):
     waiting_for_id = State()
     waiting_for_name = State()
 
+class ScanHand(StatesGroup):
+    waiting_for_hand = State()
+    waiting_for_topic = State()
+
 
 TOPIC_MAP = {
     (-1002189931727, 3): (-1002658129391, 4),
@@ -223,13 +227,108 @@ async def back_to_menu(callback: CallbackQuery):
 
 
 
+@dp.callback_query(F.data == 'scan_hand')
+async def scan_hand(calback : CallbackQuery):
+    await calback.message.answer('Отправьте вакансию для проверки')
+    await state.set_state(ScanHand.waiting_for_hand)
+    
 
 
+@dp.message(ScanHand.waiting_for_hand)
+async def scan_hand_message(message: types.Message, state: FSMContext):
+    text = message.text
+    if not text:
+        await message.answer('Нет текста')
+        return
+    if is_russia_only_citizenship(text):
+        await message.answer('Гражданство не подходит')
+        return
+
+    if oplata_filter(text):
+        await message.answer('Оплата не подходит')
+        return
+
+    if check_project_duration(text):
+        await message.answer('Маленькая продолжительность проекта')
+        
+        return
+
+    if has_strikethrough(msg):
+        await message.answer('Сообщение содержит зачёркнутый текст')
+        return
+
+    try:
+        text_gpt = await process_vacancy(text)
+    except Exception as e:
+        await message.answer('Ошибка при обработке вакансии')
+        return
+
+    if text_gpt == None or text_gpt == 'None':
+        await message.answer('Вакансия отсеяна')
+
+    try:
+        text = text_gpt.get("text")
+        if text is None:
+            await message.answer('Вакансия отсеяна')
+            return
+        
+        vac_id = text_gpt.get('vacancy_id')
+        print(vac_id)
+        print(type(vac_id))
+        rate = text_gpt.get("rate")
+        vacancy = text_gpt.get('vacancy_title')
+        deadline_date = text_gpt.get("deadline_date")
+        deadline_time = text_gpt.get("deadline_time")
+        if vacancy is None or vacancy == 'None':
+            await message.answer('Вакансия отсеяна')
+            return
+        
+
+        # Вакансия отсекается, если нет ID
+        if vac_id is None  or vac_id == 'None':
+            await message.answer('Вакансия отсеяна, нет ID')
+            return
+
+        # Блок для обработки ставки
+        if rate is None or int(rate) == 0:
+            text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
+        else:
+            rate = int(rate)
+            rate = round(rate / 5) * 5
+            print(rate)
+            
+            rate = find_rate_in_sheet_gspread(rate)
+            rate = re.sub(r'\s+', '', rate)
+            rounded = math.ceil(int(rate) / 100) * 100 
+            rate = f"{rounded:,}".replace(",", " ")
+            print(rate)
+
+            if rate is None or rate == 'None' or vacancy is None or vacancy == 'None':
+                await message.answer('Вакансия отсеяна')
+                return
+            
+            text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+            await message.answer(text_cleaned)
+            await state.update_data(text_cleaned=text_cleaned)
+    except Exception as e:
+        await message.answer('Ошибка при обработке вакансии')
+        return
+    await message.answer('Выберите топик куда отправить вакансию', reply_markup=await send_kb())
 
 
+@dp.message(ScanHand.waiting_for_topic, F.data.startswith("topic:"))
+async def scan_hand_topic(message: types.Message, state: FSMContext):
+    topic_id = message.data.split(":")[1]
+    data = await state.get_data()
+    text_cleaned = data.get('text_cleaned')
+    if not text_cleaned:
+        await message.answer('Нет текста')
+        return
 
-
-
+    telethon_client.send_message(chat_id = -1002658129391, message=text_cleaned, reply_to=topic_id)
+    await state.clear()
+    await message.answer('Вакансия отправлена')
+    
 
 
 

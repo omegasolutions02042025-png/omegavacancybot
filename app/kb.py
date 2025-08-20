@@ -1,16 +1,4 @@
-import inspect
-from collections import namedtuple
-if not hasattr(inspect, "getargspec"):
-    ArgSpec = namedtuple('ArgSpec', ['args', 'varargs', 'keywords', 'defaults'])
-    def getargspec(func):
-        spec = inspect.getfullargspec(func)
-        return ArgSpec(
-            args=spec.args,
-            varargs=spec.varargs,
-            keywords=spec.varkw,
-            defaults=spec.defaults,
-        )
-    inspect.getargspec = getargspec
+
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
