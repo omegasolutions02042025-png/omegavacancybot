@@ -278,6 +278,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
         vacancy = text_gpt.get('vacancy_title')
         deadline_date = text_gpt.get("deadline_date")
         deadline_time = text_gpt.get("deadline_time")
+        utochnenie = text_gpt.get("utochnenie")
         if vacancy is None or vacancy == 'None':
             await message.answer('Вакансия отсеяна')
             return
@@ -307,8 +308,19 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
                 return
             
             text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
+            if utochnenie == 'True' or utochnenie is True:
+                await telethon_client.send_message(
+                    GROUP_ID,
+                    text_cleaned,
+                )
+                return
+                
+        try:
             await message.answer(text_cleaned)
-            await state.update_data(text_cleaned=text_cleaned)
+        except Exception as e:
+            await message.answer('Ошибка при отправке вакансии', e)
+            return
+        await state.update_data(text_cleaned=text_cleaned)
     except Exception as e:
         await message.answer('Ошибка при обработке вакансии', e)
         return
