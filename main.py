@@ -19,16 +19,18 @@ from aiogram.types import CallbackQuery
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart
-from kb import main_kb, channels_kb, channel_kb, back_to_channel_menu_kb
+from kb import main_kb, channels_kb, channel_kb, back_to_channel_menu_kb, send_kb
 from teleton_client import get_channel_info, leave_channel_listening
 from telethon_bot import (
-    forward_recent_posts, register_handler, list_all_dialogs, monitor_and_cleanup, forward_messages_from_topics,register_topic_listener, check_and_delete_duplicates
+    forward_recent_posts, register_handler, list_all_dialogs, monitor_and_cleanup, forward_messages_from_topics,register_topic_listener, check_and_delete_duplicates, has_strikethrough
 )
 from funcs import update_channels_and_restart_handler
 import os
 from dotenv import load_dotenv
-
-
+from funcs import *
+from gpt import process_vacancy
+from googlesheets import find_rate_in_sheet_gspread
+import math
 load_dotenv()
 
 # Вставь свои данные
@@ -52,7 +54,7 @@ async def register_handler_wrapper():
 CHANNELS = []  # Текущий список каналов для слежения
 
 # --- Telethon клиент ---
-telethon_client = TelegramClient('session_name', API_ID, API_HASH)
+telethon_client = TelegramClient('dmitryi', API_ID, API_HASH)
 
 # --- Aiogram бот ---
 bot = Bot(token=BOT_TOKEN)
@@ -228,7 +230,7 @@ async def back_to_menu(callback: CallbackQuery):
 
 
 @dp.callback_query(F.data == 'scan_hand')
-async def scan_hand(calback : CallbackQuery):
+async def scan_hand(calback : CallbackQuery, state: FSMContext):
     await calback.message.answer('Отправьте вакансию для проверки')
     await state.set_state(ScanHand.waiting_for_hand)
     
@@ -253,10 +255,6 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
         
         return
 
-    if has_strikethrough(msg):
-        await message.answer('Сообщение содержит зачёркнутый текст')
-        return
-
     try:
         text_gpt = await process_vacancy(text)
     except Exception as e:
@@ -265,6 +263,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
 
     if text_gpt == None or text_gpt == 'None':
         await message.answer('Вакансия отсеяна')
+        return
 
     try:
         text = text_gpt.get("text")
@@ -311,23 +310,25 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
             await message.answer(text_cleaned)
             await state.update_data(text_cleaned=text_cleaned)
     except Exception as e:
-        await message.answer('Ошибка при обработке вакансии')
+        await message.answer('Ошибка при обработке вакансии', e)
         return
     await message.answer('Выберите топик куда отправить вакансию', reply_markup=await send_kb())
+    await state.set_state(ScanHand.waiting_for_topic)
 
 
-@dp.message(ScanHand.waiting_for_topic, F.data.startswith("topic:"))
-async def scan_hand_topic(message: types.Message, state: FSMContext):
-    topic_id = message.data.split(":")[1]
+@dp.callback_query(ScanHand.waiting_for_topic, F.data.startswith("topic:"))
+async def scan_hand_topic(callback: CallbackQuery, state: FSMContext):
+    await callback.message.delete()
+    topic_id = int(callback.data.split(":")[1])
     data = await state.get_data()
     text_cleaned = data.get('text_cleaned')
     if not text_cleaned:
-        await message.answer('Нет текста')
+        await callback.message.answer('Нет текста')
         return
 
-    telethon_client.send_message(chat_id = -1002658129391, message=text_cleaned, reply_to=topic_id)
+    await telethon_client.send_message(entity = -1002658129391, message=text_cleaned, reply_to=topic_id)
     await state.clear()
-    await message.answer('Вакансия отправлена')
+    await callback.message.answer('Вакансия отправлена')
     
 
 

@@ -190,6 +190,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                     vacancy = text_gpt.get('vacancy_title')
                     deadline_date = text_gpt.get("deadline_date")
                     deadline_time = text_gpt.get("deadline_time")
+                    utochnenie = text_gpt.get("utochnenie")
                     if vacancy is None or vacancy == 'None':
                         print('нет вакансии')
                         continue
@@ -220,7 +221,13 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         
                         text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
                                 
-                    # Блок для отправки сообщения и сохранения в БД
+                    if utochnenie == 'True' or utochnenie is True:
+                        await telethon_client.send_message(
+                            GROUP_ID,
+                            text_cleaned,
+                        )
+                        continue
+                        
                     forwarded_msg = await telethon_client.send_message(
                         dst_chat,
                         text_cleaned,
