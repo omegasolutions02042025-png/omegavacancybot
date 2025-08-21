@@ -21,6 +21,10 @@ from telethon.tl.types import PeerChannel
 import pymorphy2
 from telethon.errors import UsernameInvalidError, ChannelInvalidError
 
+from dotenv import load_dotenv
+load_dotenv()
+
+
 async def get_channel_info(channel_id_or_name, client, phone_number):
     await client.start(phone=phone_number)
     channel_id_or_name = str(channel_id_or_name)

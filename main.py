@@ -367,7 +367,7 @@ async def scan_hand_topic(callback: CallbackQuery, state: FSMContext):
 # --- Запуск всех задач ---
 async def main():
     await init_db()
-    await telethon_client.start(phone='+375257224153')
+    await telethon_client.start(phone=PHONE_NUMBER)
     await list_all_dialogs(telethon_client, PHONE_NUMBER)
     channels = await get_all_channels()
     channels = [channel.channel_id for channel in channels]
