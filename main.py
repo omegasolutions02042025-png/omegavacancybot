@@ -318,11 +318,11 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
         try:
             await message.answer(text_cleaned)
         except Exception as e:
-            await message.answer('Ошибка при отправке вакансии', e)
+            await message.answer(f'Ошибка при отправке вакансии {e}')
             return
         await state.update_data(text_cleaned=text_cleaned)
     except Exception as e:
-        await message.answer('Ошибка при обработке вакансии', e)
+        await message.answer(f'Ошибка при обработке вакансии {e}')
         return
     await message.answer('Выберите топик куда отправить вакансию', reply_markup=await send_kb())
     await state.set_state(ScanHand.waiting_for_topic)
