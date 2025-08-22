@@ -12,12 +12,13 @@ from gpt import del_contacts_gpt, process_vacancy
 from googlesheets import find_rate_in_sheet_gspread
 from typing import Tuple, Optional
 from funcs import is_russia_only_citizenship, oplata_filter, check_project_duration
-from main import GROUP_ID
 from telethon.errors import FloodWaitError
 
 import teleton_client
+import os
 
 VACANCY_ID_REGEX = re.compile(r"🆔\s*([A-Z]{2}-\d+|\d+)", re.UNICODE)
+GROUP_ID = os.getenv('GROUP_ID')
 
 #
 #
