@@ -12,7 +12,7 @@ from gpt import del_contacts_gpt, process_vacancy
 from googlesheets import find_rate_in_sheet_gspread
 from typing import Tuple, Optional
 from funcs import is_russia_only_citizenship, oplata_filter, check_project_duration
-
+from main import GROUP_ID
 from telethon.errors import FloodWaitError
 
 import teleton_client
@@ -583,7 +583,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
 
             deadline_date = text_gpt.get("deadline_date")
             deadline_time = text_gpt.get("deadline_time")
-
+            utochnenie = text_gpt.get("utochnenie")
             # Формируем текст для пересылки
             if not rate or int(rate) == 0:
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
@@ -601,7 +601,15 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
         except Exception as e:
             print(e)
             return
-
+        try:
+            if utochnenie:
+                await telethon_client.send_message(
+                    GROUP_ID,
+                    message=text_cleaned,
+                )
+        except Exception as e:
+            print(e)
+            return
         try:
             forwarded_msg = await telethon_client.send_message(
                 dst_chat_id,
