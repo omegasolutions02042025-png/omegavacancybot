@@ -24,6 +24,8 @@ async def update_channels_and_restart_handler(new_channels, CHANNELS, register_h
 
 
 
+import re
+
 def is_russia_only_citizenship(text: str) -> bool:
 	"""
 	Проверяет:
@@ -37,7 +39,9 @@ def is_russia_only_citizenship(text: str) -> bool:
 	friendly_keywords = [
 		"рб", "беларусь", "казахстан", "армения", "киргизия", "кыргызстан",
 		"узбекистан", "таджикистан", "азербайджан", "сербия", "турция", "снг", "еаэс",
-		"рф/рб", "рф и рб", "рф либо рб", "рф, рб"
+		"рф/рб", "рф и рб", "рф либо рб", "рф, рб",
+		"рф/дружественные", "рф / дружественные", "рф- друшственные", "рф - дружественные",
+		"рф и дружественные страны", "рф либо дружественные", "рф, дружественные"
 	]
 	broad_allow_keywords = [
 		"любой", "любая", "без ограничений", "any", "worldwide", "global",
@@ -90,6 +94,7 @@ def is_russia_only_citizenship(text: str) -> bool:
 
 	# Отсекаем, если любой блок строгий
 	return strict_citizenship or strict_location
+
 
 
 
