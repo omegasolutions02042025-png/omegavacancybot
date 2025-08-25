@@ -615,13 +615,13 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
             forwarded_msg = await telethon_client.send_message(
                 dst_chat_id,
                 message=text_cleaned,
-                parse_mode='html'
+                parse_mode='html',
+                reply_to=dst_topic_id
             )
-        except Exception:
-            forwarded_msg = await telethon_client.send_message(
-                dst_chat_id,
-                message=text_cleaned
-            )
+        except Exception as e:
+            print('Не удалось отправить в канал', e)
+            return
+            
 
         # Сохраняем сопоставление сообщений
         async with AsyncSessionLocal() as session:
