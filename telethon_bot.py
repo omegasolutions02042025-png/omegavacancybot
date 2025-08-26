@@ -688,7 +688,7 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id):
                 if dst_msg.message and vacancy_id in dst_msg.message:
                     if has_strikethrough(dst_msg):
                         print(f"🗑 Найден зачеркнутый ID {vacancy_id} в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}")
-                        await mark_as_deleted(telethon_client, dst_msg.id, src_chat_id, vacancy_id)
+                        await mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id)
                         break  # нашли и удалили → идём к следующему
 
         except FloodWaitError as e:
@@ -697,7 +697,7 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id):
         except Exception as e:
             print(f"Ошибка обработки сообщения {msg.id}: {e}")
         
-    await asyncio.sleep(120)
+    await asyncio.sleep(500)
 
 
 async def mark_as_deleted(client, msg_id, chat_id, vacancy_id):
