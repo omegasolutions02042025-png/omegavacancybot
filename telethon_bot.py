@@ -661,3 +661,68 @@ async def check_and_delete_duplicates(teleton_client, channel_id: int):
         seen_ids.clear()
         print("✅ Проверка завершена, set очищен")
         await asyncio.sleep(60)
+
+
+async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id):
+    """
+    src_chat_id — канал-источник, откуда берём айди
+    dst_chat_id — канал, где ищем зачёркнутый айди
+    """
+    async for msg in telethon_client.iter_messages(src_chat_id):
+        try:
+            if not msg.message:
+                continue
+
+            # Ищем vacancy_id по regex
+            match = VACANCY_ID_REGEX.search(msg.message)
+            if not match:
+                continue
+
+            vacancy_id = match.group(0)
+            
+            print(vacancy_id)# зачёркнутый айди для поиска
+
+            # Ищем в другом канале это зачёркнутое айди
+            async for dst_msg in telethon_client.iter_messages(dst_chat_id, search=vacancy_id):
+                
+                if dst_msg.message and vacancy_id in dst_msg.message:
+                    if has_strikethrough(dst_msg):
+                        print(f"🗑 Найден зачеркнутый ID {vacancy_id} в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}")
+                        await mark_as_deleted(telethon_client, dst_msg.id, src_chat_id, vacancy_id)
+                        break  # нашли и удалили → идём к следующему
+
+        except FloodWaitError as e:
+            print(f"⚠ Flood control: ждём {e.seconds} сек.")
+            await asyncio.sleep(e.seconds)
+        except Exception as e:
+            print(f"Ошибка обработки сообщения {msg.id}: {e}")
+        
+    await asyncio.sleep(120)
+
+
+async def mark_as_deleted(client, msg_id, chat_id, vacancy_id):
+    try:
+        
+        if vacancy_id:
+            new_text = f"\n\n{vacancy_id} — вакансия неактивна"
+        else:
+            new_text = "Вакансия неактивна"
+
+        await client.edit_message(chat_id, msg_id, new_text)
+
+        # Закрепляем
+        await client.pin_message(chat_id, msg_id, notify=False)
+        print(f"📌 Закреплено сообщение {msg_id}")
+
+        # Ждём 24 часа
+        await asyncio.sleep(24 * 60 * 60)
+
+        # Открепляем и удаляем
+        await client.unpin_message(chat_id, msg_id)
+        await client.delete_messages(chat_id, msg_id)
+        print(f"🗑 Удалено сообщение {msg_id}")
+
+    except Exception as e:
+        print(f"Ошибка при изменении/удалении {msg_id}: {e}")
+  # проверяем каждую минуту
+    await asyncio.sleep(20)

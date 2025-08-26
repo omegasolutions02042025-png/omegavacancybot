@@ -22,7 +22,7 @@ from aiogram.filters import CommandStart
 from kb import main_kb, channels_kb, channel_kb, back_to_channel_menu_kb, send_kb
 from teleton_client import get_channel_info, leave_channel_listening
 from telethon_bot import (
-    forward_recent_posts, register_handler, list_all_dialogs, monitor_and_cleanup, forward_messages_from_topics,register_topic_listener, check_and_delete_duplicates, has_strikethrough
+    cleanup_by_striked_id, forward_recent_posts, register_handler, list_all_dialogs, monitor_and_cleanup, forward_messages_from_topics,register_topic_listener, check_and_delete_duplicates, has_strikethrough
 )
 from funcs import update_channels_and_restart_handler
 import os
@@ -392,7 +392,7 @@ async def main():
     asyncio.create_task(check_and_delete_duplicates(telethon_client, -1002658129391))
     # Запускаем Telethon клиента
     asyncio.create_task(telethon_client.run_until_disconnected())
-
+    asyncio.create_task(cleanup_by_striked_id(telethon_client, src_chat_id=-1002658129391, dst_chat_id=-1002189931727))
     # Запускаем Aiogram бота
     await dp.start_polling(bot)
 
