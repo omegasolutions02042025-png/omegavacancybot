@@ -541,24 +541,8 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
         text = getattr(event.message, 'message', '') or ""
         if not text:
             return
-
-        if is_russia_only_citizenship(text):
-            print('Гражданство не подходит')
-            return
-
-        if has_strikethrough(event.message):
-            print(f"❌ Сообщение {event.message.id} в канале {event.chat_id} содержит зачёркнутый текст — пропускаем")
-            return
-
-        if oplata_filter(text):
-            print('Оплата не подходит')
-            return
-        if check_project_duration(text):
-            print('Маленькая продолжительность проекта')
-            asyncio.sleep(3)
-            return
         try:
-            text_gpt = await process_vacancy(text)
+            text_gpt = process_vacancy(text)
         except Exception as e:
             print(e)
             return
@@ -634,6 +618,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
                 deadline_date=deadline_date,
                 deadline_time=deadline_time
             )
+
 
 async def check_and_delete_duplicates(teleton_client, channel_id: int):
     """Проверяет последние сообщения канала на дубликаты по ID в тексте"""
