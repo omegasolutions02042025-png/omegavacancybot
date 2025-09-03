@@ -528,21 +528,42 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
 
     @telethon_client.on(events.NewMessage(chats=chats_to_watch))
     async def new_topic_message(event):
-        # На старом Telethon топики могут не поддерживаться
-        # Ищем все ключи для этого чата
-        key_candidates = [k for k in TOPIC_MAP if k[0] == event.chat_id]
-        if not key_candidates:
-            return  # Чат не отслеживаем
+        # Проверяем, что сообщение из топика
+        if not hasattr(event.message, 'reply_to') or not event.message.reply_to:
+            return  # Не топик-сообщение
+        
+        src_topic_id = event.message.reply_to.reply_to_msg_id
+        
+        # Ищем точное соответствие чата и топика
+        key = (event.chat_id, src_topic_id)
+        if key not in TOPIC_MAP:
+            return  # Этот топик не отслеживаем
 
-        # Берём первый ключ (единственный или любой)
-        key = key_candidates[0]
         dst_chat_id, dst_topic_id = TOPIC_MAP[key]
 
         text = getattr(event.message, 'message', '') or ""
         if not text:
             return
+
+        # Добавляем все необходимые фильтры
+        if is_russia_only_citizenship(text):
+            print('Гражданство не подходит')
+            return
+
+        if has_strikethrough(event.message):
+            print(f"❌ Сообщение {event.message.id} содержит зачёркнутый текст — пропускаем")
+            return
+
+        if oplata_filter(text):
+            print('Оплата не подходит')
+            return
+
+        if check_project_duration(text):
+            print('Маленькая продолжительность проекта')
+            return
+
         try:
-            text_gpt = process_vacancy(text)
+            text_gpt = await process_vacancy(text)
         except Exception as e:
             print(e)
             return
@@ -562,15 +583,16 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
             if vacancy is None or vacancy == 'None':
                 print('нет вакансии')
                 return
-            if vac_id is None or vac_id  == 'None':
+            if vac_id is None or vac_id == 'None':
                 print('нет айди')
                 return
 
             deadline_date = text_gpt.get("deadline_date")
             deadline_time = text_gpt.get("deadline_time")
             utochnenie = text_gpt.get("utochnenie")
-            # Формируем текст для пересылки
-            if not rate or int(rate) == 0:
+            
+            # Исправляем логику обработки ставки
+            if rate is None or rate == 'None' or int(rate) == 0:
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
             else:
                 rate = int(rate)
@@ -584,17 +606,20 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
 
         except Exception as e:
-            print(e)
+            print(f"Ошибка обработки данных вакансии: {e}")
             return
+
         try:
-            if utochnenie:
+            if utochnenie == 'True' or utochnenie is True:
                 await telethon_client.send_message(
                     GROUP_ID,
                     message=text_cleaned,
                 )
+                return  # Если отправили в группу уточнений, не отправляем в канал
         except Exception as e:
-            print(e)
+            print(f"Ошибка отправки в группу уточнений: {e}")
             return
+
         try:
             forwarded_msg = await telethon_client.send_message(
                 dst_chat_id,
@@ -603,9 +628,8 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
                 reply_to=dst_topic_id
             )
         except Exception as e:
-            print('Не удалось отправить в канал', e)
+            print(f'Не удалось отправить в канал: {e}')
             return
-            
 
         # Сохраняем сопоставление сообщений
         async with AsyncSessionLocal() as session:
@@ -629,11 +653,8 @@ async def check_and_delete_duplicates(teleton_client, channel_id: int):
                 if not message.message:
                     continue
                 
-                match = VACANCY_ID_REGEX.search(message.message)
-                if match:
-                    vacancy_id = match.group(0)
-                else:
-                    continue
+                vacancy_id = message.text
+                
 
                 if vacancy_id in seen_ids:
                     print(f"❌ Дубликат найден: {vacancy_id}, удаляю сообщение {message.id}")
