@@ -650,11 +650,14 @@ async def check_and_delete_duplicates(teleton_client, channel_id: int):
     while True:
         try:
             async for message in teleton_client.iter_messages(channel_id):
-                if not message.message:
+                if not message.text:
                     continue
                 
-                vacancy_id = message.text
-                
+                match = VACANCY_ID_REGEX.search(message.text)
+                if match:
+                    vacancy_id = match.group(0).strip()
+                else:
+                    continue
 
                 if vacancy_id in seen_ids:
                     print(f"❌ Дубликат найден: {vacancy_id}, удаляю сообщение {message.id}")
