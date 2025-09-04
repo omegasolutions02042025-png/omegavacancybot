@@ -20,7 +20,10 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
             for mapping in mappings:
                 try:
                     msg = await telethon_client.get_messages(mapping.src_chat_id, ids=mapping.src_msg_id)
-                    
+                    if not msg:  
+                        # сообщение удалено или не найдено → сразу чистим
+                        await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
+                        continue
                     vacancy_id = None
                     if msg.message:
                         match = VACANCY_ID_REGEX.search(msg.message)
