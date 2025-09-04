@@ -6,6 +6,7 @@ async def main_kb():
     builder = InlineKeyboardBuilder()
     #builder.button(text="Управление обязательными словами", callback_data='slova_info')
     
+    builder.button(text="📊 Статус бота", callback_data='bot_status')
     builder.button(text="Подключение канала", callback_data='channels_info')
     builder.button(text='Сканировать каналы', callback_data='scan_channels')
     builder.button(text='Сканировать RedlabPartners', callback_data='scan_redlab')

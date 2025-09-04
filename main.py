@@ -21,9 +21,10 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart
 from kb import main_kb, channels_kb, channel_kb, back_to_channel_menu_kb, send_kb
 from teleton_client import get_channel_info, leave_channel_listening
-from telethon_bot import (
-    cleanup_by_striked_id, forward_recent_posts, register_handler, list_all_dialogs, monitor_and_cleanup, forward_messages_from_topics,register_topic_listener, check_and_delete_duplicates, has_strikethrough
-)
+from message_handlers import register_handler, register_topic_listener, has_strikethrough
+from message_scanner import forward_recent_posts, forward_messages_from_topics
+from message_monitor import monitor_and_cleanup, check_and_delete_duplicates, cleanup_by_striked_id
+from utils import list_all_dialogs
 from funcs import update_channels_and_restart_handler
 import os
 from dotenv import load_dotenv
@@ -31,6 +32,7 @@ from funcs import *
 from gpt import process_vacancy
 from googlesheets import find_rate_in_sheet_gspread
 import math
+from bot_utils import send_error_to_admin, update_activity, get_bot_status
 load_dotenv()
 
 # Вставь свои данные
@@ -222,6 +224,11 @@ async def scan_redlab(calback : CallbackQuery):
 
 
 
+
+@dp.callback_query(F.data == "bot_status")
+async def show_bot_status(callback: CallbackQuery):
+    status_message = get_bot_status()
+    await callback.message.edit_text(text=status_message, reply_markup=await main_kb(), parse_mode='Markdown')
 
 @dp.callback_query(F.data == "back_to_menu")
 async def back_to_menu(callback: CallbackQuery):
