@@ -57,6 +57,7 @@ CHANNELS = []  # Текущий список каналов для слежен�
 
 # --- Telethon клиент ---
 telethon_client = TelegramClient('dmitryi', API_ID, API_HASH)
+##213123131
 
 
 
