@@ -1,6 +1,11 @@
 import gspread
 from typing import Optional
-
+from typing import List, Optional, Dict, Any
+from google.oauth2.service_account import Credentials
+import os
+import re
+import math
+import gspread
 # --- Настройка ---
 # Замените 'path/to/your/credentials.json' на путь к вашему файлу
 # Ключ создается в Google Cloud Console.
@@ -8,11 +13,12 @@ SERVICE_ACCOUNT_FILE = 'creds.json'
 
 # Замените 'your_spreadsheet_id' на ID вашей таблицы.
 # ID находится в URL: https://docs.google.com/spreadsheets/d/your_spreadsheet_id/edit#gid=...
-SPREADSHEET_ID = '1pIrNhJ9Fr7Ickp9X0ao73rRwlqDp1QbTzMn5ULzVjuw'
+SPREADSHEET_ID = '1ApDxmH0BL4rbuKTni6cj-D_d0vJ5KG45sEQjOyXM3PY'
 
 # Имя листа, с которым вы работаете
 SHEET_NAME = 'Для Бота'
 
+SHEET_URL = 'https://docs.google.com/spreadsheets/d/1ApDxmH0BL4rbuKTni6cj-D_d0vJ5KG45sEQjOyXM3PY/edit#gid=0'
 # --- Функция для получения данных ---
 def find_rate_in_sheet_gspread(search_value_usd: int) -> Optional[str]:
     """
@@ -89,12 +95,122 @@ def find_rate_in_sheet_gspread(search_value_usd: int) -> Optional[str]:
         print(f"Произошла непредвиденная ошибка: {e}")
         return None
 
-# --- Пример использования ---
-if __name__ == "__main__":
-    search_number = 27 # Искомое число
-    result_rate = find_rate_in_sheet_gspread(search_number)
 
-    if result_rate:
-        print(f"Для ставки в {search_number} USD, верхняя граница зарплаты в RUB: {result_rate}")
-    else:
-        print(f"Ставка в {search_number} USD не найдена в листе '{SHEET_NAME}'.")
+
+def search_and_extract_values(
+    search_column: str,
+    search_value: float,
+    extract_columns: List[str],
+    worksheet_name: str = "Resume_Database"
+) -> Optional[Dict[str, Any]]:
+    """
+    Поиск значения в указанной колонке и извлечение данных из других колонок
+    
+    Args:
+        search_column: Буква колонки для поиска (например, 'B')
+        search_value: Числовое значение для поиска
+        extract_columns: Список букв колонок для извлечения данных (например, ['A', 'C', 'D'])
+        worksheet_name: Название листа
+    
+    Returns:
+        Словарь с найденными значениями или None если ничего не найдено
+    """
+    try:
+        # URL таблицы
+        
+
+        # Авторизация
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds = Credentials.from_service_account_file("./creds.json", scopes=scopes)
+        client = gspread.authorize(creds)
+
+        # Подключаемся к таблице
+        spreadsheet = client.open_by_url(SHEET_URL)
+
+        # Выбираем лист
+        try:
+            worksheet = spreadsheet.worksheet(worksheet_name)
+        except gspread.WorksheetNotFound:
+            print(f"❌ Лист '{worksheet_name}' не найден")
+            return None
+
+        # Получаем все строки
+        all_values = worksheet.get_all_values()
+        if not all_values:
+            print("❌ Лист пуст")
+            return None
+
+        # Индекс колонки
+        search_col_index = ord(search_column.upper()) - ord('A')
+
+        # Диапазон поиска ±20
+        search_range = list(range(int(search_value) - 20, int(search_value) + 21))
+        print(f"🔍 Поиск в диапазоне {search_range[0]} - {search_range[-1]} в колонке {search_column}")
+
+        target_row_index = None
+        exact_match_row = None
+        valid_values = []
+
+        for row_index, row in enumerate(all_values):
+            if row_index == 0:  # пропускаем заголовки
+                continue
+
+            if len(row) <= search_col_index:
+                continue
+
+            cell_value = row[search_col_index]
+            if not cell_value:
+                continue
+
+            try:
+                cell_value = cell_value.strip().split(",")[0]
+                numeric_value = int(re.sub(r"[^\d]", "", cell_value))
+                valid_values.append(numeric_value)
+                
+
+                if numeric_value == search_value:
+                    exact_match_row = row_index
+                    target_row_index = row_index
+                    print(f"✅ Найдено точное совпадение: {numeric_value} в строке {row_index + 1}")
+                    break
+
+                if numeric_value in search_range:
+                    target_row_index = row_index
+                    print(f"✅ Найдено совпадение в диапазоне: {numeric_value} в строке {row_index + 1}")
+                    break
+
+            except (ValueError, AttributeError):
+                continue
+
+        if target_row_index is None:
+            print(f"❌ Не найдено значений рядом с {search_value} в колонке {search_column}")
+            print(f"📋 Найденные значения: {sorted(set(valid_values))[:10]}...")
+            return None
+
+        target_row = all_values[target_row_index]
+
+        result = {
+            "found_row": target_row_index + 1,
+            "search_value_found": target_row[search_col_index] if len(target_row) > search_col_index else "",
+            "is_exact_match": exact_match_row is not None,
+            "extracted_values": {}
+        }
+
+        for col_letter in extract_columns:
+            col_index = ord(col_letter.upper()) - ord('A')
+            if len(target_row) > col_index:
+                clean_value = target_row[col_index].replace("\xa0", "").strip()
+                rounded = (int(clean_value) // 1000) * 1000
+                clean_value = f"{rounded:,}".replace(",", " ")
+                result["extracted_values"][col_letter] = clean_value
+            else:
+                result["extracted_values"][col_letter] = ""
+
+        print(result["extracted_values"])
+        return result["extracted_values"]
+
+    except Exception as e:
+        print(f"❌ Ошибка при поиске и извлечении данных: {e}")
+        return None
+
+

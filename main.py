@@ -4,8 +4,6 @@ from telethon import TelegramClient
 
 
 
-
-
 from db import (
     init_db,
     add_channel,
@@ -29,7 +27,7 @@ import os
 from dotenv import load_dotenv
 from funcs import *
 from gpt import process_vacancy
-from googlesheets import find_rate_in_sheet_gspread
+from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 import math
 load_dotenv()
 
@@ -42,6 +40,10 @@ print(PHONE_NUMBER)
 print(API_ID)
 GROUP_ID = os.getenv("GROUP_ID")
 current_handler = None  # Храним текущий обработчик
+ADMIN_ID = os.getenv("ADMIN_ID")
+# --- Aiogram бот ---
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
 
 async def register_handler_wrapper():
     global current_handler
@@ -49,16 +51,14 @@ async def register_handler_wrapper():
         telethon_client.remove_event_handler(current_handler)
         print("❌ Старый обработчик удалён")
     
-    current_handler = await register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLocal)
+    current_handler = await register_handler(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLocal, bot)
     print(f"✅ Новый обработчик событий зарегистрирован для {len(CHANNELS)} каналов")
 CHANNELS = []  # Текущий список каналов для слежения
 
 # --- Telethon клиент ---
 telethon_client = TelegramClient('dmitryi', API_ID, API_HASH)
 
-# --- Aiogram бот ---
-bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher()
+
 
 # --- FSM States ---
 class AddChannel(StatesGroup):
@@ -206,18 +206,18 @@ async def back_to_сhannel_menu(callback: CallbackQuery, state: FSMContext, bot 
 @dp.callback_query(F.data == 'scan_channels')
 async def scan_channels(calback : CallbackQuery):
     await calback.message.answer('Начинаю сканирование...')
-    await forward_recent_posts(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLocal)
+    await forward_recent_posts(telethon_client, CHANNELS, GROUP_ID, AsyncSessionLocal, bot)
 
 
 @dp.callback_query(F.data == 'scan_redlab')
 async def scan_redlab(calback : CallbackQuery):
     await calback.message.answer('Начинаю сканирование...')
-    await forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=14)
+    await forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=14, bot = bot)
 
 @dp.callback_query(F.data == 'scan_redlab_day')
 async def scan_redlab(calback : CallbackQuery):
     await calback.message.answer('Начинаю сканирование...')
-    await forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=1)
+    await forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=1, bot = bot)
 
 
 
@@ -293,27 +293,22 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
         if rate is None or int(rate) == 0:
             text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
         else:
-            rate = int(rate)
-            rate = round(rate / 5) * 5
-            print(rate)
+            rate = float(rate)
+            rate_sng_contract = search_and_extract_values('M', rate, ['B'], 'Рассчет ставки (штат/контракт) СНГ').get('B')
+            rate_sng_ip = search_and_extract_values('M', rate, ['B'], 'Рассчет ставки (ИП) СНГ').get('B')
+            rate_sng_samozanyatii = search_and_extract_values('M', rate, ['B'], 'Рассчет ставки (Самозанятый) СНГ').get('B')
+            if rate_sng_contract and rate_sng_ip and rate_sng_samozanyatii:
+                        
+                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до:\n штат/контракт : {rate_sng_contract} RUB,\n ИП : {rate_sng_ip} RUB,\n самозанятый : {rate_sng_samozanyatii} RUB\n\n{text}"
+            else:
+                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}"
             
-            rate = find_rate_in_sheet_gspread(rate)
-            rate = re.sub(r'\s+', '', rate)
-            rounded = math.ceil(int(rate) / 100) * 100 
-            rate = f"{rounded:,}".replace(",", " ")
-            print(rate)
-
-            if rate is None or rate == 'None' or vacancy is None or vacancy == 'None':
-                await message.answer('Вакансия отсеяна')
-                return
-            
-            text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: {rate} RUB\n\n{text}"
-            if utochnenie == 'True' or utochnenie is True:
-                await telethon_client.send_message(
-                    GROUP_ID,
-                    text_cleaned,
-                )
-                return
+        if utochnenie == 'True' or utochnenie is True:
+            await telethon_client.send_message(
+                GROUP_ID,
+                text_cleaned,
+            )
+            return
                 
         try:
             await message.answer(text_cleaned)
@@ -385,11 +380,11 @@ async def main():
     channels = [channel.channel_id for channel in channels]
     print(channels)
     await update_channels_and_restart_handler(channels, CHANNELS, register_handler_wrapper)
-    await register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal)
+    await register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal, bot)
 
     # Запускаем мониторинг зачёркнутых сообщений
     asyncio.create_task(monitor_and_cleanup(telethon_client, AsyncSessionLocal))
-    asyncio.create_task(check_and_delete_duplicates(telethon_client, -1002658129391))
+    asyncio.create_task(check_and_delete_duplicates(telethon_client, -1002658129391, bot, TOPIC_MAP))
     # Запускаем Telethon клиента
     asyncio.create_task(telethon_client.run_until_disconnected())
     asyncio.create_task(cleanup_by_striked_id(telethon_client, src_chat_id=-1002658129391, dst_chat_id=-1002189931727))

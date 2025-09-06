@@ -261,3 +261,5 @@ Scala Developer
 """
 
 print(check_project_duration(text=text))
+
+
