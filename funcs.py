@@ -1,5 +1,11 @@
 import inspect
 from collections import namedtuple
+from db import get_next_sequence_number
+from gpt import generate_hashtags_from_text
+from aiogram import Bot
+from datetime import datetime
+import pytz
+
 if not hasattr(inspect, "getargspec"):
     ArgSpec = namedtuple('ArgSpec', ['args', 'varargs', 'keywords', 'defaults'])
     def getargspec(func):
@@ -48,15 +54,16 @@ def is_russia_only_citizenship(text: str) -> bool:
 		"любая локация", "любой регион", "без привязки"
 	]
 	strict_russia_patterns = [
-		r"только\s*(?:рф|россия)",
-		r"только\s*гражданство\s*рф",
-		r"паспорт\s*рф\s*обязателен",
-		r"налоговое\s*резидентство\s*рф\s*обязательно",
-		r"жители\s*рф",
-		r"из\s*рф",
-		r"лок:\s*рф",
-		r"оформление\s*в\s*рф"
-	]
+        r"только\s*(?:рф|россия)",
+        r"только\s*гражданство\s*рф",
+        r"паспорт\s*рф\s*обязателен",
+        r"налоговое\s*резидентство\s*рф\s*обязательно",
+        r"жители\s*рф",
+        r"\bиз\s*рф\b",
+        r"\bлокац(?:ия|и)\s*[:\-]?\s*рф\b",
+        r"\bлок:\s*рф\b",
+        r"оформление\s*в\s*рф"
+    ]
 
 	def contains_any(segment: str, keywords: list[str]) -> bool:
 		return any(kw in segment for kw in keywords)
@@ -88,7 +95,7 @@ def is_russia_only_citizenship(text: str) -> bool:
 		strict_citizenship = segment_is_strict(m_cit.group(1))
 
 	# 2) Локация специалиста
-	m_loc = re.search(r"локация\s*специалиста\s*[:\-]?\s*(.+)", text_lower, flags=re.IGNORECASE)
+	m_loc = re.search(r"локац(?:ия|и)\s*(?:специалиста)?\s*[:\-]?\s*(.+)", text_lower, flags=re.IGNORECASE)
 	if m_loc:
 		strict_location = segment_is_strict(m_loc.group(1))
 
@@ -217,7 +224,7 @@ Scala Developer
 О кандидате:
 
 Грейд: Middle+ / Senior
-Локация специалиста: РФ, Беларусь, Казахстан, Армения
+Локация:  РБ
 Тайм-зона проекта: мск
 
 О проекте:
@@ -260,6 +267,68 @@ Scala Developer
 - Опыт использования фреймворка / экосистемы ZIO
 """
 
-print(check_project_duration(text=text))
+print(is_russia_only_citizenship(text=text))
 
 
+VACANCY_ID_REGEX = re.compile(
+    r"(🆔\s*[A-ZА-ЯЁ]*[-\d]+|1с\s*\d+)", re.IGNORECASE
+)
+
+
+def remove_vacancy_id(text: str) -> str:
+    """
+    Удаляет все ID вакансий (включая 🆔), но не трогает дату.
+    """
+    # удаляем все ID
+    clean_text = VACANCY_ID_REGEX.sub("", text)
+
+    # убираем лишние пробелы в начале/конце и двойные пробелы
+    clean_text = re.sub(r"[ \t]{2,}", " ", clean_text)
+    clean_text = re.sub(r"\n{2,}", "\n\n", clean_text)  # не более 2 переносов
+
+    return clean_text.strip()
+
+
+async def send_mess_to_group(group_id: int, message: str, vacancy_id: str, bot: Bot):
+    seq_num = await get_next_sequence_number()
+    print(message)
+    text = remove_vacancy_id(message)
+    vacancy_id = vacancy_id[-4:]
+    vacancy_id = f'{seq_num:04d}{vacancy_id}'
+    pometka = f'"📨 Отправляйте резюме с пометкой «{vacancy_id} Ruby of Rails», пожелания по размеру заработной платы (на руки), форму трудоустройства/оформления, на e-mail: cv@omega-solutions.ru"'
+    heashtegs_gpt = await generate_hashtags_from_text(text)
+    heashegs = f'#vacancy #работа #job #remote #удалёнка #OmegaVacancy\n{heashtegs_gpt}\n#{vacancy_id}'
+    text_for_message = f'🆔{vacancy_id}\n\n{text}\n\n{pometka}\n\n{heashegs}'
+    await bot.send_message(group_id, text_for_message, parse_mode="HTML")
+    
+    
+
+def get_message_datetime(msg, tz: str = "Europe/Moscow") -> str:
+    """
+    Возвращает дату и время отправки сообщения в формате DD.MM.YYYY HH:MM
+    с учётом указанной таймзоны.
+
+    :param msg: объект сообщения (msg.date — datetime в UTC)
+    :param tz: строка с таймзоной (по умолчанию "Europe/Moscow")
+    :return: строка с датой и временем
+    """
+    # Берём дату из сообщения (всегда UTC)
+    utc_date = msg.date  
+
+    # Переводим в локальную зону
+    target_tz = pytz.timezone(tz)
+    local_date = utc_date.astimezone(target_tz)
+
+    return local_date.strftime("%d.%m.%Y %H:%M")
+
+
+def get_vacancy_title(text: str) -> str | None:
+    """
+    Возвращает заголовок вакансии (строку с 🥇) без удаления её из текста.
+    Если строки с 🥇 нет, возвращает None.
+    """
+    pattern = re.compile(r'^🥇\s*(.*)$', re.MULTILINE)
+    match = pattern.search(text)
+    if match:
+        return match.group(1).strip()
+    return None

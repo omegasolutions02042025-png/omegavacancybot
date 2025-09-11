@@ -14,12 +14,7 @@ AsyncSessionLocal = sessionmaker(
 
 class Base(DeclarativeBase):
     pass
-
-class LastSequenceNumber(Base):
-    __tablename__ = "last_sequence_number"
-    id = Column(Integer, primary_key=True, default=1)  # всегда одна запись с id=1
-    last_number = Column(Integer, default=0)
-
+    
 
 class Channel(Base):
     __tablename__ = 'channels'
@@ -54,6 +49,13 @@ class MessageMapping(Base):
     dst_msg_id = Column(BigInteger, index=True)
     deadline_date = Column(String, nullable=True)  
     deadline_time = Column(String, nullable=True) 
+
+
+class LastSequenceNumber(Base):
+    __tablename__ = "last_sequence_number"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    last_number = Column(Integer, nullable=False)
 
 async def init_db():
     async with async_engine.begin() as conn:
@@ -216,3 +218,6 @@ async def get_next_sequence_number() -> int:
         record.last_number += 1
         await session.commit()
         return record.last_number
+    
+    
+    
