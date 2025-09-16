@@ -34,7 +34,7 @@ async def process_vacancy_with_gemini(text: str) -> dict | None:
     current_tz = "+03:00"  # МСК по умолчанию
 
     # --- ЕДИНЫЙ ПРОМПТ ДЛЯ GEMINI ---
-    system_prompt = """
+    system_prompt = f"""
     Ты — фильтр вакансий. На вход приходит ТЕКСТ ВАКАНСИИ. Работай строго по правилам ниже.
 При противоречиях выбирай ОТСЕЧЬ. Логика между разделами — И (AND).
 Сегодня: {current_date} {current_time} ({current_tz}).
@@ -187,7 +187,7 @@ O) Если в тексте встречаются фразы:
             то верни only_fulltime: true, иначе — only_fulltime: false.
 
 ФОРМАТ ОТВЕТА — СТРОГО СЛОВАРЬ:
-{
+{{
   "text": "<очищенный текст вакансии>" или None (если отсечена),
   "rate": <целое число или 0> или None,
   "deadline_date": "DD.MM.YYYY" или None,
@@ -198,14 +198,14 @@ O) Если в тексте встречаются фразы:
   "short_project": true или false
   "delay_payment": "<содержимое фразы или None>",
   "only_fulltime": true или false
-}
+}}
 Никаких других слов/символов не добавляй. Не используй Markdown/код-блоки в ответе.
 """
 
     # Модель Gemini
     model = genai.GenerativeModel('gemini-2.5-flash')
     generation_config = genai.types.GenerationConfig(temperature=0.1)
-    system_prompt = system_prompt.format(current_date=current_date, current_time=current_time, current_tz=current_tz)
+    
     full_prompt = system_prompt + "\n\nТекст вакансии:\n\n" + text
 
     try:
