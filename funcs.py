@@ -2,6 +2,7 @@ import inspect
 from collections import namedtuple
 from db import get_next_sequence_number
 from gpt import generate_hashtags_from_text
+from gpt_gimini import generate_hashtags_gemini
 from aiogram import Bot
 from datetime import datetime
 import pytz
@@ -296,7 +297,7 @@ async def send_mess_to_group(group_id: int, message: str, vacancy_id: str, bot: 
     vacancy_id = vacancy_id[-4:]
     vacancy_id = f'{seq_num:04d}{vacancy_id}'
     pometka = f'"📨 Отправляйте резюме с пометкой «{vacancy_id} Ruby of Rails», пожелания по размеру заработной платы (на руки), форму трудоустройства/оформления, на e-mail: cv@omega-solutions.ru"'
-    heashtegs_gpt = await generate_hashtags_from_text(text)
+    heashtegs_gpt = await generate_hashtags_gemini(text)
     heashegs = f'#vacancy #работа #job #remote #удалёнка #OmegaVacancy\n{heashtegs_gpt}\n#{vacancy_id}'
     text_for_message = f'🆔{vacancy_id}\n\n{text}\n\n{pometka}\n\n{heashegs}'
     await bot.send_message(group_id, text_for_message, parse_mode="HTML")

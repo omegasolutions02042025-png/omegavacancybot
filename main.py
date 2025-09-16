@@ -24,6 +24,7 @@ import os
 from dotenv import load_dotenv
 from funcs import *
 from gpt import process_vacancy, format_vacancy
+from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_monitor import has_strikethrough, cleanup_by_striked_id, check_and_delete_duplicates, list_all_dialogs , monitor_and_cleanup, check_old_messages_and_mark
 
@@ -136,7 +137,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
         return
 
     try:
-        text_gpt = await process_vacancy(text)
+        text_gpt = await process_vacancy_with_gemini(text)
     except Exception as e:
         await message.answer('Ошибка при обработке вакансии')
         return
@@ -210,7 +211,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до:\n{state_contract_text}\n{delay_payment_text}{acts_text}\n{ip_samoz_text}\n\n{text}"
             else:
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
-        formatted_text = await format_vacancy(text_cleaned, vacancy_id=vac_id)
+        formatted_text = await format_vacancy_gemini(text_cleaned, vacancy_id=vac_id)
         print(formatted_text)
         if utochnenie == 'True' or utochnenie is True:
             await telethon_client.send_message(

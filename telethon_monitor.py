@@ -242,19 +242,21 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id):
     src_chat_id — канал-источник, откуда берём айди
     dst_chat_id — канал, где ищем зачёркнутый айди
     """
-    async for msg in telethon_client.iter_messages(src_chat_id):
+    async for msg in telethon_client.iter_messages(src_chat_id, limit=None):
         try:
-            if not msg.message or not msg.text:
+            if not msg.text:
                 continue
             
-            text = msg.message or msg.text
+            text = msg.text
             # Ищем vacancy_id по regex
             match = VACANCY_ID_REGEX.search(text)
+            print(match)
             if not match:
                 continue
 
             vacancy_id = match.group(0)
             vacancy_id = vacancy_id.replace("🆔", "").strip()
+            
             
             
             title = get_vacancy_title(text)
@@ -264,15 +266,15 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id):
             )
 
             # Ищем в другом канале это зачёркнутое айди
-            async for dst_msg in telethon_client.iter_messages(dst_chat_id, search=vacancy_id):
+            async for dst_msg in telethon_client.iter_messages(dst_chat_id, limit=None):
                 
-                if dst_msg.message and vacancy_id in dst_msg.message:
+                if dst_msg.message and vacancy_id in dst_msg.text:
                     if has_strikethrough(dst_msg):
-                        print(f"🗑 Найден зачеркнутый ID {vacancy_id} в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}")
+                        print(f"🗑 Найден зачеркнутый ID {vacancy_id} в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
                         await mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title)
                         break  # нашли и удалили → идём к следующему
-                    elif stop_pattern.search(dst_msg.message):
-                        print(f"🛑 Найдено слово 'стоп' в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}")
+                    elif stop_pattern.search(dst_msg.text):
+                        print(f"🛑 Найдено слово 'стоп' в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
                         await mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title)
                         break  # нашли и удалили → идём к следующему
         except Exception as e:
@@ -316,7 +318,7 @@ async def check_old_messages_and_mark(teleton_client, channel_id: int, bot: Bot)
     Если сообщение старше 21 дня — вызывает mark_inactive_and_schedule_delete(message).
     """
     now = datetime.now(timezone.utc)
-    max_age = timedelta(days=21)
+    max_age = timedelta(days=14)
 
     async for message in teleton_client.iter_messages(channel_id):
         if not message.text:  # игнорируем медиа/системные
