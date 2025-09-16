@@ -207,7 +207,6 @@ O) Если в тексте встречаются фразы:
     generation_config = genai.types.GenerationConfig(temperature=0.1)
     
     full_prompt = system_prompt + "\n\nТекст вакансии:\n\n" + text
-    print(full_prompt)
 
     try:
         response = await model.generate_content_async(
