@@ -92,6 +92,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                     acts = text_gpt.get("acts")
                     only_fulltime = text_gpt.get("only_fulltime")
                     short_project = text_gpt.get("short_project")
+                    long_payment = text_gpt.get("long_payment")
                     message_date = f'Дата публикации: {get_message_datetime(msg)}'
                     
                     if vacancy is None or vacancy == 'None':
@@ -130,8 +131,11 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                             else:
                                 acts_text = 'Актирование: ежемесячное\n'
                                 state_contract_text = f"Ежемесячная выплата Штат/Контракт : {rate_sng_contract} RUB"
-                            if short_project:
+                            if short_project :
                                 state_contract_text = f"<s>{state_contract_text}</s>"
+                            if long_payment:
+                                state_contract_text = f"<s>{state_contract_text}</s>"
+                            
                             if only_fulltime:
                                 ip_samoz_text = f"<s>ИП : {rate_sng_ip} RUB,\n Самозанятый : {rate_sng_samozanyatii} RUB</s>"
                             else:
@@ -256,6 +260,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
             acts = text_gpt.get("acts")
             only_fulltime = text_gpt.get("only_fulltime")
             short_project = text_gpt.get("short_project")
+            long_payment = text_gpt.get("long_payment")
             message_date = f"Дата публикации: {get_message_datetime(event.message)}"
             
             # Исправляем логику обработки ставки
@@ -289,7 +294,9 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                         
                     if short_project:
                         state_contract_text = f"<s>{state_contract_text}</s>"
-                        
+                    
+                    if long_payment:
+                        state_contract_text = f"<s>{state_contract_text}</s>"
                     
                     if only_fulltime:
                         ip_samoz_text = f"<s>ИП : {rate_sng_ip} RUB,\n Самозанятый : {rate_sng_samozanyatii} RUB</s>\n"
