@@ -120,9 +120,9 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
                     else:
                         rate = float(rate)
-                        rate_sng_contract = search_and_extract_values('M', rate, ['B'], 'Рассчет ставки (штат/контракт) СНГ').get('B')
-                        rate_sng_ip = search_and_extract_values('M', rate, ['B'], 'Рассчет ставки (ИП) СНГ').get('B')
-                        rate_sng_samozanyatii = search_and_extract_values('M', rate, ['B'], 'Рассчет ставки (Самозанятый) СНГ').get('B')
+                        rate_sng_contract = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ').get('B')
+                        rate_sng_ip = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (ИП) СНГ').get('B')
+                        rate_sng_samozanyatii = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (Самозанятый) СНГ').get('B')
                         if rate_sng_contract and rate_sng_ip and rate_sng_samozanyatii:
                             if acts:
                                 acts_text = f"Актирование: поквартальное\n"
