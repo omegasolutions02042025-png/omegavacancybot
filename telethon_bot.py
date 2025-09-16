@@ -131,9 +131,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                             else:
                                 acts_text = 'Актирование: ежемесячное\n'
                                 state_contract_text = f"Ежемесячная выплата Штат/Контракт : {rate_sng_contract} RUB"
-                            if short_project :
-                                state_contract_text = f"<s>{state_contract_text}</s>"
-                            if long_payment:
+                            if short_project or long_payment:
                                 state_contract_text = f"<s>{state_contract_text}</s>"
                             
                             if only_fulltime:
@@ -292,10 +290,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                         acts_text = 'Актирование: ежемесячное'
                         state_contract_text = f"- Ежемесячная выплата Штат/Контракт : {rate_sng_contract} RUB\n"
                         
-                    if short_project:
-                        state_contract_text = f"<s>{state_contract_text}</s>"
-                    
-                    if long_payment:
+                    if short_project or long_payment:
                         state_contract_text = f"<s>{state_contract_text}</s>"
                     
                     if only_fulltime:

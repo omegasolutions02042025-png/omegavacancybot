@@ -202,9 +202,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
                 else:
                     acts_text = 'Актирование: ежемесячное\n'
                     state_contract_text = f"Ежемесячная выплата Штат/Контракт : {rate_sng_contract} RUB"
-                if short_project:
-                    state_contract_text = f"<s>{state_contract_text}</s>"
-                if long_payment:
+                if short_project or long_payment:
                     state_contract_text = f"<s>{state_contract_text}</s>"
                 if only_fulltime:
                     ip_samoz_text = f"<s>ИП : {rate_sng_ip} RUB,\n Самозанятый : {rate_sng_samozanyatii} RUB</s>"
