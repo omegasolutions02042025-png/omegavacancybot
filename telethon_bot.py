@@ -16,6 +16,7 @@ from telethon.errors import FloodWaitError
 from aiogram import Bot
 import teleton_client
 import os
+from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini
 
 from telethon_monitor import has_strikethrough
 
@@ -64,7 +65,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                     continue
                 
                 try:
-                    text_gpt = await process_vacancy(text)
+                    text_gpt = await process_vacancy_with_gemini(text)
                 except Exception as e:
                     await bot.send_message(ADMIN_ID, f'❌ Ошибка в GPT в сообщении {msg.id}: {e}')
                     continue
@@ -139,7 +140,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                             text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до:\n\n{state_contract_text}\n{delay_payment_text} {acts_text}\n{ip_samoz_text}\n\n{text}"
                         else:
                             text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
-                    formatted_text = await format_vacancy(text_cleaned, vac_id, message_date)
+                    formatted_text = await format_vacancy_gemini(text_cleaned, vac_id, message_date)
                         
                     if utochnenie == 'True' or utochnenie is True:
                         await telethon_client.send_message(
@@ -225,7 +226,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
             return
 
         try:
-            text_gpt = await process_vacancy(text)
+            text_gpt = await process_vacancy_with_gemini(text)
         except Exception as e:
             await bot.send_message(ADMIN_ID, f'❌ Ошибка при обработке вакансии в топике {src_topic_id} в чате {event.chat_id}: {e}')
             return
@@ -298,7 +299,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                     text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до:\n\n{state_contract_text}\n{delay_payment_text} {acts_text}\n{ip_samoz_text}\n\n{text}"
                 else:
                     text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
-            formatted_text = await format_vacancy(text_cleaned, vac_id, message_date)   
+            formatted_text = await format_vacancy_gemini(text_cleaned, vac_id, message_date)   
         except Exception as e:
             await bot.send_message(ADMIN_ID, f'❌ Ошибка обработки данных вакансии в топике {src_topic_id} в чате {event.chat_id}: {e}')
             return
