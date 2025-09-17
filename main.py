@@ -218,8 +218,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
                 print(text_cleaned)
         formatted_text = await format_vacancy_gemini(text_cleaned, vacancy_id=vac_id)
-        print(formatted_text)
-        print(formatted_text)
+        print(formatted_text[:200])
         if utochnenie == 'True' or utochnenie is True:
             await telethon_client.send_message(
                 GROUP_ID,
