@@ -126,10 +126,10 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
 
                         except Exception as e:
                             print(f"⚠ Ошибка парсинга дедлайна для {mapping.src_msg_id} "
-                                  f"в {mapping.src_chat_id}: {e}")
+                                  f"в {mapping.src_chat_id}: {e} функция monitor_and_cleanup")
 
                 except Exception as e:
-                    print(f"Ошибка проверки {mapping.src_msg_id} в {mapping.src_chat_id}: {e}")
+                    print(f"Ошибка проверки {mapping.src_msg_id} в {mapping.src_chat_id}: {e} функция monitor_and_cleanup")
 
         await asyncio.sleep(60)
 
@@ -222,19 +222,19 @@ async def check_and_delete_duplicates(teleton_client, channel_id: int, bot: Bot,
                     )
                     
                     if stop_pattern.search(message.text):
-                        await bot.send_message(ADMIN_ID, f'❌ Стоп-слово найдено в сообщении {message.id} в канале {channel_id}')
+                        await bot.send_message(ADMIN_ID, f'❌ Стоп-слово найдено в сообщении {message.id} в канале {channel_id} функция check_and_delete_duplicates')
                         await message.delete()
                         continue
                     
                     
                     if vac_id_without_symbol in seen_ids:
                         
-                        await bot.send_message(ADMIN_ID, f'❌ Дубликат найден: {vac_id_without_symbol}, удаляю сообщение {message.id} в канале {channel_id}')
+                        await bot.send_message(ADMIN_ID, f'❌ Дубликат найден: {vac_id_without_symbol}, удаляю сообщение {message.id} в канале {channel_id} функция check_and_delete_duplicates')
                         await message.delete()
                     else:
                         seen_ids.add(vac_id_without_symbol)
         except Exception as e:
-            print('Ошибка при проверке', e)
+            print('Ошибка при проверке функции check_and_delete_duplicates', e)
         # очищаем сет в конце итерации
         seen_ids.clear()
         
@@ -274,12 +274,26 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id):
                 async for dst_msg in telethon_client.iter_messages(dst_chat_id, limit=None):
                     
                     if dst_msg.text and vacancy_id in dst_msg.text:
+                        
+                        
+                        msg_date = dst_msg.date
+                        if msg_date.tzinfo is None:  # если naive
+                            msg_date = msg_date.replace(tzinfo=timezone.utc)
+                        else:  # если aware, приведём к UTC на всякий случай
+                            msg_date = msg_date.astimezone(timezone.utc)
+                        
+                        
+                        
                         if has_strikethrough(dst_msg):
                             print(f"🗑 Найден зачеркнутый ID {vacancy_id} в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
                             await mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title)
                             break  # нашли и удалили → идём к следующему
                         elif stop_pattern.search(dst_msg.text):
                             print(f"🛑 Найдено слово 'стоп' в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
+                            await mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title)
+                            break  # нашли и удалили → идём к следующему
+                        elif msg_date < datetime.now(timezone.utc) - timedelta(days=21):
+                            print(f"🗑 Найдено сообщение старше 21 дня в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
                             await mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title)
                             break  # нашли и удалили → идём к следующему
             except Exception as e:
@@ -327,13 +341,18 @@ async def check_old_messages_and_mark(teleton_client, channel_id: int, bot: Bot)
     Если сообщение старше 21 дня — вызывает mark_inactive_and_schedule_delete(message).
     """
     now = datetime.now(timezone.utc)
-    max_age = timedelta(days=14)
+    max_age = timedelta(days=21)
 
     async for message in teleton_client.iter_messages(channel_id):
         if not message.text:  # игнорируем медиа/системные
             continue
 
-        msg_date = message.date.replace(tzinfo=timezone.utc)  # дата отправки
+        msg_date = message.date
+        if msg_date.tzinfo is None:  # если naive
+            msg_date = msg_date.replace(tzinfo=timezone.utc)
+        else:  # если aware, приведём к UTC на всякий случай
+            msg_date = msg_date.astimezone(timezone.utc)
+        # дата отправки
         
         age = now - msg_date
         
