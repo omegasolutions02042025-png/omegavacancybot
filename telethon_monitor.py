@@ -111,10 +111,6 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
                             month = month.zfill(2)
 
                             deadline_dt = datetime.strptime(f"{day}.{month}.{year} {time_str}", "%d.%m.%Y %H:%M")
-
-                            print(f"🕒 Проверка дедлайна для {mapping.src_msg_id} "
-                                  f"({mapping.src_chat_id}): {deadline_dt}")
-
                             now_utc = datetime.now(timezone.utc)
                             if deadline_dt.replace(tzinfo=timezone.utc) <= now_utc:
                                 print(f"⏰ Дедлайн для сообщения {mapping.src_msg_id} истёк — удаляем функция monitor_and_cleanup")
