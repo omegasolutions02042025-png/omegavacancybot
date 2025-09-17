@@ -74,7 +74,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
                     title = get_vacancy_title(msg.message)
                     # Если сообщение удалено или зачёркнуто
                     if has_strikethrough(msg):
-                        print(f"❌ Сообщение {mapping.src_msg_id} содержит зачёркнутый текст — удаляем")
+                        print(f"❌ Сообщение {mapping.src_msg_id} содержит зачёркнутый текст — удаляем функция monitor_and_cleanup")
                         await mark_inactive_and_schedule_delete(
                             telethon_client, mapping, vacancy_id, title
                         )
@@ -86,7 +86,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
                     )
                     # Проверка на слово "стоп"
                     if msg.message and stop_pattern.search(msg.message):
-                        print(f"🛑 Сообщение {mapping.src_msg_id} содержит слово 'стоп' — удаляем")
+                        print(f"🛑 Сообщение {mapping.src_msg_id} содержит слово 'стоп' — удаляем функция monitor_and_cleanup")
                         await mark_inactive_and_schedule_delete(
                             telethon_client, mapping, vacancy_id, title
                         )
@@ -117,7 +117,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
 
                             now_utc = datetime.now(timezone.utc)
                             if deadline_dt.replace(tzinfo=timezone.utc) <= now_utc:
-                                print(f"⏰ Дедлайн для сообщения {mapping.src_msg_id} истёк — удаляем")
+                                print(f"⏰ Дедлайн для сообщения {mapping.src_msg_id} истёк — удаляем функция monitor_and_cleanup")
                                 await mark_inactive_and_schedule_delete(
                                     telethon_client, mapping, vacancy_id, get_vacancy_title(msg.message)
                                 )
@@ -145,20 +145,24 @@ async def mark_inactive_and_schedule_delete(client, mapping, vacancy_id, title):
             new_text = f"\n\n{vacancy_id} — вакансия неактивна\n{title}"
         else:
             new_text = "Вакансия неактивна"
+        
+        await client.delete_messages(mapping.dst_chat_id, mapping.dst_msg_id)
 
-        await client.edit_message(mapping.dst_chat_id, mapping.dst_msg_id, new_text)
+        message = await client.send_message(mapping.dst_chat_id, new_text)
+        
 
         # Закрепляем
-        await client.pin_message(mapping.dst_chat_id, mapping.dst_msg_id, notify=False)
-        print(f"📌 Закреплено сообщение {mapping.dst_msg_id} в {mapping.dst_chat_id}")
+        await client.pin_message(mapping.dst_chat_id, message.id, notify=False)
+        print(f"📌 Закреплено сообщение {message.id} в {mapping.dst_chat_id}")
 
         # Ждём 24 часа
-        await asyncio.sleep(24 * 60 * 60)
+        await asyncio.sleep(20)
 
         # Открепляем и удаляем
-        await client.unpin_message(mapping.dst_chat_id, mapping.dst_msg_id)
-        await client.delete_messages(mapping.dst_chat_id, mapping.dst_msg_id)
-        print(f"🗑 Удалено сообщение {mapping.dst_msg_id} в {mapping.dst_chat_id}")
+        #await client.unpin_message(mapping.dst_chat_id, mapping.dst_msg_id)
+        await client.delete_messages(mapping.dst_chat_id, message.id)
+        
+        print(f"🗑 Удалено сообщение {message.id} в {mapping.dst_chat_id}")
 
     except Exception as e:
         print(f"Ошибка при изменении/удалении {mapping.dst_msg_id}: {e}")
@@ -295,20 +299,20 @@ async def mark_as_deleted(client, msg_id, chat_id, vacancy_id, name_vac):
             new_text = f"🆔{vacancy_id} — вакансия неактивна\n{name_vac}"
         else:
             new_text = "Вакансия неактивна"
-
-        await client.edit_message(chat_id, msg_id, new_text)
+        await client.delete_messages(chat_id, msg_id)
+        message = await client.send_message(chat_id, new_text)
 
         # Закрепляем
-        await client.pin_message(chat_id, msg_id, notify=False)
-        print(f"📌 Закреплено сообщение {msg_id}")
+        await client.pin_message(chat_id, message.id, notify=False)
+        print(f"📌 Закреплено сообщение {message.id}")
 
         # Ждём 24 часа
-        await asyncio.sleep(24 * 60 * 60)
+        await asyncio.sleep(20)
 
         # Открепляем и удаляем
-        await client.unpin_message(chat_id, msg_id)
-        await client.delete_messages(chat_id, msg_id)
-        print(f"🗑 Удалено сообщение {msg_id}")
+        # await client.unpin_message(chat_id, msg_id)
+        await client.delete_messages(chat_id, message.id)
+        print(f"🗑 Удалено сообщение {message.id}")
 
     except Exception as e:
         print(f"Ошибка при изменении/удалении {msg_id}: {e}")
