@@ -66,6 +66,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                 
                 try:
                     text_gpt = await process_vacancy_with_gemini(text)
+                    print(text_gpt)
                 except Exception as e:
                     await bot.send_message(ADMIN_ID, f'❌ Ошибка в GPT в сообщении {msg.id}: {e}')
                     continue
@@ -81,8 +82,6 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         continue
                     
                     vac_id = text_gpt.get('vacancy_id')
-                    print(vac_id)
-                    print(type(vac_id))
                     rate = text_gpt.get("rate")
                     vacancy = text_gpt.get('vacancy_title')
                     deadline_date = text_gpt.get("deadline_date")
