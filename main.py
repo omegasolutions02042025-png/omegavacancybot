@@ -103,6 +103,11 @@ async def scan_redlab(calback : CallbackQuery):
 async def scan_redlab(calback : CallbackQuery):
     await calback.message.answer('Начинаю сканирование...')
     await forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=1, bot = bot)
+    
+@dp.callback_query(F.data == 'scan_redlab_21')
+async def scan_redlab(calback : CallbackQuery):
+    await calback.message.answer('Начинаю сканирование...')
+    await forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=21, bot = bot)
 
 
 
