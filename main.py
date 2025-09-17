@@ -143,6 +143,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
 
     try:
         text_gpt = await process_vacancy_with_gemini(text)
+        print(text_gpt) 
     except Exception as e:
         await message.answer('Ошибка при обработке вакансии')
         return
@@ -158,8 +159,6 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
             return
         
         vac_id = text_gpt.get('vacancy_id')
-        print(vac_id)
-        print(type(vac_id))
         rate = text_gpt.get("rate")
         vacancy = text_gpt.get('vacancy_title')
         deadline_date = text_gpt.get("deadline_date")
@@ -217,7 +216,9 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до:\n{state_contract_text}\n{delay_payment_text}{acts_text}\n{ip_samoz_text}\n\n{text}"
             else:
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
+                print(text_cleaned)
         formatted_text = await format_vacancy_gemini(text_cleaned, vacancy_id=vac_id)
+        print(formatted_text)
         print(formatted_text)
         if utochnenie == 'True' or utochnenie is True:
             await telethon_client.send_message(
