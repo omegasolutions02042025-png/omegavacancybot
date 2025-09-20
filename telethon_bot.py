@@ -52,9 +52,6 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                 text = msg.text
                 if not text:
                     continue
-                if is_russia_only_citizenship(text):
-                    await bot.send_message(ADMIN_ID, f'❌ Гражданство не подходит в сообщении {msg.id}')
-                    continue
                 
                 if check_project_duration(text):
                     await bot.send_message(ADMIN_ID, f'❌ Маленькая продолжительность проекта в сообщении {msg.id}')
@@ -210,9 +207,6 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
             return
 
         # Добавляем все необходимые фильтры
-        if is_russia_only_citizenship(text):
-            await bot.send_message(ADMIN_ID, f'❌ Гражданство не подходит в топике {src_topic_id} в чате {event.chat_id}')
-            return
 
         if has_strikethrough(event.message):
             await bot.send_message(ADMIN_ID, f"❌ Сообщение {event.message.id} содержит зачёркнутый текст — пропускаем")

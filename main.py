@@ -132,10 +132,6 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
     if not text:
         await message.answer('Нет текста')
         return
-    if is_russia_only_citizenship(text):
-        await message.answer('Гражданство не подходит')
-        return
-
     if check_project_duration(text):
         await message.answer('Маленькая продолжительность проекта')
         
