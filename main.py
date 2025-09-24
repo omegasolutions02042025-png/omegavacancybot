@@ -225,12 +225,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
                 print(text_cleaned)
         formatted_text = await format_vacancy_gemini(text_cleaned, vacancy_id=vac_id)
         print(formatted_text[:200])
-        if utochnenie == 'True' or utochnenie is True:
-            await telethon_client.send_message(
-                GROUP_ID,
-                formatted_text,
-            )
-            return
+        
                 
         try:
             await message.answer(formatted_text, parse_mode='HTML')

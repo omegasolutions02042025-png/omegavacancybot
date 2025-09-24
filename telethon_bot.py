@@ -39,15 +39,18 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
     for (src_chat, src_topic_id), (dst_chat, dst_topic_id) in TOPIC_MAP.items():
         await bot.send_message(ADMIN_ID, f"[i] Проверяем топик {src_topic_id} в чате {src_chat}")
         try:
+            msgs = []
             async for msg in telethon_client.iter_messages(
                 src_chat,
                 reply_to=src_topic_id,
                 reverse=True,
 
             ):
-                if msg.date < cutoff_date:
-                    continue
-                
+                if msg.date >= cutoff_date:
+                    msgs.append(msg)
+            msgs.sort(key=lambda m: m.date)
+            
+            for msg in msgs:
                 text = msg.text
                 if not text:
                     continue
@@ -148,11 +151,8 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                     formatted_text = await format_vacancy_gemini(text_cleaned, vac_id, message_date)
                         
                     if utochnenie == 'True' or utochnenie is True:
-                        await telethon_client.send_message(
-                            GROUP_ID,
-                            formatted_text,
-                        )
-                        await bot.send_message(ADMIN_ID, f'✅ Вакансия отправлена в группу в сообщении {msg.id}')
+                        await bot.send_message(ADMIN_ID, "Отправлено для уточнения")
+                        await bot.send_message(ADMIN_ID, formatted_text)
                         continue
                                     
                     forwarded_msg = await telethon_client.send_message(
@@ -317,10 +317,8 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
 
         try:
             if utochnenie == 'True' or utochnenie is True:
-                await telethon_client.send_message(
-                    GROUP_ID,
-                    message=formatted_text,
-                )
+                await bot.send_message(ADMIN_ID, "Отправлено для уточнения")
+                await bot.send_message(ADMIN_ID, formatted_text)
                 return  # Если отправили в группу уточнений, не отправляем в канал
         except Exception as e:
             await bot.send_message(ADMIN_ID, f'❌ Ошибка отправки в группу уточнений в топике {src_topic_id} в чате {event.chat_id}: {e}')
