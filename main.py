@@ -199,10 +199,13 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
             text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
         else:
             rate = float(rate)
-            rate_sng_contract = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ').get('B')
-            rate_sng_ip = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (ИП) СНГ').get('B')
-            rate_sng_samozanyatii = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (Самозанятый) СНГ').get('B')
+            rate_sng_contract = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ')
+            rate_sng_ip = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (ИП) СНГ')
+            rate_sng_samozanyatii = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (Самозанятый) СНГ')
             if rate_sng_contract and rate_sng_ip and rate_sng_samozanyatii:
+                rate_sng_contract = rate_sng_contract.get('B')
+                rate_sng_ip = rate_sng_ip.get('B')
+                rate_sng_samozanyatii = rate_sng_samozanyatii.get('B')
                 if acts:
                     acts_text = f"Актирование: поквартальное\n"
                     state_contract_text = f"<s>Ежемесячная выплата Штат/Контракт : {rate_sng_contract} RUB</s>"
