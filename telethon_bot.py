@@ -65,16 +65,22 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                 except Exception as e:
                     await bot.send_message(ADMIN_ID, f'❌ Ошибка в GPT в сообщении {msg.id}: {e}')
                     continue
-
+                
+                reason = text_gpt.get("reason")
+                if reason:
+                    await bot.send_message(ADMIN_ID, f'❌ Вакансия отсеяна в GPT в сообщении {msg.id}: {reason}')
+                    continue
+                
                 if text_gpt == None or text_gpt == 'None':
                     await bot.send_message(ADMIN_ID, f'❌ Вакансия отсеяна в GPT в сообщении {msg.id}')
                     continue
-
+            
                 try:
                     text = text_gpt.get("text")
                     if text is None:
                         await bot.send_message(ADMIN_ID, f'❌ Вакансия отсеяна в GPT в сообщении {msg.id}')
                         continue
+                
                     
                     vac_id = text_gpt.get('vacancy_id')
                     rate = text_gpt.get("rate")
@@ -115,10 +121,13 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
                     else:
                         rate = float(rate)
-                        rate_sng_contract = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ').get('B')
-                        rate_sng_ip = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (ИП) СНГ').get('B')
-                        rate_sng_samozanyatii = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (Самозанятый) СНГ').get('B')
+                        rate_sng_contract = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ')
+                        rate_sng_ip = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (ИП) СНГ')
+                        rate_sng_samozanyatii = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (Самозанятый) СНГ')
                         if rate_sng_contract and rate_sng_ip and rate_sng_samozanyatii:
+                            rate_sng_contract = rate_sng_contract.get('B')
+                            rate_sng_ip = rate_sng_ip.get('B')
+                            rate_sng_samozanyatii = rate_sng_samozanyatii.get('B')
                             if acts:
                                 acts_text = f"Актирование: поквартальное\n"
                                 state_contract_text = f"<s>Ежемесячная выплата Штат/Контракт : {rate_sng_contract} RUB</s>"
@@ -223,7 +232,12 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
         except Exception as e:
             await bot.send_message(ADMIN_ID, f'❌ Ошибка при обработке вакансии в топике {src_topic_id} в чате {event.chat_id}: {e}')
             return
-
+        
+        reason = text_gpt.get("reason")
+        if reason:
+            await bot.send_message(ADMIN_ID, f'❌ Вакансия отсеяна в топике {src_topic_id} в чате {event.chat_id}: {reason}')
+            return
+        
         if text_gpt is None or text_gpt == 'None':
             return
 
@@ -270,10 +284,13 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                 text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
             else:
                 rate = float(rate)
-                rate_sng_contract = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ').get('B')
-                rate_sng_ip = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (ИП) СНГ').get('B')
-                rate_sng_samozanyatii = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (Самозанятый) СНГ').get('B')
+                rate_sng_contract = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ')
+                rate_sng_ip = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (ИП) СНГ')
+                rate_sng_samozanyatii = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (Самозанятый) СНГ')
                 if rate_sng_contract and rate_sng_ip and rate_sng_samozanyatii:
+                    rate_sng_contract = rate_sng_contract.get('B')
+                    rate_sng_ip = rate_sng_ip.get('B')
+                    rate_sng_samozanyatii = rate_sng_samozanyatii.get('B')
                     if acts:
                         acts_text = f"Актирование: поквартальное"
                         state_contract_text = f"<s>- Ежемесячная выплата Штат/Контракт : {rate_sng_contract} RUB</s>\n"
