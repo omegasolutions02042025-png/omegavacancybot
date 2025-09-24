@@ -143,11 +143,18 @@ async def scan_hand_message(message: types.Message, state: FSMContext):
     except Exception as e:
         await message.answer('Ошибка при обработке вакансии')
         return
-
+    
+    reason = text_gpt.get("reason")
+    if reason:
+        await message.answer(reason)
+        return
+    
+    
+    
     if text_gpt == None or text_gpt == 'None':
         await message.answer('Вакансия отсеяна')
         return
-
+    
     try:
         text = text_gpt.get("text")
         if text is None:

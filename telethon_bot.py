@@ -42,12 +42,11 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
             async for msg in telethon_client.iter_messages(
                 src_chat,
                 reply_to=src_topic_id,
-                reverse=False,
+                reverse=True,
+
             ):
                 if msg.date < cutoff_date:
-                    print(msg.date)
-                    await asyncio.sleep(5)
-                    break
+                    continue
                 
                 text = msg.text
                 if not text:
@@ -63,7 +62,6 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                 
                 try:
                     text_gpt = await process_vacancy_with_gemini(text)
-                    print(text_gpt)
                 except Exception as e:
                     await bot.send_message(ADMIN_ID, f'❌ Ошибка в GPT в сообщении {msg.id}: {e}')
                     continue
