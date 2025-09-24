@@ -49,7 +49,8 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                 if msg.date >= cutoff_date:
                     msgs.append(msg)
             msgs.sort(key=lambda m: m.date)
-            print(msgs)
+            for msg in msgs:
+                print(msg.date)
             for msg in msgs:
                 text = msg.text
                 if not text:
