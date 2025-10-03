@@ -266,15 +266,15 @@ async def main():
     await telethon_client.start(phone=PHONE_NUMBER)
     await register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal, bot)
 
-    # Запускаем мониторинг зачёркнутых сообщений
-    asyncio.create_task(monitor_and_cleanup(telethon_client, AsyncSessionLocal))
-    asyncio.create_task(check_and_delete_duplicates(telethon_client, -1002658129391, bot, TOPIC_MAP))
-    # Запускаем Telethon клиента
-    asyncio.create_task(telethon_client.run_until_disconnected())
-    asyncio.create_task(cleanup_by_striked_id(telethon_client, src_chat_id=-1002658129391, dst_chat_id=-1002189931727))
-    asyncio.create_task(check_old_messages_and_mark(telethon_client, -1002658129391, bot))
-    # Запускаем Aiogram бота
-    await dp.start_polling(bot)
+   
+    tasks = []
+    tasks.append(asyncio.create_task(monitor_and_cleanup(telethon_client, AsyncSessionLocal)))
+    tasks.append(asyncio.create_task(check_and_delete_duplicates(telethon_client, -1002658129391, bot, TOPIC_MAP)))
+    tasks.append(asyncio.create_task(telethon_client.run_until_disconnected()))
+    tasks.append(asyncio.create_task(cleanup_by_striked_id(telethon_client, src_chat_id=-1002658129391, dst_chat_id=-1002189931727)))
+    tasks.append(asyncio.create_task(check_old_messages_and_mark(telethon_client, -1002658129391, bot)))
+    tasks.append(asyncio.create_task(dp.start_polling(bot)))
+    await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     asyncio.run(main())
