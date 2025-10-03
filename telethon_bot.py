@@ -156,15 +156,17 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         await bot.send_message(ADMIN_ID, "Отправлено для уточнения")
                         await bot.send_message(ADMIN_ID, formatted_text)
                         continue
-                                    
-                    forwarded_msg = await bot.send_message(
-                        chat_id=dst_chat,
-                        text=formatted_text,
-                        message_thread_id=dst_topic_id,
-                        parse_mode='HTML',
-                        reply_markup=await scan_vac_kb()
-                    )
-                    
+                    try:                 
+                        forwarded_msg = await bot.send_message(
+                            chat_id=dst_chat,
+                            text=formatted_text,
+                            message_thread_id=dst_topic_id,
+                            parse_mode='HTML',
+                            reply_markup=await scan_vac_kb()
+                        )
+                    except Exception as e:
+                        await bot.send_message(ADMIN_ID, f'❌ Ошибка при отправке в сообщении {msg.id}: {e}')
+                        continue
                     await send_mess_to_group(GROUP_ID, formatted_text, vac_id, bot)
                     
                                 
