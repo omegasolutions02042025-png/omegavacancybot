@@ -34,7 +34,17 @@ async def main():
     tasks.append(asyncio.create_task(check_old_messages_and_mark(telethon_client, -1002658129391, bot)))
     tasks.append(asyncio.create_task(dp.start_polling(bot)))
     tasks.append(asyncio.create_task(register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal, bot)))
-    await asyncio.gather(*tasks)
+    try:
+        await asyncio.gather(*tasks)
+    except asyncio.CancelledError:
+        print("⏹ Задачи были отменены")
+    finally:
+        # Корректное завершение
+        for t in tasks:
+            t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        await bot.session.close()
+        print("✅ Бот и все фоновые задачи остановлены")
 
 if __name__ == "__main__":
     asyncio.run(main())
