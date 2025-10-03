@@ -97,3 +97,16 @@ async def send_kb():
     builder.button(text='General', callback_data="topic:1")
     builder.adjust(3)
     return builder.as_markup()
+
+
+async def scan_vac_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Проверить кандидатов на соотвествие вакансии', callback_data='scan_kand_for_vac')
+    builder.adjust(1)
+    return builder.as_markup()
+
+async def scan_vac_rekr_yn_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Да', callback_data='yes_vac_rekr')
+    builder.button(text='Нет', callback_data='no_vac_rekr')
+    return builder.as_markup()

@@ -17,7 +17,7 @@ from aiogram import Bot
 import teleton_client
 import os
 from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini
-
+from kb import scan_vac_kb
 from telethon_monitor import has_strikethrough
 
 VACANCY_ID_REGEX = re.compile(
@@ -26,11 +26,12 @@ VACANCY_ID_REGEX = re.compile(
 )
 GROUP_ID = os.getenv('GROUP_ID')
 ADMIN_ID = os.getenv('ADMIN_ID')
+API_ID = os.getenv("API_ID")
+API_HASH = os.getenv("API_HASH")
 
-#
-#
-# --- Telethon функции ---
 
+
+telethon_client = TelegramClient('dmitryi', API_ID, API_HASH)
 
 async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, bot : Bot, days=14):
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
@@ -156,13 +157,14 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         await bot.send_message(ADMIN_ID, formatted_text)
                         continue
                                     
-                    forwarded_msg = await telethon_client.send_message(
-                        dst_chat,
-                        formatted_text,
-                        file=msg.media,
-                        reply_to=dst_topic_id,
-                        parse_mode='html'
+                    forwarded_msg = await bot.send_message(
+                        chat_id=dst_chat,
+                        text=formatted_text,
+                        message_thread_id=dst_topic_id,
+                        parse_mode='HTML',
+                        reply_markup=await scan_vac_kb()
                     )
+                    
                     await send_mess_to_group(GROUP_ID, formatted_text, vac_id, bot)
                     
                                 
@@ -326,12 +328,13 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
             return
 
         try:
-            forwarded_msg = await telethon_client.send_message(
-                dst_chat_id,
-                message=formatted_text,
-                parse_mode='html',
-                reply_to=dst_topic_id
-            )
+            forwarded_msg = await bot.send_message(
+                chat_id=dst_chat_id,
+                text=formatted_text,
+                message_thread_id=dst_topic_id,
+                parse_mode='HTML',
+                reply_markup=await scan_vac_kb()
+                )
             await send_mess_to_group(GROUP_ID, formatted_text, vac_id, bot)
         except Exception as e:
             await bot.send_message(ADMIN_ID, f'❌ Не удалось отправить в канал в топике {src_topic_id} в чате {event.chat_id}: {e}')
