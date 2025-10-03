@@ -141,21 +141,20 @@ async def mark_inactive_and_schedule_delete(client, mapping, vacancy_id, title):
             new_text = f"\n\n{vacancy_id} — вакансия неактивна\n{title}"
         else:
             new_text = "Вакансия неактивна"
-        
+    
         await client.delete_messages(mapping.dst_chat_id, mapping.dst_msg_id)
 
         message = await client.send_message(mapping.dst_chat_id, new_text)
         
 
         # Закрепляем
-        await client.pin_message(mapping.dst_chat_id, message.id, notify=False)
+        
         print(f"📌 Закреплено сообщение {message.id} в {mapping.dst_chat_id}")
 
         # Ждём 24 часа
         await asyncio.sleep(86400)
 
         # Открепляем и удаляем
-        await client.unpin_message(mapping.dst_chat_id, message.id)
         await client.delete_messages(mapping.dst_chat_id, message.id)
         
         print(f"🗑 Удалено сообщение {message.id} в {mapping.dst_chat_id}")
@@ -313,14 +312,13 @@ async def mark_as_deleted(client, msg_id, chat_id, vacancy_id, name_vac):
         message = await client.send_message(chat_id, new_text)
 
         # Закрепляем
-        await client.pin_message(chat_id, message.id, notify=False)
+        
         print(f"📌 Закреплено сообщение {message.id}")
 
         # Ждём 24 часа
         await asyncio.sleep(86400)
 
         # Открепляем и удаляем
-        await client.unpin_message(chat_id, message.id)
         await client.delete_messages(chat_id, message.id)
         print(f"🗑 Удалено сообщение {message.id}")
 
