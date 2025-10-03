@@ -66,17 +66,17 @@ async def cmd_start(message: types.Message):
 
 
 @bot_router.callback_query(F.data == 'scan_redlab')
-async def scan_redlab(calback : CallbackQuery):
+async def scan_redlab(calback : CallbackQuery, bot : Bot):
     await calback.message.answer('Начинаю сканирование...')
     await forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=14, bot = bot)
 
 @bot_router.callback_query(F.data == 'scan_redlab_day')
-async def scan_redlab(calback : CallbackQuery):
+async def scan_redlab(calback : CallbackQuery, bot : Bot):
     await calback.message.answer('Начинаю сканирование...')
     await forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=1, bot = bot)
     
 @bot_router.callback_query(F.data == 'scan_redlab_21')
-async def scan_redlab(calback : CallbackQuery):
+async def scan_redlab(calback : CallbackQuery, bot : Bot):
     await calback.message.answer('Начинаю сканирование...')
     await forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionLocal, days=21, bot = bot)
 
