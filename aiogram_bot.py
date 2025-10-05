@@ -60,10 +60,10 @@ TOPIC_MAP = {
 
 
 @bot_router.message(CommandStart())
-async def cmd_start(message: types.Message):
+async def cmd_start(message: types.Message, command : CommandStart):
     if message.from_user.id not in [6264939461,429765805]:
         #await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе")
-        payload = message.get_args()
+        payload = command.args
         print(payload)
         return
     await message.answer(text="Основное меню", reply_markup = await main_kb())
