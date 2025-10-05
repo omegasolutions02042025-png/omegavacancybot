@@ -259,16 +259,16 @@ async def save_document(message: types.Message, state: FSMContext, bot : Bot):
             # Сохраняем media_group_id и спрашиваем только один раз
             await state.update_data(last_media_group_id=message.media_group_id)
             await message.answer(f"📥 Файлы сохранены.")
-            await message.answer("Хотите добавить ещё файлы?", reply_markup=await scan_vac_rekr_yn_kb())
+            await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
             
     else:
         # Для одиночного файла
         await message.answer(f"📥 Файл сохранён.")
-        await message.answer("Хотите добавить ещё файлы?", reply_markup=await scan_vac_rekr_yn_kb())
+        await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
 
 
 
-@bot_router.message(ScanVacRekr.waiting_for_vac, F.document)
+@bot_router.message(F.document)
 async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
     await save_document(message, state, bot)
     

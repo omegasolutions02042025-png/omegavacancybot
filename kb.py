@@ -105,7 +105,7 @@ async def scan_vac_kb():
     builder.adjust(1)
     return builder.as_markup()
 
-async def scan_vac_rekr_yn_kb():
+def scan_vac_rekr_yn_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text='Да', callback_data='yes_vac_rekr')
     builder.button(text='Нет', callback_data='no_vac_rekr')
