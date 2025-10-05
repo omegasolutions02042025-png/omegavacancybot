@@ -239,6 +239,12 @@ async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext
     await state.set_state(ScanVacRekr.waiting_for_vac)
 
 
+@bot_router.message(F.document, ScanVacRekr.waiting_for_vac)
+async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
+    print("scan_vac_rekr")
+    await save_document(message, state, bot)
+
+
 async def save_document(message: types.Message, state: FSMContext, bot : Bot):
     document = message.document
     if not document:
@@ -273,9 +279,7 @@ async def save_document(message: types.Message, state: FSMContext, bot : Bot):
 
 
 
-@bot_router.message(F.document, ScanVacRekr.waiting_for_vac)
-async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
-    await save_document(message, state, bot)
+
     
 @bot_router.callback_query(F.data == "yes_vac_rekr")
 async def scan_vac_rekr_y(callback: CallbackQuery, state: FSMContext, bot: Bot):
