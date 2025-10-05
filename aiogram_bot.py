@@ -241,13 +241,15 @@ text_mes_id = {}
 
 @bot_router.callback_query(F.data == "scan_kand_for_vac")
 async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext):
-    user_id = callback.from_user.id
-    mess_text = callback.message.text
-    await bot.send_message(chat_id=user_id, text=mess_text)
-    text_mes_id[user_id] = mess_text
+    
     try:
+        user_id = callback.from_user.id
+        mess_text = callback.message.text
+        text_mes_id[user_id] = mess_text
         await bot.send_message(chat_id=user_id, text="Отправьте вакансии для проверки")
+        await bot.send_message(chat_id=user_id, text=mess_text)
     except:
+        user_id = callback.from_user.id
         telethon_client.send_message(chat_id=user_id, text="Чтобы пользоватся проверкой вакансий необходимо написать /start боту @omega_vacancy_bot а затем опять нажать на кнопку")
         return
     state_users.append(user_id)
@@ -336,6 +338,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             
             
         
-@bot_router.message(Command("/bot"))
-async def bot(message: Message):
+@bot_router.message(Command("bot"))
+async def bot_hr(message: Message):
+    await message.answer("Отправьте вакансию для проверки")
     await message.answer(f"https://t.me/omega_vacancy_bot?start=from_channel_123")
