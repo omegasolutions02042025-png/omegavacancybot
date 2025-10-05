@@ -259,13 +259,12 @@ async def save_document(message: types.Message, state: FSMContext, bot : Bot):
             # Сохраняем media_group_id и спрашиваем только один раз
             await state.update_data(last_media_group_id=message.media_group_id)
             await message.answer(f"📥 Файлы сохранены.")
-            await message.answer("Хотите добавить ещё файлы?", reply_markup=get_yes_no_kb())
-            await state.set_state(ScanVacRekr.waiting_for_process)
+            await message.answer("Хотите добавить ещё файлы?", reply_markup=await scan_vac_rekr_yn_kb())
+            
     else:
         # Для одиночного файла
         await message.answer(f"📥 Файл сохранён.")
-        await message.answer("Хотите добавить ещё файлы?", reply_markup=get_yes_no_kb())
-        await state.set_state(ScanVacRekr.waiting_for_process)
+        await message.answer("Хотите добавить ещё файлы?", reply_markup=await scan_vac_rekr_yn_kb())
 
 
 
@@ -273,12 +272,12 @@ async def save_document(message: types.Message, state: FSMContext, bot : Bot):
 async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
     await save_document(message, state, bot)
     
-@bot_router.callback_query(ScanVacRekr.waiting_for_process, F.data == "yes_vac_rekr")
+@bot_router.callback_query(F.data == "yes_vac_rekr")
 async def scan_vac_rekr_y(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.message.answer("Жду файлы")
     await state.set_state(ScanVacRekr.waiting_for_vac)
 
-@bot_router.callback_query(ScanVacRekr.waiting_for_process, F.data == "no_vac_rekr")
+@bot_router.callback_query(F.data == "no_vac_rekr")
 async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()  # убрать "часики"
     await callback.message.answer("Начинаю обработку...")
@@ -302,6 +301,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await asyncio.gather(*tasks)
 
     await callback.message.answer("✅ Обработка завершена.")
+    await state.clear()
             
             
         

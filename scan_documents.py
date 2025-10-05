@@ -2,7 +2,7 @@ from docx import Document
 from PyPDF2 import PdfReader
 import pypandoc
 from aiogram import Bot
-
+import os
 # PDF → текст
 def process_pdf(path: str) -> str:
     reader = PdfReader(path)
@@ -41,5 +41,6 @@ async def process_file(path: str, bot: Bot, user_id: int|str):
             return
         print(f"✅ {path} обработан → {len(text)} символов")
         await bot.send_message(user_id, text)
+        os.remove(path)
     except Exception as e:
         print(f"❌ Ошибка в {path}: {e}")
