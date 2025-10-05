@@ -397,6 +397,7 @@ async def generate_hashtags_gemini(vacancy_text: str) -> str:
 
 async def sverka_vac_and_resume(vacancy_text: str, resume_text: str):
     resume_text = anonymize_contacts(resume_text)
+    print(resume_text)
     vacancy_text = vacancy_text.replace("{", "{{").replace("}", "}}")
     resume_text = resume_text.replace("{", "{{").replace("}", "}}")
     print("[*] Сверяем вакансию и резюме...")
