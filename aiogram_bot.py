@@ -308,7 +308,6 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.message.answer("Начинаю обработку...")
     user_id = callback.from_user.id
     vac_text = text_mes_id.get(user_id)
-    print(vac_text)
     
     
     state_users.remove(user_id)
