@@ -5,6 +5,7 @@ import re
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from funcs import anonymize_contacts
 
 load_dotenv()
 
@@ -395,6 +396,7 @@ async def generate_hashtags_gemini(vacancy_text: str) -> str:
 
 
 async def sverka_vac_and_resume(vacancy_text: str, resume_text: str):
+    resume_text = anonymize_contacts(resume_text)
     print("[*] Сверяем вакансию и резюме...")
     prompt = f"""
     Сравни очень тщательно требования вакансии и резюме кандидата.
