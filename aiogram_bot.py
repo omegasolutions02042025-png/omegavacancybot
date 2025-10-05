@@ -239,26 +239,39 @@ async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext
     await state.set_state(ScanVacRekr.waiting_for_vac)
 
 
-notified_flags = {}
+async def save_document(message: types.Message, state: FSMContext, bot : Bot):
+    document = message.document
+    if not document:
+        await message.answer("Отправьте резюме в формате PDF/DOCX/RTF/TXT")
+        return
+
+    file_info = await bot.get_file(document.file_id)
+    file_path = file_info.file_path
+    file_name = document.file_name
+
+    os.makedirs("downloads", exist_ok=True)
+    local_file_path = os.path.join("downloads", file_name)
+    await bot.download_file(file_path, destination=local_file_path)
+    # --- Обработка media_group_id ---
+    data = await state.get_data()
+    if message.media_group_id:
+        if data.get("last_media_group_id") != message.media_group_id:
+            # Сохраняем media_group_id и спрашиваем только один раз
+            await state.update_data(last_media_group_id=message.media_group_id)
+            await message.answer(f"📥 Файлы сохранены.")
+            await message.answer("Хотите добавить ещё файлы?", reply_markup=get_yes_no_kb())
+            await state.set_state(ScanVacRekr.waiting_for_process)
+    else:
+        # Для одиночного файла
+        await message.answer(f"📥 Файл сохранён.")
+        await message.answer("Хотите добавить ещё файлы?", reply_markup=get_yes_no_kb())
+        await state.set_state(ScanVacRekr.waiting_for_process)
+
+
 
 @bot_router.message(ScanVacRekr.waiting_for_vac, F.document)
 async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
-    global notified_flags
-    user = message.from_user
-    user_id = user.id
-    user_dir = os.path.join(SAVE_DIR, str(user_id))
-    file_id = message.document.file_id
-    file_name = message.document.file_name
-    file = await bot.get_file(file_id)
-
-    dest = os.path.join(user_dir, file_name)
-    await bot.download_file(file.file_path, destination=dest)
-
-    # Сообщаем только один раз
-    if not notified_flags.get(user_id, False):
-        await message.answer("Файлы приняты ✅\nДобавить еще?", reply_markup=await scan_vac_rekr_yn_kb())
-        notified_flags[user_id] = True
-    await state.set_state(ScanVacRekr.waiting_for_process)
+    await save_document(message, state, bot)
     
 @bot_router.callback_query(ScanVacRekr.waiting_for_process, F.data == "yes_vac_rekr")
 async def scan_vac_rekr_y(callback: CallbackQuery, state: FSMContext, bot: Bot):
@@ -267,19 +280,28 @@ async def scan_vac_rekr_y(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
 @bot_router.callback_query(ScanVacRekr.waiting_for_process, F.data == "no_vac_rekr")
 async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await callback.answer()  # убрать "часики"
     await callback.message.answer("Начинаю обработку...")
+
     user_id = callback.from_user.id
-    notified_flags.pop(user_id)
     user_dir = os.path.join(SAVE_DIR, str(user_id))
+
+    if not os.path.exists(user_dir):
+        await callback.message.answer("❌ Нет загруженных файлов для обработки.")
+        return
+
+    tasks = []
     for file_name in os.listdir(user_dir):
         file_path = os.path.join(user_dir, file_name)
-        ext = file_name.split(".")[-1].lower()
-        tasks = []
-        for file_name in os.listdir(user_dir):
-            path = os.path.join(user_dir, file_name)
-            if os.path.isfile(path):
-                tasks.append(process_file(path, bot, user_id))
-        await asyncio.gather(*tasks)
+        if os.path.isfile(file_path):
+            tasks.append(process_file(file_path, bot, user_id))
+
+    if not tasks:
+        await callback.message.answer("❌ Не найдено ни одного файла.")
+        return
+    await asyncio.gather(*tasks)
+
+    await callback.message.answer("✅ Обработка завершена.")
             
             
         
