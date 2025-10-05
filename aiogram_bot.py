@@ -248,8 +248,11 @@ async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
 
 # Общий обработчик документов (без состояния) - должен быть после обработчика с состоянием
 @bot_router.message(F.document)
-async def any_document(message: Message):
-    await message.answer("Вы находитесь не в состоянии ожидания вакансии. Нажмите кнопку, чтобы начать.")
+async def any_document(message: Message, state: FSMContext):
+    state = await state.get_state()
+    print(state)
+    
+    await message.answer("Вы находитесь в состоянии ожидания вакансии. Нажмите кнопку, чтобы начать.")
 
 
 async def save_document(message: types.Message, state: FSMContext, bot : Bot):
