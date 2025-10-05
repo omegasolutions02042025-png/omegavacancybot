@@ -236,7 +236,10 @@ async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext
     await bot.send_message(chat_id=user_id, text=mess_text)
     await state.update_data(mess_text=mess_text)
     await bot.send_message(chat_id=user_id, text="Отправьте вакансии для проверки")
+    
     await state.set_state(ScanVacRekr.waiting_for_vac)
+    state = await state.get_state()
+    print(state)
 
 
 @bot_router.message(F.document, ScanVacRekr.waiting_for_vac)
