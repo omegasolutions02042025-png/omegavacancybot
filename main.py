@@ -1,4 +1,6 @@
 import asyncio
+import sys
+import signal
 from db import init_db, AsyncSessionLocal
 from aiogram import Bot, Dispatcher
 from telethon_bot import *
@@ -18,6 +20,12 @@ ADMIN_ID = os.getenv("ADMIN_ID")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 dp.include_router(bot_router)
+
+def handle_sigint(signum, frame):
+    print("\n🛑 Получен Ctrl+C, завершаем...")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, handle_sigint)
 
 
 
