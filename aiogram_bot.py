@@ -251,7 +251,9 @@ async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext
     except:
         user_id = callback.from_user.id
         print(user_id)
-        await telethon_client.send_message(entity=user_id, message="Чтобы пользоватся проверкой вакансий необходимо написать /start боту @omega_vacancy_bot а затем опять нажать на кнопку")
+        msg = await telethon_client.send_message(entity=user_id, message="Чтобы пользоватся проверкой вакансий необходимо написать /start боту @omega_vacancy_bot а затем опять нажать на кнопку")
+        await asyncio.sleep(10)
+        await telethon_client.delete_messages(entity=user_id, message_ids=msg.id)
         return
     state_users.append(user_id)
     
