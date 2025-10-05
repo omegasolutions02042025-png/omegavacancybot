@@ -395,11 +395,7 @@ async def generate_hashtags_gemini(vacancy_text: str) -> str:
 
 
 
-async def sverka_vac_and_resume(vacancy_text: str, resume_text: str):
-    resume_text = anonymize_contacts(resume_text)
-    print(resume_text)
-    vacancy_text = vacancy_text.replace("{", "{{").replace("}", "}}")
-    resume_text = resume_text.replace("{", "{{").replace("}", "}}")
+def sverka_vac_and_resume(vacancy_text: str, resume_text: str):
     print("[*] Сверяем вакансию и резюме...")
     prompt = f"""
     Сравни очень тщательно требования вакансии и резюме кандидата.
@@ -432,21 +428,10 @@ async def sverka_vac_and_resume(vacancy_text: str, resume_text: str):
     generation_config = genai.types.GenerationConfig(temperature=0.1)
     
     try:
-        response = await model.generate_content_async(prompt, generation_config=generation_config)
+        response = model.generate_content(prompt, generation_config=generation_config)
         return response.text.strip()
     except Exception as e:
         print(f"🔥 Ошибка при сверке вакансии и резюме: {e}")
         return False
 
 
-def anonymize_contacts(text: str) -> str:
-    """Удаляет личные данные из текста резюме."""
-    text = re.sub(r'[\w\.\-+=]+@[\w\.\-]+\.[\w]+', '[EMAIL УДАЛЕН]', text)
-    phone_pattern = r'(?:\+?\d{1,3}[-\s]?)?\(?\d{3}\)?[-\s]?\d{3}[-\s]?\d{2}[-\s]?\d{2}'
-    text = re.sub(phone_pattern, '[ТЕЛЕФОН УДАЛЕН]', text)
-    url_pattern = r'(?:https?://|www\.)[^\s<>"\']+'
-    text = re.sub(url_pattern, '[ССЫЛКА УДАЛЕНА]', text)
-    username_pattern = r'(?:@[a-zA-Z0-9_]+)|(?:skype:\s*[a-zA-Z0-9_]+)|(?:t\.me/[a-zA-Z0-9_]+)'
-    text = re.sub(username_pattern, '[ЛОГИН УДАЛЕН]', text, flags=re.IGNORECASE)
-    
-    return text

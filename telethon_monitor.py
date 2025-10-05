@@ -68,7 +68,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal):
                    
                     vacancy_id = None
                     if not msg:
-                        print(f"❌ Сообщение {mapping.src_msg_id} не найдено — пропускаем функция monitor_and_cleanup")
+                        #print(f"❌ Сообщение {mapping.src_msg_id} не найдено — пропускаем функция monitor_and_cleanup")
                         continue
                     if msg.message:
                         match = VACANCY_ID_REGEX.search(msg.message)
