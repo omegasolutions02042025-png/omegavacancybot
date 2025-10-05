@@ -319,7 +319,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     for file_name in os.listdir(user_dir):
         file_path = os.path.join(user_dir, file_name)
         if os.path.isfile(file_path):
-            tasks.append(process_file(file_path, bot, user_id))
+            tasks.append(process_file_and_gpt(file_path, bot, user_id))
 
     if not tasks:
         await callback.message.answer("❌ Не найдено ни одного файла.")
