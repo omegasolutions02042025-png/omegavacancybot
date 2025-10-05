@@ -41,15 +41,22 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
         else:
             await bot.send_message(user_id, f"⚠️ Формат {ext} не поддерживается: {path}")
             return
-        try:
-            text = asyncio.create_task(sverka_vac_and_resume(resume_text=text, vacancy_text=vac_text))
-        except Exception as e:
-            await bot.send_message(user_id, f"❌ Ошибка при проверке вакансии: {e}")
-            return
-        if text:
-            await bot.send_message(user_id, text[:4096], parse_mode="HTML")
-        else:
-            await bot.send_message(user_id, "❌ Ошибка при проверке вакансии", parse_mode="HTML")
+        
+        text = asyncio.create_task(background_sverka(resume_text=text, vacancy_text=vac_text, bot=bot, user_id=user_id))
+        
         os.remove(path)
     except Exception as e:
         await bot.send_message(user_id, f"❌ Ошибка в {path}: {e}")
+        
+        
+async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_id: int|str):
+    try:
+        result = await sverka_vac_and_resume(resume_text, vacancy_text)
+        if result:
+            # Если результат большой, можно отправлять по частям
+            for i in range(0, len(result), 4096):
+                await bot.send_message(user_id, result[i:i+4096], parse_mode="HTML")
+        else:
+            await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")
+    except Exception as e:
+        await bot.send_message(user_id, f"🔥 Ошибка при сверке: {e}")
