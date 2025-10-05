@@ -30,7 +30,7 @@ class ScanHand(StatesGroup):
     
 class ScanVacRekr(StatesGroup):
     waiting_for_vac = State()
-    waiting_for_process = State()
+    
     
 
 
@@ -242,9 +242,8 @@ async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext
     print(state)
 
 
-@bot_router.message(F.document, ScanVacRekr.waiting_for_vac)
+@bot_router.message(ScanVacRekr.waiting_for_vac)
 async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
-    print("scan_vac_rekr")
     await save_document(message, state, bot)
 
 
