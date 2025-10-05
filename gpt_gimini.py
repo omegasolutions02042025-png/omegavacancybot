@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 import os
 from dotenv import load_dotenv
-from funcs import anonymize_contacts
+
 
 load_dotenv()
 
