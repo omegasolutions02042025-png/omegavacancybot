@@ -28,9 +28,9 @@ class ScanHand(StatesGroup):
     waiting_for_hand = State()
     waiting_for_topic = State()
     
-class ScanVacRekr(StatesGroup):
-    waiting_for_vac = State()
-    
+
+class Scan(StatesGroup):
+    waiting_resume = State()
     
 
 
@@ -228,23 +228,28 @@ async def scan_hand_topic(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await send_mess_to_group(GROUP_ID, text_cleaned, vac_id, bot)
     
     
+class ScanVacRekr(StatesGroup):
+    waiting_for_vac = State()
+
+# Обработчик callback
 @bot_router.callback_query(F.data == "scan_kand_for_vac")
 async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext):
-    user = callback.from_user
-    user_id = user.id
+    user_id = callback.from_user.id
     mess_text = callback.message.text
     await bot.send_message(chat_id=user_id, text=mess_text)
     await state.update_data(mess_text=mess_text)
     await bot.send_message(chat_id=user_id, text="Отправьте вакансии для проверки")
-    
     await state.set_state(ScanVacRekr.waiting_for_vac)
-    state = await state.get_state()
-    print(state)
 
-
-@bot_router.message(ScanVacRekr.waiting_for_vac)
+# Обработчик документа в состоянии waiting_for_vac
+@bot_router.message(F.document, ScanVacRekr.waiting_for_vac)
 async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
     await save_document(message, state, bot)
+
+# Общий обработчик документов (без состояния) - должен быть после обработчика с состоянием
+@bot_router.message(F.document)
+async def any_document(message: Message):
+    await message.answer("Вы находитесь не в состоянии ожидания вакансии. Нажмите кнопку, чтобы начать.")
 
 
 async def save_document(message: types.Message, state: FSMContext, bot : Bot):
