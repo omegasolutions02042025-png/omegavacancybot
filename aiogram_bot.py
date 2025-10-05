@@ -16,6 +16,7 @@ from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_bot import telethon_client
 from db import AsyncSessionLocal
 from scan_documents import process_file_and_gpt
+import shutil
 
 bot_router = Router()
 SAVE_DIR = "downloads"
@@ -241,8 +242,8 @@ text_mes_id = {}
 async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext):
     user_id = callback.from_user.id
     mess_text = callback.message.text
-    msg = await bot.send_message(chat_id=user_id, text=mess_text)
-    text_mes_id[user_id] = msg.message_id
+    await bot.send_message(chat_id=user_id, text=mess_text)
+    text_mes_id[user_id] = mess_text
     try:
         await bot.send_message(chat_id=user_id, text="Отправьте вакансии для проверки")
     except:
@@ -305,10 +306,13 @@ async def scan_vac_rekr_y(callback: CallbackQuery, state: FSMContext, bot: Bot):
 async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()  # убрать "часики"
     await callback.message.answer("Начинаю обработку...")
-    msg_id = text_mes_id.get(callback.from_user.id)
-    print(msg_id)
     user_id = callback.from_user.id
+    vac_text = text_mes_id.get(user_id)
+    print(vac_text)
+    
+    
     state_users.remove(user_id)
+    text_mes_id.pop(user_id)
     user_dir = os.path.join(SAVE_DIR, str(user_id))
 
     if not os.path.exists(user_dir):
@@ -319,13 +323,13 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     for file_name in os.listdir(user_dir):
         file_path = os.path.join(user_dir, file_name)
         if os.path.isfile(file_path):
-            tasks.append(process_file_and_gpt(file_path, bot, user_id))
+            tasks.append(process_file_and_gpt(file_path, bot, user_id, vac_text))
 
     if not tasks:
         await callback.message.answer("❌ Не найдено ни одного файла.")
         return
     await asyncio.gather(*tasks)
-    os.remove(user_dir)
+    shutil.rmtree(user_dir)
 
     await callback.message.answer("✅ Обработка завершена.")
     

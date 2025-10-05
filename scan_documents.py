@@ -26,7 +26,7 @@ def process_txt(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
-async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str):
+async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: str):
     ext = path.split(".")[-1].lower()
     try:
         if ext == "pdf":
@@ -38,14 +38,17 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str):
         elif ext == "txt":
             text = process_txt(path)
         else:
-            print(f"⚠️ Формат {ext} не поддерживается: {path}")
+            await bot.send_message(user_id, f"⚠️ Формат {ext} не поддерживается: {path}")
             return
-        print(f"✅ {path} обработан → {len(text)} символов")
-        text = await sverka_vac_and_resume(text)
+        try:
+            text = await sverka_vac_and_resume(text, vac_text)
+        except Exception as e:
+            await bot.send_message(user_id, f"❌ Ошибка при проверке вакансии: {e}")
+            return
         if text:
             await bot.send_message(user_id, text, parse_mode="HTML")
         else:
             await bot.send_message(user_id, "❌ Ошибка при проверке вакансии", parse_mode="HTML")
         os.remove(path)
     except Exception as e:
-        print(f"❌ Ошибка в {path}: {e}")
+        await bot.send_message(user_id, f"❌ Ошибка в {path}: {e}")
