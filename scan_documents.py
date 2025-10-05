@@ -52,7 +52,7 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
         
 async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_id: int|str):
     try:
-        result = await sverka_vac_and_resume_yandex(resume_text, vacancy_text)
+        result = await sverka_vac_and_resume(resume_text, vacancy_text)
         if result:
             # Если результат большой, можно отправлять по частям
             for i in range(0, len(result), 4096):
