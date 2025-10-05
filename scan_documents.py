@@ -41,7 +41,7 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
             await bot.send_message(user_id, f"⚠️ Формат {ext} не поддерживается: {path}")
             return
         try:
-            text = await sverka_vac_and_resume(resume_text=text, vac_text=vac_text)
+            text = await sverka_vac_and_resume(resume_text=text, vacancy_text=vac_text)
         except Exception as e:
             await bot.send_message(user_id, f"❌ Ошибка при проверке вакансии: {e}")
             return
