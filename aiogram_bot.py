@@ -249,8 +249,13 @@ async def save_document(message: types.Message, state: FSMContext, bot : Bot):
     file_path = file_info.file_path
     file_name = document.file_name
 
-    os.makedirs("downloads", exist_ok=True)
-    local_file_path = os.path.join("downloads", file_name)
+    # --- создаём папку для пользователя ---
+    user_id = message.from_user.id
+    user_dir = os.path.join(SAVE_DIR, str(user_id))
+    os.makedirs(user_dir, exist_ok=True)
+
+    # --- путь для сохранения файла ---
+    local_file_path = os.path.join(user_dir, file_name)
     await bot.download_file(file_path, destination=local_file_path)
     # --- Обработка media_group_id ---
     data = await state.get_data()
@@ -268,7 +273,7 @@ async def save_document(message: types.Message, state: FSMContext, bot : Bot):
 
 
 
-@bot_router.message(F.document)
+@bot_router.message(F.document, ScanVacRekr.waiting_for_vac)
 async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
     await save_document(message, state, bot)
     
