@@ -231,31 +231,28 @@ async def scan_hand_topic(callback: CallbackQuery, state: FSMContext, bot: Bot):
 class ScanVacRekr(StatesGroup):
     waiting_for_vac = State()
 
-# Обработчик callback
+
+state_users = []
+text_mes_id = {}
+
+
 @bot_router.callback_query(F.data == "scan_kand_for_vac")
 async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext):
     user_id = callback.from_user.id
     mess_text = callback.message.text
-    await bot.send_message(chat_id=user_id, text=mess_text)
-    await state.update_data(mess_text=mess_text)
+    msg = await bot.send_message(chat_id=user_id, text=mess_text)
+    text_mes_id[user_id] = msg.message_id
     await bot.send_message(chat_id=user_id, text="Отправьте вакансии для проверки")
+    state_users.append(user_id)
     
-    await state.set_state(ScanVacRekr.waiting_for_vac)
-    statee = await state.get_state()
-    print(statee)
 
-# Обработчик документа в состоянии waiting_for_vac
-@bot_router.message(F.document, ScanVacRekr.waiting_for_vac)
-async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
-    await save_document(message, state, bot)
-
-# Общий обработчик документов (без состояния) - должен быть после обработчика с состоянием
 @bot_router.message(F.document)
-async def any_document(message: Message, state: FSMContext):
-    state = await state.get_state()
-    print(state)
-    
-    await message.answer("Вы находитесь в состоянии ожидания вакансии. Нажмите кнопку, чтобы начать.")
+async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
+    user_id = message.from_user.id
+    if user_id not in state_users:
+        await message.answer("Вы не начали процесс проверки вакансий. Нажмите кнопку, чтобы начать.")
+        return
+    await save_document(message, state, bot)
 
 
 async def save_document(message: types.Message, state: FSMContext, bot : Bot):
@@ -297,14 +294,16 @@ async def save_document(message: types.Message, state: FSMContext, bot : Bot):
 @bot_router.callback_query(F.data == "yes_vac_rekr")
 async def scan_vac_rekr_y(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.message.answer("Жду файлы")
-    await state.set_state(ScanVacRekr.waiting_for_vac)
+    
 
 @bot_router.callback_query(F.data == "no_vac_rekr")
 async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()  # убрать "часики"
     await callback.message.answer("Начинаю обработку...")
-
+    msg_id = text_mes_id.get(callback.from_user.id)
+    print(msg_id)
     user_id = callback.from_user.id
+    state_users.remove(user_id)
     user_dir = os.path.join(SAVE_DIR, str(user_id))
 
     if not os.path.exists(user_dir):
