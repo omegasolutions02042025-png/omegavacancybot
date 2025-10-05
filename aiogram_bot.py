@@ -56,13 +56,15 @@ TOPIC_MAP = {
 
 }
 
-
+# 
 
 
 @bot_router.message(CommandStart())
 async def cmd_start(message: types.Message):
-    if message.from_user.id not in [6264939461, 429765805]:
-        await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе")
+    if message.from_user.id not in [6264939461,429765805]:
+        #await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе")
+        payload = message.get_args()
+        print(payload)
         return
     await message.answer(text="Основное меню", reply_markup = await main_kb())
 
@@ -250,7 +252,6 @@ async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext
         await bot.send_message(chat_id=user_id, text=mess_text)
     except:
         user_id = callback.from_user.id
-        print(user_id)
         msg = await telethon_client.send_message(entity=user_id, message="Чтобы пользоватся проверкой вакансий необходимо написать /start боту @omega_vacancy_bot а затем опять нажать на кнопку")
         await asyncio.sleep(10)
         await telethon_client.delete_messages(entity=user_id, message_ids=msg.id)
@@ -344,4 +345,5 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
 @bot_router.message(Command("bot"))
 async def bot_hr(message: Message):
     await message.answer("Отправьте вакансию для проверки")
-    await message.answer(f"https://t.me/omega_vacancy_bot?start=from_channel_123")
+    
+    await message.answer(f"https://t.me/omega_vacancy_bot?start={message.message_id}")
