@@ -1,9 +1,10 @@
 from aiogram import Router
 from aiogram import Bot, Dispatcher, types, F
+
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 from kb import main_kb, send_kb, scan_vac_rekr_yn_kb
 from telethon_bot import *
 from funcs import update_channels_and_restart_handler
@@ -335,6 +336,6 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             
             
         
-@bot_router.message(F.command("/bot"))
+@bot_router.message(Command("/bot"))
 async def start(message: Message, bot: Bot):
     await message.answer(f"https://t.me/omega_vacancy_bot?start=from_channel_123")
