@@ -403,7 +403,7 @@ async def sverka_vac_and_resume(vacancy_text: str, resume_text: str):
     prompt = f"""
     Сравни очень тщательно требования вакансии и резюме кандидата.
     
-    ВАЖНО: Перед проверкой удали все контакты из резюме.
+    
     
 Составь таблицы соответствия: 
 — Блок 1. Обязательные требования (все пункты из вакансии) 
@@ -423,6 +423,8 @@ async def sverka_vac_and_resume(vacancy_text: str, resume_text: str):
 Вот текст резюме:
 
 {resume_text}
+
+Удали все личные данные из резюме.
 """
     
     model = genai.GenerativeModel('gemini-2.5-flash')
