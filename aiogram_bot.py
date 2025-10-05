@@ -325,6 +325,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await callback.message.answer("❌ Не найдено ни одного файла.")
         return
     await asyncio.gather(*tasks)
+    os.remove(user_dir)
 
     await callback.message.answer("✅ Обработка завершена.")
     

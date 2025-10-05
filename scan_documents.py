@@ -3,6 +3,7 @@ from PyPDF2 import PdfReader
 import pypandoc
 from aiogram import Bot
 import os
+from gpt_gimini import sverka_vac_and_resume
 # PDF → текст
 def process_pdf(path: str) -> str:
     reader = PdfReader(path)
@@ -25,7 +26,7 @@ def process_txt(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
-async def process_file(path: str, bot: Bot, user_id: int|str):
+async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str):
     ext = path.split(".")[-1].lower()
     try:
         if ext == "pdf":
@@ -40,7 +41,11 @@ async def process_file(path: str, bot: Bot, user_id: int|str):
             print(f"⚠️ Формат {ext} не поддерживается: {path}")
             return
         print(f"✅ {path} обработан → {len(text)} символов")
-        await bot.send_message(user_id, text[:2000], parse_mode="HTML")
+        text = await sverka_vac_and_resume(text)
+        if text:
+            await bot.send_message(user_id, text, parse_mode="HTML")
+        else:
+            await bot.send_message(user_id, "❌ Ошибка при проверке вакансии", parse_mode="HTML")
         os.remove(path)
     except Exception as e:
         print(f"❌ Ошибка в {path}: {e}")

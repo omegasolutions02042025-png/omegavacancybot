@@ -410,3 +410,5 @@ async def generate_hashtags_from_text(vacancy_text: str):
     clean_text = result.alternatives[0].text.strip()
     return clean_text
 
+
+    
