@@ -15,7 +15,7 @@ from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_bot import telethon_client
 from db import AsyncSessionLocal
-from scan_documents import process_file
+from scan_documents import process_file_and_gpt
 
 bot_router = Router()
 SAVE_DIR = "downloads"
