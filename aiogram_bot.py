@@ -335,4 +335,6 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             
             
         
-
+@bot_router.message(F.command("/bot"))
+async def start(message: Message, bot: Bot):
+    await message.answer(f"https://t.me/omega_vacancy_bot?start=from_channel_123")
