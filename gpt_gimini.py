@@ -418,8 +418,8 @@ async def sverka_vac_and_resume(vacancy_text: str, resume_text: str):
 {resume_text}
 """
     
-    model = genai.GenerativeModel('gemini-2.5-flash')
-    generation_config = genai.types.GenerationConfig(temperature=0.1)
+    model = genai.GenerativeModel('gemini-2.5-pro')
+    generation_config = genai.types.GenerationConfig(temperature=0.1, max_output_tokens=1000)
     
     try:
         response = await model.generate_content_async(prompt, generation_config=generation_config)
