@@ -3,8 +3,7 @@ from PyPDF2 import PdfReader
 import pypandoc
 from aiogram import Bot
 import os
-from gpt_gimini import sverka_vac_and_resume
-from gpt import sverka_vac_and_resume_yandex
+from gpt_gimini import sverka_vac_and_resume_json
 import asyncio
 # PDF → текст
 def process_pdf(path: str) -> str:
@@ -52,7 +51,7 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
         
 async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_id: int|str):
     try:
-        result = await asyncio.to_thread(sverka_vac_and_resume, vacancy_text, resume_text)
+        result = await asyncio.to_thread(sverka_vac_and_resume_json, vacancy_text, resume_text)
         if result:
             # Если результат большой, можно отправлять по частям
             for i in range(0, len(result), 4096):
