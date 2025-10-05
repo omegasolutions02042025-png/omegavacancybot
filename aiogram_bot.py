@@ -228,7 +228,7 @@ async def scan_hand_topic(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await send_mess_to_group(GROUP_ID, text_cleaned, vac_id, bot)
     
     
-@bot_router.message(F.data == "scan_kand_for_vac")
+@bot_router.callback_query(F.data == "scan_kand_for_vac")
 async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext):
     user = callback.from_user
     user_id = user.id
