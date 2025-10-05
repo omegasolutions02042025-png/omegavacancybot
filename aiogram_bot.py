@@ -65,6 +65,8 @@ async def cmd_start(message: types.Message, command : CommandStart):
         #await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе")
         payload = command.args
         print(payload)
+        mes = telethon_client.get_messages(-1002658129391, payload)
+        await message.answer(mes.text)
         return
     await message.answer(text="Основное меню", reply_markup = await main_kb())
 
