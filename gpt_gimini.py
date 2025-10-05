@@ -418,7 +418,7 @@ async def sverka_vac_and_resume(vacancy_text: str, resume_text: str):
 {resume_text}
 """
     
-    model = genai.GenerativeModel('gemini-2.5-pro')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     generation_config = genai.types.GenerationConfig(temperature=0.1, max_output_tokens=1000)
     
     try:
