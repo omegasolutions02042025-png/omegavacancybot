@@ -46,7 +46,7 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
             await bot.send_message(user_id, f"❌ Ошибка при проверке вакансии: {e}")
             return
         if text:
-            await bot.send_message(user_id, text, parse_mode="HTML")
+            await bot.send_message(user_id, text[:2000], parse_mode="HTML")
         else:
             await bot.send_message(user_id, "❌ Ошибка при проверке вакансии", parse_mode="HTML")
         os.remove(path)
