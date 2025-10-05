@@ -40,7 +40,7 @@ async def process_file(path: str, bot: Bot, user_id: int|str):
             print(f"⚠️ Формат {ext} не поддерживается: {path}")
             return
         print(f"✅ {path} обработан → {len(text)} символов")
-        await bot.send_message(user_id, text)
+        await bot.send_message(user_id, text[:2000], parse_mode="HTML")
         os.remove(path)
     except Exception as e:
         print(f"❌ Ошибка в {path}: {e}")

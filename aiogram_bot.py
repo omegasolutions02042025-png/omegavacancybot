@@ -60,6 +60,7 @@ TOPIC_MAP = {
 @bot_router.message(CommandStart())
 async def cmd_start(message: types.Message):
     if message.from_user.id not in [6264939461, 429765805]:
+        await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе")
         return
     await message.answer(text="Основное меню", reply_markup = await main_kb())
 
@@ -242,7 +243,11 @@ async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext
     mess_text = callback.message.text
     msg = await bot.send_message(chat_id=user_id, text=mess_text)
     text_mes_id[user_id] = msg.message_id
-    await bot.send_message(chat_id=user_id, text="Отправьте вакансии для проверки")
+    try:
+        await bot.send_message(chat_id=user_id, text="Отправьте вакансии для проверки")
+    except:
+        telethon_client.send_message(chat_id=user_id, text="Чтобы пользоватся проверкой вакансий необходимо написать /start боту @omega_vacancy_bot а затем опять нажать на кнопку")
+        return
     state_users.append(user_id)
     
 
@@ -322,7 +327,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await asyncio.gather(*tasks)
 
     await callback.message.answer("✅ Обработка завершена.")
-    await state.clear()
+    
             
             
         
