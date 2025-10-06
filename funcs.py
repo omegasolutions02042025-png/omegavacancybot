@@ -337,16 +337,20 @@ def get_message_datetime(msg, tz: str = "Europe/Moscow") -> str:
 
     return local_date.strftime("%d.%m.%Y %H:%M")
 
-
 def get_vacancy_title(text: str) -> str | None:
     """
-    Возвращает заголовок вакансии (строку с 🥇) без удаления её из текста.
-    Если строки с 🥇 нет, возвращает None.
+    Возвращает заголовок вакансии — строку, начинающуюся с 🥇.
+    Пример:
+    🥇 Аналитик Colvir (Middle+/Senior) → "Аналитик Colvir (Middle+/Senior)"
     """
-    pattern = re.compile(r'^🥇\s*(.*)$', re.MULTILINE)
+    if not text:
+        return None
+
+    pattern = re.compile(r'^\s*🥇\s*(.+)$', re.MULTILINE)
     match = pattern.search(text)
     if match:
         return match.group(1).strip()
+
     return None
 
 

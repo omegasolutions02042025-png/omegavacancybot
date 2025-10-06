@@ -78,7 +78,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal, bot: Bot):
                     # Если сообщение удалено или зачёркнуто
                     if has_strikethrough(msg):
                         print(f"❌ Сообщение {mapping.src_msg_id} содержит зачёркнутый текст — удаляем функция monitor_and_cleanup")
-                        await asyncio.create_task(mark_inactive_and_schedule_delete(
+                        asyncio.create_task(mark_inactive_and_schedule_delete(
                             telethon_client, mapping, vacancy_id, title, bot
                         ))
                         await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
@@ -90,7 +90,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal, bot: Bot):
                     # Проверка на слово "стоп"
                     if msg.message and stop_pattern.search(msg.message):
                         print(f"🛑 Сообщение {mapping.src_msg_id} содержит слово 'стоп' — удаляем функция monitor_and_cleanup")
-                        await asyncio.create_task(mark_inactive_and_schedule_delete(
+                        asyncio.create_task(mark_inactive_and_schedule_delete(
                             telethon_client, mapping, vacancy_id, title, bot
                         ))
                         await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
@@ -117,7 +117,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal, bot: Bot):
                             now_utc = datetime.now(timezone.utc)
                             if deadline_dt.replace(tzinfo=timezone.utc) <= now_utc:
                                 print(f"⏰ Дедлайн для сообщения {mapping.src_msg_id} истёк — удаляем функция monitor_and_cleanup")
-                                await asyncio.create_task(mark_inactive_and_schedule_delete(
+                                asyncio.create_task(mark_inactive_and_schedule_delete(
                                     telethon_client, mapping, vacancy_id, get_vacancy_title(msg.message), bot
                                 ))
                                 await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
@@ -287,15 +287,15 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id, bot: 
                             
                             if has_strikethrough(dst_msg):
                                 print(f"🗑 Найден зачеркнутый ID {vacancy_id} в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
-                                await asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
+                                asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
                                 break  # нашли и удалили → идём к следующему
                             elif stop_pattern.search(dst_msg.text):
                                 print(f"🛑 Найдено слово 'стоп' в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
-                                await asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
+                                asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
                                 break  # нашли и удалили → идём к следующему
                             elif msg_date < datetime.now(timezone.utc) - timedelta(days=21):
                                 print(f"🗑 Найдено сообщение старше 21 дня в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
-                                await asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
+                                asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
                                 break  # нашли и удалили → идём к следующему
                 except Exception as e:
                         print(f"Ошибка обработки сообщения {msg.id}: {e}")
@@ -325,7 +325,7 @@ async def mark_as_deleted(client, msg_id, chat_id, vacancy_id, name_vac, bot: Bo
         print(f"📌 Закреплено сообщение {message.id}")
 
         # Ждём 24 часа
-        await asyncio.sleep(30)
+        await asyncio.sleep(86400)
 
         # Открепляем и удаляем
         await bot.delete_message(chat_id, message.id)
@@ -366,4 +366,4 @@ async def check_old_messages_and_mark(teleton_client, channel_id: int, bot: Bot)
                 await bot.send_message(ADMIN_ID, f'⚠️Удалено сообщение {message.id} старше 21 дня ({age.days} дней). Помечаем...')
                 await message.delete()
                 
-        await asyncio.sleep(30)
+        await asyncio.sleep(86400)
