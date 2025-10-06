@@ -6,6 +6,7 @@ import os
 from gpt_gimini import sverka_vac_and_resume_json
 import asyncio
 from funcs import format_candidate_json_str
+from striprtf.striprtf import rtf_to_text
 # PDF → текст
 def process_pdf(path: str) -> str:
     reader = PdfReader(path)
@@ -21,7 +22,14 @@ def process_docx(path: str) -> str:
 
 # RTF → текст
 def process_rtf(path: str) -> str:
-    return pypandoc.convert_text(open(path, encoding="utf-8").read(), "plain", format="rtf")
+    """
+    Читает RTF-файл и возвращает чистый текст.
+    Работает без Pandoc.
+    """
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+    text = rtf_to_text(content)
+    return text
 
 # TXT → текст
 def process_txt(path: str) -> str:
