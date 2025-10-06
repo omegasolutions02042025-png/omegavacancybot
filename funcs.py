@@ -353,7 +353,7 @@ def get_vacancy_title(text: str) -> str | None:
 def format_candidate_json_str(raw_str: str) -> str:
     """
     Обрабатывает строку JSON (в том числе с ```json ``` или тройными кавычками),
-    парсит её и возвращает красиво форматированный текст для Telegram.
+    парсит её и возвращает красиво форматированный текст для Telegram с отступами.
     """
     # Убираем ```json и ``` по краям
     cleaned_str = re.sub(r'^```json\s*', '', raw_str.strip())
@@ -374,20 +374,24 @@ def format_candidate_json_str(raw_str: str) -> str:
     text = f"👤 Кандидат: {name} {surname}\n"
     text += f"📌 Итоговое решение: {verdict}\n\n"
 
+    # Обязательные навыки
     text += "🛠 Обязательные навыки:\n"
     for skill in candidate_json.get("comparison_results", {}).get("required_skills", []):
         requirement = skill.get("requirement", "")
         status = skill.get("status", "")
         comment = skill.get("comment", "")
-        text += f"- {requirement} — {status}\n  {comment}\n"
+        text += f"- {requirement} — {status}\n  {comment}\n\n"  # добавлен перенос между навыками
 
+    # Дополнительные навыки
     plus_skills = candidate_json.get("comparison_results", {}).get("plus_skills", [])
     if plus_skills:
-        text += "\n➕ Дополнительные навыки:\n"
+        text += "➕ Дополнительные навыки:\n"
         for skill in plus_skills:
             text += f"- {skill}\n"
+        text += "\n"
 
+    # Обоснование
     if justification:
-        text += f"\n📝 Обоснование:\n{justification}"
+        text += f"📝 Обоснование:\n{justification}\n"
 
     return text
