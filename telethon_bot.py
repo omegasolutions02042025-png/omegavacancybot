@@ -11,7 +11,7 @@ from db import get_all_channels, add_message_mapping, remove_message_mapping, ge
 from gpt import del_contacts_gpt, process_vacancy, format_vacancy
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from typing import Tuple, Optional
-from funcs import is_russia_only_citizenship, oplata_filter, check_project_duration, send_mess_to_group, get_message_datetime, extract_vacancy_id_and_text
+from funcs import is_russia_only_citizenship, oplata_filter, check_project_duration, send_mess_to_group, get_message_datetime, extract_vacancy_id_and_text, remove_vacancy_id
 from telethon.errors import FloodWaitError
 from aiogram import Bot
 import teleton_client
@@ -158,9 +158,9 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         continue
                     try:                 
                         mess = await bot.send_message(chat_id=dst_chat, text='.', message_thread_id=dst_topic_id)
-                        vacancy_id , cleaned_text = extract_vacancy_id_and_text(formatted_text)
-                        url = f"https://t.me/omega_vacancy_bot?start={mess.message_id}"
-                        ms_text = f"<a href='{url}'>{vacancy_id}</a>\n{cleaned_text}"
+                        cleaned_text = remove_vacancy_id(formatted_text)
+                        url = f"https://t.me/omega_vacancy_bot?start={mess.message_id}_{vac_id}"
+                        ms_text = f"<a href='{url}'>{vac_id}</a>\n{cleaned_text}"
                         forwarded_msg = await bot.edit_message_text(
                             chat_id=dst_chat,
                             message_id=mess.message_id,
@@ -331,9 +331,9 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
 
         try:
             mess = await bot.send_message(chat_id=dst_chat_id, text='.', message_thread_id=dst_topic_id)
-            vacancy_id , cleaned_text = extract_vacancy_id_and_text(formatted_text)
-            url = f"https://t.me/omega_vacancy_bot?start={mess.message_id}"
-            ms_text = f"<a href='{url}'>{vacancy_id}</a>\n{cleaned_text}"
+            cleaned_text = remove_vacancy_id(formatted_text)
+            url = f"https://t.me/omega_vacancy_bot?start={mess.message_id}_{vac_id}"
+            ms_text = f"<a href='{url}'>{vac_id}</a>\n{cleaned_text}"
             forwarded_msg = await bot.edit_message_text(
                 chat_id=dst_chat_id,
                 message_id=mess.message_id,
