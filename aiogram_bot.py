@@ -76,7 +76,7 @@ async def cmd_start(message: types.Message, command : CommandStart, state: FSMCo
             return
         mes = await telethon_client.get_messages(-1002658129391, ids = int(payload))
         print(mes)
-        await message.answer(mes.text, parse_mode='Markdown')
+        await message.answer(mes.text, parse_mode='HTML')
         await message.answer('Отправьте резюме')
         await state.update_data(vacancy_id=payload)
         await state.set_state(Scan.waiting_resume)
