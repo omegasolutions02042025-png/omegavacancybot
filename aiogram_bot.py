@@ -76,7 +76,7 @@ async def cmd_start(message: types.Message, command : CommandStart, state: FSMCo
         mes = await telethon_client.get_messages(-1002658129391, ids = int(payload))
         await message.answer(mes.message, parse_mode='HTML')
         await message.answer('Отправьте резюме')
-        await state.update_data(vacancy_id=payload)
+        await state.update_data(vacancy = mes.message)
         await state.set_state(ScanVacRekr.waiting_for_vac)
         return
     
@@ -313,6 +313,8 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.message.answer("Начинаю обработку...")
     user_id = callback.from_user.id
     user_dir = os.path.join(SAVE_DIR, str(user_id))
+    data = await state.get_data()
+    vac_text = data.get("vacancy")
 
     if not os.path.exists(user_dir):
         await callback.message.answer("❌ Нет загруженных файлов для обработки.")
