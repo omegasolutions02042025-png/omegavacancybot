@@ -32,9 +32,8 @@ class ScanHand(StatesGroup):
     waiting_for_topic = State()
     
 
-class Scan(StatesGroup):
-    waiting_resume = State()
-    
+class ScanVacRekr(StatesGroup):
+    waiting_for_vac = State()
 
 
 TOPIC_MAP = {
@@ -75,11 +74,10 @@ async def cmd_start(message: types.Message, command : CommandStart, state: FSMCo
             await message.answer(text="Основное меню", reply_markup = await main_kb())
             return
         mes = await telethon_client.get_messages(-1002658129391, ids = int(payload))
-        print(mes)
         await message.answer(mes.message, parse_mode='HTML')
         await message.answer('Отправьте резюме')
         await state.update_data(vacancy_id=payload)
-        await state.set_state(Scan.waiting_resume)
+        await state.set_state(ScanVacRekr.waiting_for_vac)
         return
     
 
@@ -252,8 +250,7 @@ async def scan_hand_topic(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await send_mess_to_group(GROUP_ID, text_cleaned, vac_id, bot)
     
     
-class ScanVacRekr(StatesGroup):
-    waiting_for_vac = State()
+
 
 
 state_users = []
