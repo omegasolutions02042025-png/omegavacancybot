@@ -325,7 +325,7 @@ async def mark_as_deleted(client, msg_id, chat_id, vacancy_id, name_vac, bot: Bo
         print(f"📌 Закреплено сообщение {message.id}")
 
         # Ждём 24 часа
-        await asyncio.sleep(86400)
+        await asyncio.sleep(30)
 
         # Открепляем и удаляем
         await bot.delete_message(chat_id, message.id)
@@ -366,4 +366,4 @@ async def check_old_messages_and_mark(teleton_client, channel_id: int, bot: Bot)
                 await bot.send_message(ADMIN_ID, f'⚠️Удалено сообщение {message.id} старше 21 дня ({age.days} дней). Помечаем...')
                 await message.delete()
                 
-        await asyncio.sleep(86400)
+        await asyncio.sleep(30)
