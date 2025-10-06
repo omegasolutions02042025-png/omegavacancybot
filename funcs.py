@@ -272,9 +272,15 @@ print(is_russia_only_citizenship(text=text))
 
 
 VACANCY_ID_REGEX = re.compile(
-    r"(?:🆔\s*)?(?:[\w\-\u0400-\u04FF]+[\s\-]*)?\d+", 
+    r"(?:🆔\s*)?(?:[\w\-\u0400-\u04FF]+[\s\-]*)?(\d+)",
     re.IGNORECASE
 )
+
+def extract_vacancy_id_and_text(text: str):
+    match = VACANCY_ID_REGEX.search(text)
+    vacancy_id = match.group(1) if match else None
+    clean_text = VACANCY_ID_REGEX.sub("", text).strip()
+    return vacancy_id, clean_text
 
 
 def remove_vacancy_id(text: str) -> str:
@@ -296,6 +302,8 @@ def extract_vacancy_id_and_text(text: str):
     match = VACANCY_ID_REGEX.search(text)
     vacancy_id = match.group(1) if match else None
     clean_text = VACANCY_ID_REGEX.sub("", text).strip()
+    clean_text = re.sub(r"[ \t]{2,}", " ", clean_text)
+    clean_text = re.sub(r"\n{2,}", "\n\n", clean_text)
     return vacancy_id, clean_text
 
 async def send_mess_to_group(group_id: int, message: str, vacancy_id: str, bot: Bot):
