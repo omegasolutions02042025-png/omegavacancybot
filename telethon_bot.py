@@ -180,7 +180,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                             src_chat_id=src_chat,
                             src_msg_id=msg.id,
                             dst_chat_id=dst_chat,
-                            dst_msg_id=forwarded_msg.id,
+                            dst_msg_id=forwarded_msg.message_id,
                             deadline_date=deadline_date,
                             deadline_time=deadline_time
                         )
