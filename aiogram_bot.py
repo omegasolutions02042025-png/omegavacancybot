@@ -67,14 +67,15 @@ async def cmd_start(message: types.Message, command : CommandStart, state: FSMCo
     
         
         payload = command.args
-        vac_id = payload.split('_')[1]
-        mess_id = payload.split('_')[0]
+        
         if not payload:
             if message.from_user.id not in [6264939461,429765805]:
                 await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе")
                 return
             await message.answer(text="Основное меню", reply_markup = await main_kb())
             return
+        vac_id = payload.split('_')[1]
+        mess_id = payload.split('_')[0]
         mes = await telethon_client.get_messages(-1002658129391, ids = int(mess_id))
         clean_text = remove_vacancy_id(mes.message)
         
