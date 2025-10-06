@@ -315,6 +315,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     user_dir = os.path.join(SAVE_DIR, str(user_id))
     data = await state.get_data()
     vac_text = data.get("vacancy")
+    print(vac_text)
 
     if not os.path.exists(user_dir):
         await callback.message.answer("❌ Нет загруженных файлов для обработки.")
