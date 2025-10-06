@@ -239,7 +239,7 @@ async def scan_hand_topic(callback: CallbackQuery, state: FSMContext, bot: Bot):
     message_id = await bot.send_message(chat_id=-1002658129391, text='.', message_thread_id=topic_id, parse_mode='HTML')
     url_bot = f"https://t.me/omega_vacancy_bot?start={message_id.message_id}"
     text_cleaned = f"<a href={url_bot}>{vacancy_id}</a>\n{clean_text}"
-    await bot.edit_message_text(chat_id=-1002658129391, message_id=message_id.message_id, text=text_cleaned, message_thread_id=topic_id, parse_mode='HTML')
+    await bot.edit_message_text(chat_id=-1002658129391, message_id=message_id.message_id, text=text_cleaned,parse_mode='HTML')
     await state.clear()
     await callback.message.answer('Вакансия отправлена')
     await send_mess_to_group(GROUP_ID, text_cleaned, vac_id, bot)
