@@ -263,7 +263,7 @@ text_mes_id = {}
 @bot_router.message(F.document, ScanVacRekr.waiting_for_vac)
 async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
     await save_document(message, state, bot)
-    await state.clear()
+    
 
 
 async def save_document(message: types.Message, state: FSMContext, bot : Bot):
