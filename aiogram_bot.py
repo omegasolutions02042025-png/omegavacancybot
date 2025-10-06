@@ -212,7 +212,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
         
                 
         try:
-            await message.answer(formatted_text, parse_mode='HTML')
+            await message.answer(text_cleaned, parse_mode='HTML')
         except Exception as e:
             await message.answer(f'Ошибка при отправке вакансии {e}')
             return
