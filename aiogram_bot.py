@@ -67,14 +67,20 @@ async def cmd_start(message: types.Message, command : CommandStart, state: FSMCo
     
         
         payload = command.args
+        vac_id = payload.split('_')[1]
+        mess_id = payload.split('_')[0]
         if not payload:
             if message.from_user.id not in [6264939461,429765805]:
                 await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе")
                 return
             await message.answer(text="Основное меню", reply_markup = await main_kb())
             return
-        mes = await telethon_client.get_messages(-1002658129391, ids = int(payload))
-        await message.answer(mes.message, parse_mode='HTML')
+        mes = await telethon_client.get_messages(-1002658129391, ids = int(mess_id))
+        clean_text = remove_vacancy_id(mes.message)
+        
+        link = f"https://t.me/c/{str(-1002658129391)[4:]}/{mess_id}"
+        messsage_text = f"<a href='{link}'>{vac_id}</a>\n{clean_text}"
+        await message.answer(messsage_text, parse_mode='HTML')
         await message.answer('Отправьте резюме')
         await state.update_data(vacancy = mes.message)
         await state.set_state(ScanVacRekr.waiting_for_vac)
@@ -242,7 +248,7 @@ async def scan_hand_topic(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await callback.message.answer('Нет текста')
         return
     message_id = await bot.send_message(chat_id=-1002658129391, text='.', message_thread_id=topic_id, parse_mode='HTML')
-    url_bot = f"https://t.me/omega_vacancy_bot?start={message_id.message_id}"
+    url_bot = f"https://t.me/omega_vacancy_bot?start={message_id.message_id}_{vac_id}"
     text_cleaned = f'<a href="{url_bot}">{vacancy_id}</a>\n{clean_text}'
     await bot.edit_message_text(chat_id=-1002658129391, message_id=message_id.message_id, text=text_cleaned,parse_mode='HTML')
     await state.clear()
