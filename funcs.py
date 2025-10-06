@@ -6,6 +6,8 @@ from gpt_gimini import generate_hashtags_gemini
 from aiogram import Bot
 from datetime import datetime
 import pytz
+import json
+import re
 
 if not hasattr(inspect, "getargspec"):
     ArgSpec = namedtuple('ArgSpec', ['args', 'varargs', 'keywords', 'defaults'])
@@ -21,7 +23,6 @@ if not hasattr(inspect, "getargspec"):
 
 # --- Обычные функции ---
 
-import re
 
 async def update_channels_and_restart_handler(new_channels, CHANNELS, register_handler):
     """Обновляет список каналов и перезапускает обработчик"""
@@ -30,8 +31,6 @@ async def update_channels_and_restart_handler(new_channels, CHANNELS, register_h
     await register_handler()
 
 
-
-import re
 
 def is_russia_only_citizenship(text: str) -> bool:
 	"""
@@ -351,3 +350,44 @@ def get_vacancy_title(text: str) -> str | None:
     return None
 
 
+def format_candidate_json_str(raw_str: str) -> str:
+    """
+    Обрабатывает строку JSON (в том числе с ```json ``` или тройными кавычками),
+    парсит её и возвращает красиво форматированный текст для Telegram.
+    """
+    # Убираем ```json и ``` по краям
+    cleaned_str = re.sub(r'^```json\s*', '', raw_str.strip())
+    cleaned_str = re.sub(r'```$', '', cleaned_str.strip())
+
+    # Пробуем распарсить JSON
+    try:
+        candidate_json = json.loads(cleaned_str)
+    except json.JSONDecodeError:
+        return "❌ Ошибка: неверный формат JSON"
+
+    # Формируем красивый текст
+    name = candidate_json.get("name", "")
+    surname = candidate_json.get("surname", "")
+    verdict = candidate_json.get("final_verdict", "")
+    justification = candidate_json.get("justification", "")
+
+    text = f"👤 Кандидат: {name} {surname}\n"
+    text += f"📌 Итоговое решение: {verdict}\n\n"
+
+    text += "🛠 Обязательные навыки:\n"
+    for skill in candidate_json.get("comparison_results", {}).get("required_skills", []):
+        requirement = skill.get("requirement", "")
+        status = skill.get("status", "")
+        comment = skill.get("comment", "")
+        text += f"- {requirement} — {status}\n  {comment}\n"
+
+    plus_skills = candidate_json.get("comparison_results", {}).get("plus_skills", [])
+    if plus_skills:
+        text += "\n➕ Дополнительные навыки:\n"
+        for skill in plus_skills:
+            text += f"- {skill}\n"
+
+    if justification:
+        text += f"\n📝 Обоснование:\n{justification}"
+
+    return text
