@@ -11,7 +11,7 @@ from db import get_all_channels, add_message_mapping, remove_message_mapping, ge
 from gpt import del_contacts_gpt, process_vacancy, format_vacancy
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from typing import Tuple, Optional
-from funcs import is_russia_only_citizenship, oplata_filter, check_project_duration, send_mess_to_group, get_message_datetime
+from funcs import is_russia_only_citizenship, oplata_filter, check_project_duration, send_mess_to_group, get_message_datetime, extract_vacancy_id_and_text
 from telethon.errors import FloodWaitError
 from aiogram import Bot
 import teleton_client
@@ -157,13 +157,17 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         await bot.send_message(ADMIN_ID, formatted_text)
                         continue
                     try:                 
-                        forwarded_msg = await bot.send_message(
+                        mess = await bot.send_message(chat_id=dst_chat, text='.', message_thread_id=dst_topic_id)
+                        vacancy_id , cleaned_text = extract_vacancy_id_and_text(formatted_text)
+                        url = f"https://t.me/omega_vacancy_bot?start={mess.message_id}"
+                        ms_text = f"<a href='{url}'>{vacancy_id}</a>\n{cleaned_text}"
+                        forwarded_msg = await bot.edit_message_text(
                             chat_id=dst_chat,
-                            text=formatted_text,
-                            message_thread_id=dst_topic_id,
+                            message_id=mess.message_id,
+                            text=ms_text,
                             parse_mode='HTML',
-                            reply_markup=await scan_vac_kb()
                         )
+            
                     except Exception as e:
                         await bot.send_message(ADMIN_ID, f'❌ Ошибка при отправке в сообщении {msg.id}: {e}')
                         continue
@@ -222,10 +226,6 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
 
         if has_strikethrough(event.message):
             await bot.send_message(ADMIN_ID, f"❌ Сообщение {event.message.id} содержит зачёркнутый текст — пропускаем")
-            return
-
-        if oplata_filter(text):
-            await bot.send_message(ADMIN_ID, f'❌ Оплата не подходит в топике {src_topic_id} в чате {event.chat_id}')
             return
 
         if check_project_duration(text):
@@ -330,13 +330,17 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
             return
 
         try:
-            forwarded_msg = await bot.send_message(
+            mess = await bot.send_message(chat_id=dst_chat_id, text='.', message_thread_id=dst_topic_id)
+            vacancy_id , cleaned_text = extract_vacancy_id_and_text(formatted_text)
+            url = f"https://t.me/omega_vacancy_bot?start={mess.message_id}"
+            ms_text = f"<a href='{url}'>{vacancy_id}</a>\n{cleaned_text}"
+            forwarded_msg = await bot.edit_message_text(
                 chat_id=dst_chat_id,
-                text=formatted_text,
-                message_thread_id=dst_topic_id,
+                message_id=mess.message_id,
+                text=ms_text,
                 parse_mode='HTML',
-                reply_markup=await scan_vac_kb()
-                )
+            )
+            
             await send_mess_to_group(GROUP_ID, formatted_text, vac_id, bot)
         except Exception as e:
             await bot.send_message(ADMIN_ID, f'❌ Не удалось отправить в канал в топике {src_topic_id} в чате {event.chat_id}: {e}')
