@@ -353,7 +353,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                 src_chat_id=event.chat_id,
                 src_msg_id=event.message.id,
                 dst_chat_id=dst_chat_id,
-                dst_msg_id=forwarded_msg.id,
+                dst_msg_id=forwarded_msg.message_id,
                 deadline_date=deadline_date,
                 deadline_time=deadline_time
             )
