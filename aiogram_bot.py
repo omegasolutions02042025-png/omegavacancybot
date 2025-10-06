@@ -60,14 +60,19 @@ TOPIC_MAP = {
 
 
 @bot_router.message(CommandStart())
-async def cmd_start(message: types.Message, command : CommandStart):
+async def cmd_start(message: types.Message, command : CommandStart, state: FSMContext):
     if message.from_user.id not in [6264939461,429765805]:
-        #await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе")
+        
         payload = command.args
-        print(payload)
+        if not payload:
+            await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе")
+            return
         mes = await telethon_client.get_messages(-1002658129391, ids = int(payload))
         print(mes)
         await message.answer(mes.text)
+        await message.answer('Отправьте резюме')
+        await state.update_data(vacancy_id=payload)
+        await state.set_state(Scan.waiting_resume)
         return
     await message.answer(text="Основное меню", reply_markup = await main_kb())
 
@@ -202,8 +207,8 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
             else:
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
                 print(text_cleaned)
-        formatted_text = await format_vacancy_gemini(text_cleaned, vacancy_id=vac_id)
-        print(formatted_text[:200])
+        vacancy_id, clean_text = extract_vacancy_id_and_text(text_cleaned)
+        
         
                 
         try:
@@ -211,7 +216,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
         except Exception as e:
             await message.answer(f'Ошибка при отправке вакансии {e}')
             return
-        await state.update_data(text_cleaned=formatted_text, vac_id=vac_id)
+        await state.update_data(vac_id=vac_id, vacancy_id=vacancy_id, clean_text=clean_text)
     except Exception as e:
         await message.answer(f'Ошибка при обработке вакансии {e}')
         return
@@ -224,13 +229,17 @@ async def scan_hand_topic(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.message.delete()
     topic_id = int(callback.data.split(":")[1])
     data = await state.get_data()
-    text_cleaned = data.get('text_cleaned')
     vac_id = data.get('vac_id')
-    if not text_cleaned:
+    vacancy_id = data.get('vacancy_id')
+    clean_text = data.get('clean_text')
+    
+    if not clean_text:
         await callback.message.answer('Нет текста')
         return
-
-    await bot.send_message(chat_id=-1002658129391, text=text_cleaned, message_thread_id=topic_id, parse_mode='HTML')
+    message_id = await bot.send_message(chat_id=-1002658129391, text='.', message_thread_id=topic_id, parse_mode='HTML')
+    url_bot = f"https://t.me/omega_vacancy_bot?start={message_id.message_id}"
+    text_cleaned = f"<a href={url_bot}>{vacancy_id}</a>\n{clean_text}"
+    await bot.edit_message_text(chat_id=-1002658129391, message_id=message_id.message_id, text=text_cleaned, message_thread_id=topic_id, parse_mode='HTML')
     await state.clear()
     await callback.message.answer('Вакансия отправлена')
     await send_mess_to_group(GROUP_ID, text_cleaned, vac_id, bot)
@@ -244,31 +253,13 @@ state_users = []
 text_mes_id = {}
 
 
-@bot_router.callback_query(F.data == "scan_kand_for_vac")
-async def scan_kand_for_vac(callback: CallbackQuery, bot: Bot, state: FSMContext):
-    
-    try:
-        user_id = callback.from_user.id
-        mess_text = callback.message.text
-        text_mes_id[user_id] = mess_text
-        await bot.send_message(chat_id=user_id, text="Отправьте вакансии для проверки")
-        await bot.send_message(chat_id=user_id, text=mess_text)
-    except:
-        user_id = callback.from_user.id
-        msg = await telethon_client.send_message(entity=user_id, message="Чтобы пользоватся проверкой вакансий необходимо написать /start боту @omega_vacancy_bot а затем опять нажать на кнопку")
-        await asyncio.sleep(10)
-        await telethon_client.delete_messages(entity=user_id, message_ids=msg.id)
-        return
-    state_users.append(user_id)
+
     
 
-@bot_router.message(F.document)
+@bot_router.message(F.document, ScanVacRekr.waiting_for_vac)
 async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
-    user_id = message.from_user.id
-    if user_id not in state_users:
-        await message.answer("Вы не начали процесс проверки вакансий. Нажмите кнопку, чтобы начать.")
-        return
     await save_document(message, state, bot)
+    await state.clear()
 
 
 async def save_document(message: types.Message, state: FSMContext, bot : Bot):
@@ -314,14 +305,9 @@ async def scan_vac_rekr_y(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
 @bot_router.callback_query(F.data == "no_vac_rekr")
 async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    await callback.answer()  # убрать "часики"
+    await callback.answer()
     await callback.message.answer("Начинаю обработку...")
     user_id = callback.from_user.id
-    vac_text = text_mes_id.get(user_id)
-    
-    
-    state_users.remove(user_id)
-    text_mes_id.pop(user_id)
     user_dir = os.path.join(SAVE_DIR, str(user_id))
 
     if not os.path.exists(user_dir):
@@ -343,10 +329,9 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.message.answer("✅ Обработка завершена.")
     
             
-            
         
 @bot_router.message(Command("bot"))
 async def bot_hr(message: Message):
-    await message.answer("Отправьте вакансию для проверки")
     
-    await message.answer(f"https://t.me/omega_vacancy_bot?start={message.message_id}")
+    mess = await message.answer('.')
+    await mess.edit_text(f"<a href='https://t.me/omega_vacancy_bot?start={mess.message_id}'>Нажмите для запуска бота</a>", parse_mode="HTML")
