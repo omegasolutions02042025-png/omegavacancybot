@@ -5,7 +5,6 @@ import asyncio
 import re
 import os
 from dotenv import load_dotenv
-from app.main import bot
 from db import *
 from funcs import get_vacancy_title
 from datetime import datetime, timezone, timedelta
