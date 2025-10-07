@@ -260,7 +260,7 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id, bot: 
                     vacancy_id = extract_vacancy_id(text)
                     if not vacancy_id:
                         continue
-                    print(vacancy_id)
+                    
                     async for dst_msg in telethon_client.iter_messages(dst_chat_id, limit=None):
                         
                         if dst_msg.text and vacancy_id in dst_msg.text:
