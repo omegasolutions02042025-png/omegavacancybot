@@ -6,7 +6,7 @@ import re
 import os
 from dotenv import load_dotenv
 from db import *
-from funcs import get_vacancy_title
+from funcs import get_vacancy_title, extract_vacancy_id
 from datetime import datetime, timezone, timedelta
 load_dotenv()
 
@@ -71,10 +71,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal, bot: Bot):
                         #print(f"❌ Сообщение {mapping.src_msg_id} не найдено — пропускаем функция monitor_and_cleanup")
                         continue
                     if msg.message:
-                        match = VACANCY_ID_REGEX.search(msg.message)
-                        if match:
-                            vacancy_id = match.group(0)
-                    title = get_vacancy_title(msg.message)
+                        vacancy_id = extract_vacancy_id(msg.message)
                     # Если сообщение удалено или зачёркнуто
                     if has_strikethrough(msg):
                         print(f"❌ Сообщение {mapping.src_msg_id} содержит зачёркнутый текст — удаляем функция monitor_and_cleanup")
@@ -205,15 +202,9 @@ async def check_and_delete_duplicates(teleton_client, channel_id: int, bot: Bot,
                     if not message.text:
                         continue
                     
-                    match = VACANCY_ID_REGEX.search(message.text)
-                    if match:
-                        vacancy_id = match.group(0).strip()         # например: "🆔00668801" или "🆔 00668801"
-                        vac_id_without_symbol = vacancy_id.replace("🆔", "").strip()
-                           # оставляем только цифры/буквы
-                       
+                    vacancy_id = extract_vacancy_id(message.text)
                         
-                    else:
-                        continue
+                    
                     
                     
                     stop_pattern = re.compile(
@@ -227,12 +218,12 @@ async def check_and_delete_duplicates(teleton_client, channel_id: int, bot: Bot,
                         continue
                     
                     
-                    if vac_id_without_symbol in seen_ids:
+                    if vacancy_id in seen_ids:
                         
-                        await bot.send_message(ADMIN_ID, f'❌ Дубликат найден: {vac_id_without_symbol}, удаляю сообщение {message.id} в канале {channel_id} функция check_and_delete_duplicates')
+                        await bot.send_message(ADMIN_ID, f'❌ Дубликат найден: {vacancy_id}, удаляю сообщение {message.id} в канале {channel_id} функция check_and_delete_duplicates')
                         await message.delete()
                     else:
-                        seen_ids.add(vac_id_without_symbol)
+                        seen_ids.add(vacancy_id)
         except Exception as e:
             print('Ошибка при проверке функции check_and_delete_duplicates', e)
         # очищаем сет в конце итерации
@@ -265,14 +256,8 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id, bot: 
                 try:
                     
                     text = msg.text
-                    match = VACANCY_ID_REGEX.search(text)
-                    
-                    if not match:
-                        continue
-
-                    vacancy_id = match.group(0)
-                    vacancy_id = vacancy_id.replace("🆔", "").strip()
-                    
+                    vacancy_id = extract_vacancy_id(text)
+                    print(vacancy_id)
                     async for dst_msg in telethon_client.iter_messages(dst_chat_id, limit=None):
                         
                         if dst_msg.text and vacancy_id in dst_msg.text:
