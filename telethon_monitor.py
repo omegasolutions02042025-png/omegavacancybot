@@ -246,32 +246,33 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id, bot: 
     src_chat_id — канал-источник, откуда берём айди
     dst_chat_id — канал, где ищем зачёркнутый айди
     """
-    while True:
-        async for msg in telethon_client.iter_messages(src_chat_id, limit=None):
-            try:
-                if not msg.text:
-                    continue
-                
-                text = msg.text
-                # Ищем vacancy_id по regex
-                match = VACANCY_ID_REGEX.search(text)
-                
-                if not match:
-                    continue
-
-                vacancy_id = match.group(0)
-                vacancy_id = vacancy_id.replace("🆔", "").strip()
-                
-                
-                
-                
-                stop_pattern = re.compile(
+    
+    stop_pattern = re.compile(
                     r'(🛑.*(?:СТОП|STOP).*🛑|\bстоп\b|\bstop\b)',
                     re.IGNORECASE
                 )
+    
+    
+    message_list = []
+    while True:
+        async for msg in telethon_client.iter_messages(src_chat_id, limit=None):
+                if not msg.text:
+                    continue
+                
+                message_list.append(msg)
+                
+        for msg in message_list:
                 try:
                     
-                    # Ищем в другом канале это зачёркнутое айди
+                    text = msg.text
+                    match = VACANCY_ID_REGEX.search(text)
+                    
+                    if not match:
+                        continue
+
+                    vacancy_id = match.group(0)
+                    vacancy_id = vacancy_id.replace("🆔", "").strip()
+                    
                     async for dst_msg in telethon_client.iter_messages(dst_chat_id, limit=None):
                         
                         if dst_msg.text and vacancy_id in dst_msg.text:
@@ -290,10 +291,7 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id, bot: 
                 except Exception as e:
                         print(f"Ошибка обработки сообщения {msg.id}: {e}")
                         continue
-            except Exception as e:
-                print(f"Ошибка обработки сообщения {msg.id}: {e}")
-                continue
-            
+           
         await asyncio.sleep(30)
 
 
@@ -323,8 +321,7 @@ async def mark_as_deleted(client, msg_id, chat_id, vacancy_id, name_vac, bot: Bo
 
     except Exception as e:
         print(f"Ошибка при изменении/удалении {msg_id}: {e}")
-  # проверяем каждую минуту
-    await asyncio.sleep(20)
+ 
     
     
     
