@@ -395,7 +395,7 @@ async def generate_hashtags_gemini(vacancy_text: str) -> str:
 
 
 
-def sverka_vac_and_resume_json(vacancy_text: str, resume_list: list[str]):
+def sverka_vac_and_resume_json(vacancy_text: str, resume_text: str):
     print("[*] Сверяем вакансию и резюме (запрос JSON)...")
     
     # 1. Определяем желаемый формат JSON
@@ -436,10 +436,10 @@ verdict: На основе анализа compliance_check.must_have, выбер
 salary_expectations: Укажи зарплатные ожидания, если они есть в резюме. Если нет, напиши "нужно уточнить".
 
 [ВАКАНСИЯ]
-(Сюда будет вставлен текст вакансии)
+{vacancy_text}
 
 [РЕЗЮМЕ]
-(Сюда будет вставлен текст резюме)
+{resume_text}
 
 СТРУКТУРА ВЫВОДА (JSON):
 
