@@ -443,76 +443,64 @@ salary_expectations: Укажи зарплатные ожидания, если 
 
 СТРУКТУРА ВЫВОДА (JSON):
 
-JSON
-
 {{
   "vacancy": {{
-    "position_id": "<ID вакансии, если есть>",
+    "position_id": "<ID вакансии или null>",
     "position_name": "<Название позиции>",
-    "grade": "<Требуемый грейд>",
+    "grade": "<Требуемый грейд или null>",
     "location_requirements": {{
-      "location": "<Город/страна>",
-      "citizenship": "<Требования к гражданству>",
-      "timezone": "<Часовой пояс>"
+      "location": "<Город/страна или null>",
+      "citizenship": "<Требования к гражданству или null>",
+      "timezone": "<Часовой пояс или null>"
     }},
-    "work_format": "<remote/office/hybrid>",
+    "work_format": "<remote/office/hybrid или null>",
     "tech_stack": [
       "<Технология 1>",
       "<Технология 2>"
     ],
     "requirements": {{
       "must_have": [
-        "<Обязательное требование 1>",
-        "<Обязательное требование 2>"
+        "<Обязательное требование 1>"
       ],
-      "nice_to_have": [
-        "<Дополнительное требование 1>",
-        "<Дополнительное требование 2>"
-      ]
+      "nice_to_have": []
     }},
     "special_conditions": {{
-      "nda": "<да/нет>",
-      "sim_card": "<требуется/не требуется>",
-      "rate": "<ставка, если указана>",
-      "deadlines": "<информация о дедлайнах, если есть>"
+      "nda": "<да/нет/null>",
+      "sim_card": "<требуется/не требуется/null>",
+      "rate": "<ставка или null>",
+      "deadlines": "<информация о дедлайнах или null>"
     }},
-    "manager_telegram_nickname": "<Ник менеджера, если указан>"
+    "manager_telegram_nickname": "@Dimitryver"
   }},
   "candidate": {{
-    "full_name": "<Фамилия Имя Отчество>",
+    "full_name": "<Фамилия Имя Отчество или Фамилия Имя>",
     "birth_date": {{
-      "date": "<ДД.ММ.ГГГГ>",
-      "age": "<N лет>"
+      "date": "<ДД.ММ.ГГГГ или null>",
+      "age": "<N лет или null>"
     }},
     "location": {{
-      "city": "<Город кандидата>",
-      "country": "<Страна кандидата>"
+      "city": "<Город кандидата или null>",
+      "country": "<Страна кандидата или null>"
     }},
-    "grade_and_position": "<Грейд/позиция кандидата>",
+    "grade_and_position": "<Грейд/позиция кандидата или null>",
     "experience": [
       {{
         "company_name": "<Название компании>",
         "role": "<Роль/должность>",
-        "domain": "<Домен/индустрия компании>",
+        "domain": "<Домен/индустрия компании или null>",
         "period": "<Период работы>",
         "projects": [
           {{
             "project_description": "<Подробное описание проекта>",
             "responsibilities": [
-              "<Обязанность 1>",
-              "<Обязанность 2>"
+              "<Обязанность 1>"
             ],
-            "technologies_used": [
-              "<Стек проекта 1>",
-              "<Стек проекта 2>"
-            ]
+            "technologies_used": []
           }}
         ]
       }}
     ],
-    "tech_stack": [
-      "<Общий стек технологий кандидата>"
-    ],
+    "tech_stack": [],
     "languages": [
       {{
         "language": "<Название языка>",
@@ -520,10 +508,10 @@ JSON
       }}
     ],
     "contacts": {{
-      "phone": "<Телефон>",
-      "email": "<Email>",
-      "telegram": "<Telegram>",
-      "linkedin": "<Ссылка на LinkedIn>"
+      "phone": "<Телефон или null>",
+      "email": "<Email или null>",
+      "telegram": "<Telegram или null>",
+      "linkedin": "<Ссылка на LinkedIn или null>"
     }}
   }},
   "compliance_check": {{
@@ -534,13 +522,7 @@ JSON
         "comment": "<Подтверждение: годы/уровень/контекст/проекты>"
       }}
     ],
-    "nice_to_have": [
-      {{
-        "requirement": "<Текст дополнительного требования 1>",
-        "status": "<Да / Нет (требуется уточнение)>",
-        "comment": "<Комментарий с подтверждением, если есть>"
-      }}
-    ]
+    "nice_to_have": []
   }},
   "summary": {{
     "verdict": "<Полностью подходит / Частично подходит (нужны уточнения) / Не подходит>",
