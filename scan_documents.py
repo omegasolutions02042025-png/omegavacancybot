@@ -80,117 +80,107 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
         
 import json
 
-def display_analysis(json_data):
-    """
-    Принимает JSON-строку или словарь Python и выводит
-    структурированный отчет по анализу кандидата.
-    Автоматически удаляет маркеры блока кода ```json и ```.
-    """
+def display_analysis(json_data) -> str:
+    
     processed_data = json_data
-
-    # Блок очистки входных данных
     if isinstance(processed_data, str):
-        # Убираем лишние пробелы и переносы по краям
         clean_str = processed_data.strip()
-        # Если строка начинается с ```json, убираем эту часть
         if clean_str.startswith('```json'):
             clean_str = clean_str[len('```json'):].strip()
-        # Если строка заканчивается на ```, убираем и это
         if clean_str.endswith('```'):
             clean_str = clean_str[:-len('```')].strip()
-        
         try:
-            # Пытаемся загрузить очищенную строку
             data = json.loads(clean_str)
         except json.JSONDecodeError:
-            print("Ошибка: Некорректный формат JSON после очистки.")
-            return
+            return "Ошибка: Некорректный формат JSON после очистки."
     else:
-        # Если это уже словарь, работаем с ним напрямую
         data = processed_data
 
-    def print_field(key, value, indent=0):
-        prefix = " " * indent
-        # Используем "не указано" для None или пустых строк
-        val_str = value if value else "не указано"
-        print(f"{prefix}{key}: {val_str}")
+    lines = []
 
-    # --- ВАКАНСЯ ---
-    print("\n" + "="*15 + " 📝 ВАКАНСИЯ " + "="*15)
+    def append_field(key, value, indent=0):
+        prefix = " " * indent
+        val_str = value if value else "не указано"
+        lines.append(f"{prefix}{key}: {val_str}")
+
+    # --- ВАКАНСИЯ ---
+    lines.append("\n" + "="*15 + " 📝 ВАКАНСИЯ " + "="*15)
     vacancy = data.get("vacancy", {})
     if vacancy:
-        pos_id = f"(ID: {vacancy.get('position_id')})" if vacancy.get('position_id') else ""
-        print_field("Позиция", f"{vacancy.get('position_name')} {pos_id}")
-        print_field("Грейд", vacancy.get('grade'))
-        print_field("Формат работы", vacancy.get('work_format'))
-        loc = vacancy.get('location_requirements', {})
-        print_field("Требования к локации", f"Локация: {loc.get('location')}, Гражданство: {loc.get('citizenship')}, Пояс: {loc.get('timezone')}")
-        print_field("Контакт", vacancy.get('manager_telegram_nickname'))
-    
+        pos_id = f"(ID: {vacancy.get('vacancy_id')})" if vacancy.get('vacancy_id') else ""
+        append_field("Позиция", f"{vacancy.get('position')} {pos_id}")
+        append_field("Грейд", vacancy.get("grade"))
+        append_field("Формат работы", vacancy.get("format"))
+        loc = f"Локация: {vacancy.get('location')}, Гражданство: {vacancy.get('citizenship')}, Пояс: {vacancy.get('timezone')}"
+        append_field("Требования к локации", loc)
+        append_field("Контакт", vacancy.get("manager_nick"))
+
     # --- КАНДИДАТ ---
-    print("\n" + "="*15 + " 👤 КАНДИДАТ " + "="*15)
+    lines.append("\n" + "="*15 + " 👤 КАНДИДАТ " + "="*15)
     candidate = data.get("candidate", {})
     if candidate:
-        print_field("ФИО", candidate.get('full_name'))
-        b_date = candidate.get('birth_date', {})
-        if b_date and b_date.get('date'):
-            print_field("Дата рождения", f"{b_date.get('date')} ({b_date.get('age')})")
-        loc = candidate.get('location', {})
-        print_field("Локация", f"{loc.get('city')}, {loc.get('country')}")
-        print_field("Позиция", candidate.get('grade_and_position'))
+        append_field("ФИО", candidate.get("full_name"))
+        append_field("Дата рождения", candidate.get("birth_date"))
+        append_field("Локация", f"{candidate.get('city')}, {candidate.get('country')}")
+        append_field("Позиция", candidate.get("position"))
 
-        print("\n  Опыт работы:")
-        experience = candidate.get("experience")
+        lines.append("\n  Опыт работы:")
+        experience = candidate.get("experience", [])
         if experience:
             for exp in experience:
-                print(f"    - Компания: {exp.get('company_name', 'не указано')} ({exp.get('period', 'N/A')})")
-                print(f"      Должность: {exp.get('role', 'не указано')}")
-                for proj in exp.get('projects', []):
-                    print(f"      Проект: {proj.get('project_description', 'Описание отсутствует')}")
-                    print("        Обязанности:")
-                    for resp in proj.get('responsibilities', []):
-                        print(f"          • {resp}")
+                lines.append(f"    - Компания: {exp.get('company_name', 'не указано')} ({exp.get('period', 'N/A')})")
+                lines.append(f"      Должность: {exp.get('role', 'не указано')}")
+                for proj in exp.get("projects", []):
+                    lines.append(f"      Проект: {proj.get('description', 'Описание отсутствует')}")
+                    lines.append("        Обязанности:")
+                    for resp in proj.get("responsibilities", []):
+                        lines.append(f"          • {resp}")
         else:
-            print("    Опыт работы не указан.")
-        
-        print("\n  Стек технологий:", ', '.join(candidate.get('tech_stack', [])) or "не указан")
+            lines.append("    Опыт работы не указан.")
+
+        lines.append("\n  Стек технологий: " + ', '.join(candidate.get("tech_stack", [])) or "не указан")
 
     # --- ТАБЛИЦА СООТВЕТСТВИЯ ---
-    print("\n" + "="*12 + " ✅ ТАБЛИЦА СООТВЕТСТВИЯ " + "="*12)
-    compliance = data.get("compliance_check", {})
+    lines.append("\n" + "="*12 + " ✅ ТАБЛИЦА СООТВЕТСТВИЯ " + "="*12)
+    compliance = data.get("comparison_tables", {})
     status_map = {
         "Да": "✅",
-        "Нет (требуется уточнение)": "❓",
+        "Нет (уточнить)": "❓",
         "Нет (точно нет)": "❌"
     }
-    
-    print("\n  Обязательные требования:")
-    must_haves = compliance.get('must_have')
+
+    lines.append("\n  Обязательные требования:")
+    must_haves = compliance.get("must_have", [])
     if must_haves:
         for req in must_haves:
-            icon = status_map.get(req.get('status'), '▫️')
-            print(f"    {icon} {req.get('requirement')}")
-            print(f"      └─ Комментарий: {req.get('comment')}")
+            icon = status_map.get(req.get("status"), '▫️')
+            lines.append(f"    {icon} {req.get('requirement')}")
+            lines.append(f"      └─ Комментарий: {req.get('comment')}")
     else:
-        print("    Требования не указаны.")
+        lines.append("    Требования не указаны.")
 
-    print("\n  Будет плюсом:")
-    nice_to_haves = compliance.get('nice_to_have')
+    lines.append("\n  Будет плюсом:")
+    nice_to_haves = compliance.get("nice_to_have", [])
     if nice_to_haves:
         for req in nice_to_haves:
-            icon = status_map.get(req.get('status'), '▫️')
-            print(f"    {icon} {req.get('requirement')}")
-            print(f"      └─ Комментарий: {req.get('comment')}")
+            icon = status_map.get(req.get("status"), '▫️')
+            lines.append(f"    {icon} {req.get('requirement')}")
+            lines.append(f"      └─ Комментарий: {req.get('comment')}")
     else:
-        print("    Требования не указаны.")
+        lines.append("    Требования не указаны.")
 
     # --- ИТОГ ---
-    print("\n" + "="*17 + " 🏁 ИТОГ " + "="*17)
-    summary = data.get("summary", {})
+    lines.append("\n" + "="*17 + " 🏁 ИТОГ " + "="*17)
+    summary = data.get("candidate_result", {})
     if summary:
-        print_field("Вердикт", summary.get('verdict'))
-        print_field("Зарплатные ожидания", summary.get('salary_expectations'))
-    print("="*41)
+        append_field("Вердикт", summary.get("result_status"))
+        append_field("Зарплатные ожидания", summary.get("salary_expectations"))
+
+    lines.append("="*41)
+
+    # Возвращаем готовый текст
+    return "\n".join(lines)
+
 
 
 

@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from db import *
 from funcs import get_vacancy_title, extract_vacancy_id
 from datetime import datetime, timezone, timedelta
+from telethon import TelegramClient
 load_dotenv()
 
 API_ID = os.getenv("API_ID")
@@ -130,7 +131,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal, bot: Bot):
         await asyncio.sleep(60)
 
 
-async def mark_inactive_and_schedule_delete(client, mapping, vacancy_id, bot: Bot):
+async def mark_inactive_and_schedule_delete(client: TelegramClient, mapping, vacancy_id, bot: Bot):
     try:
         msg = await client.get_messages(mapping.dst_chat_id, ids=mapping.dst_msg_id)
         if not msg:
@@ -157,7 +158,7 @@ async def mark_inactive_and_schedule_delete(client, mapping, vacancy_id, bot: Bo
         await asyncio.sleep(86400)
 
         # Открепляем и удаляем
-        await bot.delete_message(mapping.dst_chat_id, message.id)
+        await client.delete_messages(mapping.dst_chat_id, message.id)
         
         print(f"🗑 Удалено сообщение {message.id} в {mapping.dst_chat_id}")
 
@@ -188,7 +189,7 @@ def remove_request_id(text: str):
 
 
 
-async def check_and_delete_duplicates(teleton_client, channel_id: int, bot: Bot, topic_map: dict):
+async def check_and_delete_duplicates(teleton_client: TelegramClient, channel_id: int, bot: Bot, topic_map: dict):
     """Проверяет последние сообщения канала на дубликаты по ID в тексте"""
     seen_ids = set()
     
@@ -304,7 +305,7 @@ async def mark_as_deleted(client, msg_id, chat_id, vacancy_id, name_vac, bot: Bo
         await asyncio.sleep(86400)
 
         # Открепляем и удаляем
-        await bot.delete_message(chat_id, message.id)
+        await client.delete_messages(chat_id, message.id)
         print(f"🗑 Удалено сообщение {message.id}")
 
     except Exception as e:
@@ -313,7 +314,7 @@ async def mark_as_deleted(client, msg_id, chat_id, vacancy_id, name_vac, bot: Bo
     
     
     
-async def check_old_messages_and_mark(teleton_client, channel_id: int, bot: Bot):
+async def check_old_messages_and_mark(teleton_client: TelegramClient, channel_id: int, bot: Bot):
     """
     Проверяет все сообщения в канале без привязки к топикам.
     Если сообщение старше 21 дня — вызывает mark_inactive_and_schedule_delete(message).
@@ -339,6 +340,6 @@ async def check_old_messages_and_mark(teleton_client, channel_id: int, bot: Bot)
             if age > max_age:
                 print(f"⚠️ Сообщение {message.id} старше 21 дня ({age.days} дней). Помечаем...")
                 await bot.send_message(ADMIN_ID, f'⚠️Удалено сообщение {message.id} старше 21 дня ({age.days} дней). Помечаем...')
-                await bot.delete_message(channel_id, message.id)
+                await teleton_client.delete_messages(channel_id, message.id)
                 
         await asyncio.sleep(3600)
