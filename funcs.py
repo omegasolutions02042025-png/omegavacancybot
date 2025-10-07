@@ -311,41 +311,7 @@ def remove_vacancy_id(text: str) -> str:
     return clean_text.strip()
 
 
-def extract_vacancy_id(text: str) -> str | None:
-    """
-    Извлекает ID вакансии из первой строки текста.
-    Примеры допустимых форматов:
-      🆔04100101
-      🆔 QA-8955
-      QA-8955
-      DEV-102
-      04100101
 
-    Возвращает сам ID (строку) или None, если не найден.
-    """
-    lines = text.strip().splitlines()
-    if not lines:
-        return None
-
-    first_line = lines[0].strip()
-
-    # Паттерн для ID: 🆔 (опционально) + буквы/цифры/дефисы
-    id_pattern = re.compile(r"^(?:🆔\s*)?([\w\-]+)$", re.IGNORECASE)
-
-    match = id_pattern.match(first_line)
-    if match:
-        return match.group(1).strip()
-
-    return None
-
-
-def extract_vacancy_id_and_text(text: str):
-    match = VACANCY_ID_REGEX.search(text)
-    vacancy_id = match.group(1) if match else None
-    clean_text = VACANCY_ID_REGEX.sub("", text).strip()
-    clean_text = re.sub(r"[ \t]{2,}", " ", clean_text)
-    clean_text = re.sub(r"\n{2,}", "\n\n", clean_text)
-    return vacancy_id, clean_text
 
 async def send_mess_to_group(group_id: int, message: str, vacancy_id: str, bot: Bot):
     seq_num = await get_next_sequence_number()
@@ -442,3 +408,33 @@ def format_candidate_json_str(raw_str: str) -> str:
 
     return text
 
+def extract_vacancy_id(text: str) -> str | None:
+    """
+    Ищет ID вакансии только в первой строке текста.
+    Поддерживаются форматы:
+      🆔04100101, 🆔QA-8955, QA-8955, DEV-102, 04100101
+    Возвращает сам ID или None, если не найден.
+    """
+    lines = text.strip().splitlines()
+    if not lines:
+        return None
+
+    first_line = lines[0].strip()
+
+    # Паттерн: начало строки, опциональная эмодзи, буквы/дефисы, цифры
+    id_pattern = re.compile(r"^(?:🆔\s*)?([\w\-]*\d+)$", re.IGNORECASE)
+
+    match = id_pattern.match(first_line)
+    if match:
+        return match.group(1).strip()
+    
+    return None
+
+# text = """QA-1000
+
+# 📅 Дата публикации: 06.10.2025 09:01
+# 🥇Python Developer
+# ID: ABC-9876
+# Компания: Example Corp
+# """
+# print(extract_vacancy_id(text))
