@@ -63,7 +63,7 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
         result = await asyncio.to_thread(sverka_vac_and_resume_json, vacancy_text, resume_text)
         
         if result:
-            result = format_candidate_json_str(result)
+            #result = format_candidate_json_str(result)
             # Если результат большой, можно отправлять по частям
             for i in range(0, len(result), 4096):
                 await bot.send_message(user_id, result[i:i+4096], parse_mode="HTML")
