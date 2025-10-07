@@ -276,15 +276,6 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id, bot: 
                         
                         if dst_msg.text and vacancy_id in dst_msg.text:
                             
-                            
-                            msg_date = dst_msg.date
-                            if msg_date.tzinfo is None:  # если naive
-                                msg_date = msg_date.replace(tzinfo=timezone.utc)
-                            else:  # если aware, приведём к UTC на всякий случай
-                                msg_date = msg_date.astimezone(timezone.utc)
-                            
-                            
-                            
                             if has_strikethrough(dst_msg):
                                 print(f"🗑 Найден зачеркнутый ID {vacancy_id} в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
                                 asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
@@ -293,10 +284,7 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id, bot: 
                                 print(f"🛑 Найдено слово 'стоп' в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
                                 asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
                                 break  # нашли и удалили → идём к следующему
-                            elif msg_date < datetime.now(timezone.utc) - timedelta(days=21):
-                                print(f"🗑 Найдено сообщение старше 21 дня в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
-                                asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
-                                break  # нашли и удалили → идём к следующему
+                            
                 except Exception as e:
                         print(f"Ошибка обработки сообщения {msg.id}: {e}")
                         continue
@@ -366,4 +354,4 @@ async def check_old_messages_and_mark(teleton_client, channel_id: int, bot: Bot)
                 await bot.send_message(ADMIN_ID, f'⚠️Удалено сообщение {message.id} старше 21 дня ({age.days} дней). Помечаем...')
                 await message.delete()
                 
-        await asyncio.sleep(86400)
+        await asyncio.sleep(3600)

@@ -284,17 +284,31 @@ def extract_vacancy_id_and_text(text: str):
 
 def remove_vacancy_id(text: str) -> str:
     """
-    Удаляет все ID вакансий (включая 🆔), но не трогает дату.
+    Удаляет первую строку, если она содержит ID вакансии
+    (например: 🆔04100101, 🆔 QA-8955, QA-8955, DEV-102, 04100101),
+    но не трогает дату и остальной текст.
     """
-    # удаляем все ID
-    clean_text = VACANCY_ID_REGEX.sub("", text)
+    lines = text.strip().splitlines()
 
-    # убираем лишние пробелы в начале/конце и двойные пробелы
-    clean_text = re.sub(r"[ \t]{2,}", " ", clean_text)
-    clean_text = re.sub(r"\n{2,}", "\n\n", clean_text)  # не более 2 переносов
+    if not lines:
+        return text.strip()
+
+    # Проверяем первую строку на ID
+    first_line = lines[0].strip()
+
+    # Паттерн для ID: опциональный 🆔, буквы/цифры/дефисы, не дата
+    id_pattern = re.compile(r"^(?:🆔\s*)?[\w\-]+$", re.IGNORECASE)
+
+    if id_pattern.match(first_line):
+        # Удаляем первую строку
+        lines = lines[1:]
+
+    clean_text = "\n".join(lines)
+
+    # Убираем лишние пустые строки (максимум 2 подряд)
+    clean_text = re.sub(r"\n{3,}", "\n\n", clean_text)
 
     return clean_text.strip()
-
 
 
 def extract_vacancy_id_and_text(text: str):
@@ -399,3 +413,16 @@ def format_candidate_json_str(raw_str: str) -> str:
         text += f"📝 Обоснование:\n{justification}\n"
 
     return text
+
+
+
+text = """BD-10104
+
+📅 Дата публикации: 06.10.2025 09:01
+🥇Python Developer
+ID: ABC-9876
+Компания: Example Corp
+"""
+
+print(get_vacancy_title(text))
+print(remove_vacancy_id(text))
