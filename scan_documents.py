@@ -84,22 +84,38 @@ def display_analysis(json_data):
     """
     Принимает JSON-строку или словарь Python и выводит
     структурированный отчет по анализу кандидата.
+    Автоматически удаляет маркеры блока кода ```json и ```.
     """
-    if isinstance(json_data, str):
+    processed_data = json_data
+
+    # Блок очистки входных данных
+    if isinstance(processed_data, str):
+        # Убираем лишние пробелы и переносы по краям
+        clean_str = processed_data.strip()
+        # Если строка начинается с ```json, убираем эту часть
+        if clean_str.startswith('```json'):
+            clean_str = clean_str[len('```json'):].strip()
+        # Если строка заканчивается на ```, убираем и это
+        if clean_str.endswith('```'):
+            clean_str = clean_str[:-len('```')].strip()
+        
         try:
-            data = json.loads(json_data)
+            # Пытаемся загрузить очищенную строку
+            data = json.loads(clean_str)
         except json.JSONDecodeError:
-            print("Ошибка: Некорректный формат JSON.")
+            print("Ошибка: Некорректный формат JSON после очистки.")
             return
     else:
-        data = json_data
+        # Если это уже словарь, работаем с ним напрямую
+        data = processed_data
 
     def print_field(key, value, indent=0):
         prefix = " " * indent
-        val_str = value if value is not None else "не указано"
+        # Используем "не указано" для None или пустых строк
+        val_str = value if value else "не указано"
         print(f"{prefix}{key}: {val_str}")
 
-    # --- ВАКАНСИЯ ---
+    # --- ВАКАНСЯ ---
     print("\n" + "="*15 + " 📝 ВАКАНСИЯ " + "="*15)
     vacancy = data.get("vacancy", {})
     if vacancy:
@@ -108,7 +124,7 @@ def display_analysis(json_data):
         print_field("Грейд", vacancy.get('grade'))
         print_field("Формат работы", vacancy.get('work_format'))
         loc = vacancy.get('location_requirements', {})
-        print_field("Требования к локации", f"{loc.get('location')}, гражданство: {loc.get('citizenship')}, пояс: {loc.get('timezone')}")
+        print_field("Требования к локации", f"Локация: {loc.get('location')}, Гражданство: {loc.get('citizenship')}, Пояс: {loc.get('timezone')}")
         print_field("Контакт", vacancy.get('manager_telegram_nickname'))
     
     # --- КАНДИДАТ ---
@@ -124,14 +140,18 @@ def display_analysis(json_data):
         print_field("Позиция", candidate.get('grade_and_position'))
 
         print("\n  Опыт работы:")
-        for exp in candidate.get("experience", []):
-            print(f"    - Компания: {exp.get('company_name', 'не указано')} ({exp.get('period', 'N/A')})")
-            print(f"      Должность: {exp.get('role', 'не указано')}")
-            for proj in exp.get('projects', []):
-                print(f"      Проект: {proj.get('project_description', 'Описание отсутствует')}")
-                print("        Обязанности:")
-                for resp in proj.get('responsibilities', []):
-                    print(f"          • {resp}")
+        experience = candidate.get("experience")
+        if experience:
+            for exp in experience:
+                print(f"    - Компания: {exp.get('company_name', 'не указано')} ({exp.get('period', 'N/A')})")
+                print(f"      Должность: {exp.get('role', 'не указано')}")
+                for proj in exp.get('projects', []):
+                    print(f"      Проект: {proj.get('project_description', 'Описание отсутствует')}")
+                    print("        Обязанности:")
+                    for resp in proj.get('responsibilities', []):
+                        print(f"          • {resp}")
+        else:
+            print("    Опыт работы не указан.")
         
         print("\n  Стек технологий:", ', '.join(candidate.get('tech_stack', [])) or "не указан")
 
@@ -145,16 +165,24 @@ def display_analysis(json_data):
     }
     
     print("\n  Обязательные требования:")
-    for req in compliance.get('must_have', []):
-        icon = status_map.get(req.get('status'), '▫️')
-        print(f"    {icon} {req.get('requirement')}")
-        print(f"      └─ Комментарий: {req.get('comment')}")
+    must_haves = compliance.get('must_have')
+    if must_haves:
+        for req in must_haves:
+            icon = status_map.get(req.get('status'), '▫️')
+            print(f"    {icon} {req.get('requirement')}")
+            print(f"      └─ Комментарий: {req.get('comment')}")
+    else:
+        print("    Требования не указаны.")
 
     print("\n  Будет плюсом:")
-    for req in compliance.get('nice_to_have', []):
-        icon = status_map.get(req.get('status'), '▫️')
-        print(f"    {icon} {req.get('requirement')}")
-        print(f"      └─ Комментарий: {req.get('comment')}")
+    nice_to_haves = compliance.get('nice_to_have')
+    if nice_to_haves:
+        for req in nice_to_haves:
+            icon = status_map.get(req.get('status'), '▫️')
+            print(f"    {icon} {req.get('requirement')}")
+            print(f"      └─ Комментарий: {req.get('comment')}")
+    else:
+        print("    Требования не указаны.")
 
     # --- ИТОГ ---
     print("\n" + "="*17 + " 🏁 ИТОГ " + "="*17)
@@ -162,6 +190,8 @@ def display_analysis(json_data):
     if summary:
         print_field("Вердикт", summary.get('verdict'))
         print_field("Зарплатные ожидания", summary.get('salary_expectations'))
-    print("="*40)
+    print("="*41)
+
+
 
 
