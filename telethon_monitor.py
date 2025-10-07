@@ -203,6 +203,7 @@ async def check_and_delete_duplicates(teleton_client, channel_id: int, bot: Bot,
                         continue
                     
                     vacancy_id = extract_vacancy_id(message.text)
+                    print
                         
                     
                     
@@ -257,6 +258,8 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id, bot: 
                     
                     text = msg.text
                     vacancy_id = extract_vacancy_id(text)
+                    if not vacancy_id:
+                        continue
                     print(vacancy_id)
                     async for dst_msg in telethon_client.iter_messages(dst_chat_id, limit=None):
                         
