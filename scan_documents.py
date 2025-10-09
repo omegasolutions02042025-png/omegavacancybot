@@ -73,12 +73,32 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")
     except Exception as e:
         await bot.send_message(user_id, f"🔥 Ошибка при сверке: {e}")
-        return result
+        result = "Ошибка при сверке"
+    
+    
+    return result
         
         
         
 
 import json
+
+
+def clean_json(json_data):
+    if isinstance(json_data, str):
+        clean_str = json_data.strip()
+        if clean_str.startswith('```json'):
+            clean_str = clean_str[len('```json'):].strip()
+        if clean_str.endswith('```'):
+            clean_str = clean_str[:-len('```')].strip()
+        
+        try:
+            data = json.loads(clean_str)
+        except json.JSONDecodeError:
+            return "Ошибка: Некорректный формат JSON после очистки."
+    else:
+        data = json_data
+    return data
 
 def display_analysis(json_data):
     """
@@ -91,19 +111,8 @@ def display_analysis(json_data):
     output_lines = []  # Список для хранения всех строк отчета
 
     # --- Блок очистки входных данных ---
-    if isinstance(processed_data, str):
-        clean_str = processed_data.strip()
-        if clean_str.startswith('```json'):
-            clean_str = clean_str[len('```json'):].strip()
-        if clean_str.endswith('```'):
-            clean_str = clean_str[:-len('```')].strip()
-        
-        try:
-            data = json.loads(clean_str)
-        except json.JSONDecodeError:
-            return "Ошибка: Некорректный формат JSON после очистки."
-    else:
-        data = processed_data
+    processed_data = clean_json(processed_data)
+    data = processed_data
 
     # Вспомогательная функция для форматирования поля "ключ: значение"
     def format_field(key, value):
