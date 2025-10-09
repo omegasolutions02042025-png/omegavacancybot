@@ -112,9 +112,9 @@ def display_analysis(json_data):
     output_lines.append("="*15 + " 👤 КАНДИДАТ " + "="*15)
     candidate = data.get("candidate", {})
     output_lines.append(format_field("ФИО", candidate.get('full_name')))
-    output_lines.append(format_field("Дата рождения", candidate.get('birth_date')))
-    output_lines.append(format_field("Локация", candidate.get('location')))
-    output_lines.append(format_field("Стек технологий", candidate.get('tech_stack')))
+    output_lines.append(format_field("—Дата рождения", candidate.get('birth_date').get('date')))
+    output_lines.append(format_field("—Локация", candidate.get('location').get('city')))
+    output_lines.append(format_field("—Стек технологий", ", ".join(candidate.get('tech_stack'))) )
 
 
     # --- ТАБЛИЦА СООТВЕТСТВИЯ ---
@@ -122,23 +122,20 @@ def display_analysis(json_data):
     compliance = data.get("compliance_check", {})
     status_map = { "Да": "✅", "Нет (требуется уточнение)": "❓", "Нет (точно нет)": "❌" }
     
-    output_lines.append("\n 📎 Обязательные требования:")
     must_haves = compliance.get('must_have')
     if must_haves:
         for req in must_haves:
             icon = status_map.get(req.get('status'), '▫️')
             output_lines.append(f"    {icon} {req.get('requirement')}")
-            #output_lines.append(f"      └─ Комментарий: {req.get('comment')}")
     else:
         output_lines.append("    Требования не указаны.")
 
-    output_lines.append("\n 📎 Будет плюсом:")
+
     nice_to_haves = compliance.get('nice_to_have')
     if nice_to_haves:
         for req in nice_to_haves:
             icon = status_map.get(req.get('status'), '▫️')
             output_lines.append(f"    {icon} {req.get('requirement')}")
-            #output_lines.append(f"      └─ Комментарий: {req.get('comment')}")
     else:
         output_lines.append("    Требования не указаны.")
 
