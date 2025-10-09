@@ -12,7 +12,7 @@ import os
 from dotenv import load_dotenv
 from funcs import *
 from gpt import process_vacancy, format_vacancy
-from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini
+from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_bot import telethon_client
 from db import AsyncSessionLocal
@@ -343,12 +343,23 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
         return
     table = create_finalists_table(result)
     await callback.message.answer(table)
-    create_candidates_csv(result)
-    document = FSInputFile("candidates_report.csv")
-    await callback.message.answer_document(document)
+    #create_candidates_csv(result)
+    #document = FSInputFile("candidates_report.csv")
+    #await callback.message.answer_document(document)
+   
+    for finalist in result:
+      if isinstance(finalist, str):
+        continue
+      candidate = finalist.get("candidate", {})
+      summary = finalist.get("summary", {})
+      verdict = summary.get("verdict", "")
+      if verdict == "Полностью подходит":
+        res = await generate_mail_for_candidate_finalist(finalist)
+        await callback.message.answer(f"Создано письмо для {candidate['full_name'] or '❌'}")
+        await callback.message.answer(res)
     
     shutil.rmtree(user_dir)
-    os.remove("candidates_report.csv")
+    #os.remove("candidates_report.csv")
 
     await callback.message.answer("✅ Обработка завершена.")
     
