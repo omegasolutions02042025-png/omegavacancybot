@@ -341,8 +341,8 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     if not result:
         await callback.message.answer("❌ Нет результатов для финального списка")
         return
-    table = create_finalists_table(result)
-    await callback.message.answer(table)
+    #table = create_finalists_table(result)
+    #await callback.message.answer(table)
     #create_candidates_csv(result)
     #document = FSInputFile("candidates_report.csv")
     #await callback.message.answer_document(document)

@@ -524,7 +524,7 @@ salary_expectations: Укажи зарплатные ожидания, если 
 
 
 async def generate_mail_for_candidate_finalist(json_data):
-  json_data = json.dumps(json_data)
+  
   vacancy = json_data['vacancy']
   candidate = json_data['candidate']
   
