@@ -52,12 +52,12 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
             await bot.send_message(user_id, f"⚠️ Формат {ext} не поддерживается: {path}")
             return
         
-        text = asyncio.create_task(background_sverka(resume_text=text, vacancy_text=vac_text, bot=bot, user_id=user_id))
+        text_gpt = asyncio.create_task(background_sverka(resume_text=text, vacancy_text=vac_text, bot=bot, user_id=user_id))
         
         os.remove(path)
     except Exception as e:
         await bot.send_message(user_id, f"❌ Ошибка в {path}: {e}")
-        
+        return text_gpt
         
 async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_id: int|str):
     try:
@@ -65,6 +65,7 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
         
         if result:
             result = display_analysis(result)
+            
             # Если результат большой, можно отправлять по частям
             for i in range(0, len(result), 4096):
                 await bot.send_message(user_id, result[i:i+4096], parse_mode="HTML")
@@ -72,6 +73,7 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")
     except Exception as e:
         await bot.send_message(user_id, f"🔥 Ошибка при сверке: {e}")
+        return result
         
         
         
@@ -149,3 +151,35 @@ def display_analysis(json_data):
     output_lines.append("="*41)
 
     return "\n".join(output_lines)
+
+
+
+
+def create_finalists_table(finalists):
+  """
+  Создает таблицу финалистов в формате Markdown.
+
+  Args:
+    finalists: Список словарей, где каждый словарь представляет финалиста
+               с ключами 'name', 'grade', 'location', 'stack', и 'salary'.
+
+  Returns:
+    Строка с таблицей в формате Markdown.
+  """
+
+  
+  
+  header = "| ФИО/ФИ | Грейд | Локация | Ключевой стек | Зарплатные ожидания |\n"
+  separator = "|---|---|---|---|---|\n"
+  body = ""
+  for finalist in finalists:
+    candidate = finalist.get("candidate", {})
+    summary = finalist.get("summary", {})
+    verdict = summary.get("verdict", "")
+    if verdict == "Полностью подходит":
+      body += f"| {candidate['full_name']} | {candidate['grade_and_position']} | {candidate['location']['city']} | {summary['salary_expectations']} |{summary['verdict']}\n"
+    elif verdict == "Частично подходит (нужны уточнения)":
+      body += f"| {candidate['full_name']} | {candidate['grade_and_position']} | {candidate['location']['city']} | {summary['salary_expectations']} |{summary['verdict']}\n"
+    elif verdict == "Не подходит":
+      continue
+  return header + separator + body

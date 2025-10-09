@@ -16,7 +16,7 @@ from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_bot import telethon_client
 from db import AsyncSessionLocal
-from scan_documents import process_file_and_gpt
+from scan_documents import process_file_and_gpt, create_finalists_table
 import shutil
 import markdown
 
@@ -337,7 +337,10 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     if not tasks:
         await callback.message.answer("❌ Не найдено ни одного файла.")
         return
-    await asyncio.gather(*tasks)
+    result = await asyncio.gather(*tasks)
+    table = create_finalists_table(result)
+    await callback.message.answer(table)
+    
     shutil.rmtree(user_dir)
 
     await callback.message.answer("✅ Обработка завершена.")
