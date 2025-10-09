@@ -112,6 +112,9 @@ def display_analysis(json_data):
     output_lines.append("="*15 + " 👤 КАНДИДАТ " + "="*15)
     candidate = data.get("candidate", {})
     output_lines.append(format_field("ФИО", candidate.get('full_name')))
+    output_lines.append(format_field("Дата рождения", candidate.get('birth_date')))
+    output_lines.append(format_field("Локация", candidate.get('location')))
+    output_lines.append(format_field("Стек технологий", candidate.get('tech_stack')))
 
 
     # --- ТАБЛИЦА СООТВЕТСТВИЯ ---
@@ -125,7 +128,7 @@ def display_analysis(json_data):
         for req in must_haves:
             icon = status_map.get(req.get('status'), '▫️')
             output_lines.append(f"    {icon} {req.get('requirement')}")
-            output_lines.append(f"      └─ Комментарий: {req.get('comment')}")
+            #output_lines.append(f"      └─ Комментарий: {req.get('comment')}")
     else:
         output_lines.append("    Требования не указаны.")
 
@@ -135,7 +138,7 @@ def display_analysis(json_data):
         for req in nice_to_haves:
             icon = status_map.get(req.get('status'), '▫️')
             output_lines.append(f"    {icon} {req.get('requirement')}")
-            output_lines.append(f"      └─ Комментарий: {req.get('comment')}")
+            #output_lines.append(f"      └─ Комментарий: {req.get('comment')}")
     else:
         output_lines.append("    Требования не указаны.")
 
