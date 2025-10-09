@@ -52,7 +52,7 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
             await bot.send_message(user_id, f"⚠️ Формат {ext} не поддерживается: {path}")
             return
         
-        text_gpt = asyncio.create_task(background_sverka(resume_text=text, vacancy_text=vac_text, bot=bot, user_id=user_id))
+        text_gpt = await background_sverka(resume_text=text, vacancy_text=vac_text, bot=bot, user_id=user_id)
         
         os.remove(path)
     except Exception as e:
@@ -181,5 +181,5 @@ def create_finalists_table(finalists):
     elif verdict == "Частично подходит (нужны уточнения)":
       body += f"| {candidate['full_name']} | {candidate['grade_and_position']} | {candidate['location']['city']} | {summary['salary_expectations']} |{summary['verdict']}\n"
     elif verdict == "Не подходит":
-      continue
+      body += f"| {candidate['full_name']} | {candidate['grade_and_position']} | {candidate['location']['city']} | {summary['salary_expectations']} |{summary['verdict']}\n"
   return header + separator + body
