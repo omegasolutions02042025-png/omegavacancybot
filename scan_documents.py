@@ -71,6 +71,8 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             # Если результат большой, можно отправлять по частям
             for i in range(0, len(result), 4096):
                 await bot.send_message(user_id, result[i:i+4096], parse_mode="HTML")
+            result_gpt = clean_json(result_gpt)
+            
         else:
             await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")
     except Exception as e:
@@ -185,6 +187,8 @@ def create_finalists_table(finalists: list[dict]):
   separator = "|---|---|---|---|---|\n"
   body = ""
   for finalist in finalists:
+    if isinstance(finalist, str):
+      continue
     candidate = finalist.get("candidate", {})
     summary = finalist.get("summary", {})
     verdict = summary.get("verdict", "")
