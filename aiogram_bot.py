@@ -338,6 +338,9 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await callback.message.answer("❌ Не найдено ни одного файла.")
         return
     result = await asyncio.gather(*tasks)
+    if not result:
+        await callback.message.answer("❌ Нет результатов для финального списка")
+        return
     table = create_finalists_table(result)
     await callback.message.answer(table)
     

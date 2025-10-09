@@ -39,6 +39,7 @@ def process_txt(path: str) -> str:
 
 async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: str):
     ext = path.split(".")[-1].lower()
+    
     try:
         if ext == "pdf":
             text = process_pdf(path)
@@ -57,14 +58,15 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
         os.remove(path)
     except Exception as e:
         await bot.send_message(user_id, f"❌ Ошибка в {path}: {e}")
-        return text_gpt
+    finally:
+        return text_gpt or None
         
 async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_id: int|str):
     try:
-        result = await asyncio.to_thread(sverka_vac_and_resume_json, vacancy_text, resume_text)
+        result_gpt = await asyncio.to_thread(sverka_vac_and_resume_json, vacancy_text, resume_text)
         
-        if result:
-            result = display_analysis(result)
+        if result_gpt:
+            result = display_analysis(result_gpt)
             
             # Если результат большой, можно отправлять по частям
             for i in range(0, len(result), 4096):
@@ -73,10 +75,11 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")
     except Exception as e:
         await bot.send_message(user_id, f"🔥 Ошибка при сверке: {e}")
-        result = "Ошибка при сверке"
+        result_gpt = "Ошибка при сверке"
+    finally:
+        return result_gpt
     
     
-    return result
         
         
         
@@ -164,7 +167,7 @@ def display_analysis(json_data):
 
 
 
-def create_finalists_table(finalists):
+def create_finalists_table(finalists: list[dict]):
   """
   Создает таблицу финалистов в формате Markdown.
 
