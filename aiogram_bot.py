@@ -1,7 +1,7 @@
 from aiogram import Router
 from aiogram import Bot, Dispatcher, types, F
 
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, FSInputFile, Message
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart, Command
@@ -16,7 +16,7 @@ from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_bot import telethon_client
 from db import AsyncSessionLocal
-from scan_documents import process_file_and_gpt, create_finalists_table
+from scan_documents import process_file_and_gpt, create_finalists_table, create_candidates_csv
 import shutil
 import markdown
 
@@ -343,8 +343,12 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
         return
     table = create_finalists_table(result)
     await callback.message.answer(table)
+    create_candidates_csv(result)
+    document = FSInputFile("candidates_report.csv")
+    await callback.message.answer_document(document)
     
     shutil.rmtree(user_dir)
+    os.remove("candidates_report.csv")
 
     await callback.message.answer("✅ Обработка завершена.")
     

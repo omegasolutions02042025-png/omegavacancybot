@@ -193,9 +193,64 @@ def create_finalists_table(finalists: list[dict]):
     summary = finalist.get("summary", {})
     verdict = summary.get("verdict", "")
     if verdict == "Полностью подходит":
-      body += f"| {candidate['full_name']} | {candidate['grade_and_position']} | {candidate['location']['city']} | {summary['salary_expectations']} |{summary['verdict']}\n"
+      body += f"| {candidate['full_name'] or '❌'} | {candidate['grade_and_position'] or '❌'} | {candidate['location']['city'] or '❌'} | {summary['salary_expectations'] or '❌'} |{summary['verdict'] or '❌'}\n"
     elif verdict == "Частично подходит (нужны уточнения)":
-      body += f"| {candidate['full_name']} | {candidate['grade_and_position']} | {candidate['location']['city']} | {summary['salary_expectations']} |{summary['verdict']}\n"
+      body += f"| {candidate['full_name'] or '❌'} | {candidate['grade_and_position'] or '❌'} | {candidate['location']['city'] or '❌'} | {summary['salary_expectations'] or '❌'} |{summary['verdict'] or '❌'}\n"
     elif verdict == "Не подходит":
-      body += f"| {candidate['full_name']} | {candidate['grade_and_position']} | {candidate['location']['city']} | {summary['salary_expectations']} |{summary['verdict']}\n"
+      body += f"| {candidate['full_name'] or '❌'} | {candidate['grade_and_position'] or '❌'} | {candidate['location']['city'] or '❌'} | {summary['salary_expectations'] or '❌'} |{summary['verdict'] or '❌'}\n"
   return header + separator + body
+
+
+
+
+
+import csv
+
+def create_candidates_csv(candidates: list[dict], filename: str = "candidates_report.csv"):
+  """
+  Создает CSV-файл с отчетом по кандидатам.
+
+  Args:
+    candidates: Список словарей, где каждый словарь представляет кандидата.
+    filename: Имя создаваемого CSV-файла.
+  """
+  # Заголовки для CSV файла
+  headers = ["ФИО", "Грейд и Позиция", "Город", "Зарплатные ожидания", "Вердикт"]
+
+  try:
+    # Используем with для автоматического закрытия файла
+    # encoding='utf-8-sig' для корректного отображения кириллицы в Excel
+    # newline='' для правильной обработки переносов строк
+    with open(filename, mode='w', newline='', encoding='utf-8-sig') as csv_file:
+      writer = csv.writer(csv_file)
+
+      # 1. Записываем заголовки
+      writer.writerow(headers)
+
+      # 2. Проходим по списку кандидатов и записываем данные
+      for item in candidates:
+        # Пропускаем некорректные записи в списке (если это просто строка)
+        if isinstance(item, str):
+          continue
+
+        # Безопасно извлекаем вложенные данные
+        candidate_info = item.get("candidate", {})
+        summary_info = item.get("summary", {})
+        location_info = candidate_info.get("location", {})
+        
+        # Собираем данные для одной строки в CSV
+        row = [
+          candidate_info.get("full_name", "N/A"),
+          candidate_info.get("grade_and_position", "N/A"),
+          location_info.get("city", "N/A"),
+          summary_info.get("salary_expectations", "N/A"),
+          summary_info.get("verdict", "N/A")
+        ]
+        
+        # Записываем строку в файл
+        writer.writerow(row)
+        
+    print(f"✅ Файл '{filename}' успешно создан.")
+
+  except Exception as e:
+    print(f"❌ Произошла ошибка при создании файла: {e}")
