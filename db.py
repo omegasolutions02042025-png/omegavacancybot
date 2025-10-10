@@ -2,7 +2,7 @@ import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, select, Column, BigInteger
-from datetime import datetime
+from datetime import datetime, timedelta
 import asyncio
 
 
