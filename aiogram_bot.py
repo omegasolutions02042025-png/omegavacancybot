@@ -355,7 +355,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
       candidate = finalist[1]
       mail = finalist[0]
       cover_letter = finalist[2]
-      matches = re.findall(r"Вердикт:\s*Не подходит", text)
+      matches = re.findall(r"Вердикт:\s*Не подходит", mail)
       if matches:
           await callback.message.answer(f"❌{candidate} не подходит", reply_markup=utochnit_prichinu_kb())
           await add_otkonechenie_resume(callback.message.message_id, callback.message.text)
