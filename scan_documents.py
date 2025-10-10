@@ -3,7 +3,7 @@ from PyPDF2 import PdfReader
 import pypandoc
 from aiogram import Bot
 import os
-from gpt_gimini import sverka_vac_and_resume_json
+from gpt_gimini import sverka_vac_and_resume_json, generate_mail_for_candidate_finalist, generate_mail_for_candidate_utochnenie, generate_mail_for_candidate_otkaz
 import asyncio
 from funcs import format_candidate_json_str
 from striprtf.striprtf import rtf_to_text
@@ -72,14 +72,13 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             for i in range(0, len(result), 4096):
                 await bot.send_message(user_id, result[i:i+4096], parse_mode="HTML")
             result_gpt = clean_json(result_gpt)
-            
+            mail = await create_mails(result_gpt)
+            return mail
         else:
             await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")
     except Exception as e:
         await bot.send_message(user_id, f"🔥 Ошибка при сверке: {e}")
-        result_gpt = "Ошибка при сверке"
-    finally:
-        return result_gpt
+        return None
     
     
         
@@ -161,7 +160,6 @@ def display_analysis(json_data):
     summary = data.get("summary", {})
     if summary:
         output_lines.append(format_field("Вердикт", summary.get('verdict')))
-        output_lines.append(format_field("Зарплатные ожидания", summary.get('salary_expectations')))
     output_lines.append("="*41)
 
     return "\n".join(output_lines)
@@ -254,3 +252,26 @@ def create_candidates_csv(candidates: list[dict], filename: str = "candidates_re
 
   except Exception as e:
     print(f"❌ Произошла ошибка при создании файла: {e}")
+    
+    
+    
+async def create_mails(finalist: dict):
+    try:
+    
+      if isinstance(finalist, str):
+        return None
+      candidate = finalist.get("candidate", {})
+      summary = finalist.get("summary", {})
+      verdict = summary.get("verdict", "")
+      if verdict == "Полностью подходит":
+        res = await generate_mail_for_candidate_finalist(finalist)
+        return [res, candidate.get('full_name')]
+      elif verdict == "Частично подходит (нужны уточнения)":
+        res = await generate_mail_for_candidate_utochnenie(finalist)
+        return [res, candidate.get('full_name')]
+      elif verdict == "Не подходит":
+        res = await generate_mail_for_candidate_otkaz(finalist)
+        return [res, candidate.get('full_name')]
+    except Exception as e:
+      print(f"❌ Произошла ошибка при создании письма: {e}")
+      return None

@@ -387,7 +387,7 @@ async def sverka_vac_and_resume_json(vacancy_text, resume_text):
 — Если кандидат частично или полностью соответствует, но чего-то не хватает,
   добавь в `compliance_check.must_have` пункты со статусом "Нет (требуется уточнение)" и комментарием.
 — Если добавлены такие пункты, выстави `summary.verdict = "Частично подходит (нужны уточнения)"`.
-
+- Важно заполнить все строки в `status` и `comment`. Если их нет, то добавь "Нет (точно нет)".
 Формат вывода (строго JSON):
 
 {{
@@ -401,9 +401,14 @@ async def sverka_vac_and_resume_json(vacancy_text, resume_text):
       "timezone": "<Часовой пояс или null>"
     }},
     "work_format": "<remote/office/hybrid или null>",
-    "tech_stack": [],
+    "tech_stack": [
+      "<Технология 1>",
+      "<Технология 2>"
+    ],
     "requirements": {{
-      "must_have": [],
+      "must_have": [
+        "<Обязательное требование 1>"
+      ],
       "nice_to_have": []
     }},
     "special_conditions": {{
@@ -425,9 +430,30 @@ async def sverka_vac_and_resume_json(vacancy_text, resume_text):
       "country": "<Страна кандидата или null>"
     }},
     "grade_and_position": "<Грейд/позиция кандидата или null>",
-    "experience": [],
+    "experience": [
+      {{
+        "company_name": "<Название компании>",
+        "role": "<Роль/должность>",
+        "domain": "<Домен/индустрия компании или null>",
+        "period": "<Период работы>",
+        "projects": [
+          {{
+            "project_description": "<Подробное описание проекта>",
+            "responsibilities": [
+              "<Обязанность 1>"
+            ],
+            "technologies_used": []
+          }}
+        ]
+      }}
+    ],
     "tech_stack": [],
-    "languages": [],
+    "languages": [
+      {{
+        "language": "<Название языка>",
+        "level": "<Уровень владения>"
+      }}
+    ],
     "contacts": {{
       "phone": "<Телефон или null>",
       "email": "<Email или null>",
@@ -436,7 +462,13 @@ async def sverka_vac_and_resume_json(vacancy_text, resume_text):
     }}
   }},
   "compliance_check": {{
-    "must_have": [],
+    "must_have": [
+      {{
+        "requirement": "<Текст обязательного требования 1>",
+        "status": "<Да / Нет (требуется уточнение) / Нет (точно нет)>",
+        "comment": "<Подтверждение: годы/уровень/контекст/проекты>"
+      }}
+    ],
     "nice_to_have": []
   }},
   "summary": {{
