@@ -3,7 +3,7 @@ from PyPDF2 import PdfReader
 import pypandoc
 from aiogram import Bot
 import os
-from gpt_gimini import sverka_vac_and_resume_json, generate_mail_for_candidate_finalist, generate_mail_for_candidate_utochnenie, generate_mail_for_candidate_otkaz
+from gpt_gimini import sverka_vac_and_resume_json, generate_mail_for_candidate_finalist, generate_mail_for_candidate_utochnenie, generate_mail_for_candidate_otkaz, generate_cover_letter_for_client
 import asyncio
 from funcs import format_candidate_json_str
 from striprtf.striprtf import rtf_to_text
@@ -263,15 +263,18 @@ async def create_mails(finalist: dict):
       candidate = finalist.get("candidate", {})
       summary = finalist.get("summary", {})
       verdict = summary.get("verdict", "")
+      cover_letter = None
       if verdict == "Полностью подходит":
         res = await generate_mail_for_candidate_finalist(finalist)
-        return [res, candidate.get('full_name')]
+        cover_letter = await generate_cover_letter_for_client(finalist)
+        return [res, candidate.get('full_name'), cover_letter]
       elif verdict == "Частично подходит (нужны уточнения)":
         res = await generate_mail_for_candidate_utochnenie(finalist)
-        return [res, candidate.get('full_name')]
+        cover_letter = await generate_cover_letter_for_client(finalist)
+        return [res, candidate.get('full_name'), cover_letter]
       elif verdict == "Не подходит":
         res = await generate_mail_for_candidate_otkaz(finalist)
-        return [res, candidate.get('full_name')]
+        return [res, candidate.get('full_name'), cover_letter]
     except Exception as e:
       print(f"❌ Произошла ошибка при создании письма: {e}")
       return None

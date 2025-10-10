@@ -350,8 +350,11 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     for finalist in result:
       candidate = finalist[1]
       mail = finalist[0]
+      cover_letter = finalist[2]
       await callback.message.answer(f"Создано письмо для {candidate or '❌'}")
       await callback.message.answer(mail)
+      if cover_letter:
+        await callback.message.answer(cover_letter)
     
     shutil.rmtree(user_dir)
     #os.remove("candidates_report.csv")
