@@ -12,7 +12,7 @@ import os
 from dotenv import load_dotenv
 from funcs import *
 from gpt import process_vacancy, format_vacancy
-from gpt_gimini import generate_mail_for_candidate_utochnenie, process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist
+from gpt_gimini import generate_mail_for_candidate_utochnenie, process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist, generate_mail_for_candidate_otkaz
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_bot import telethon_client
 from db import AsyncSessionLocal
@@ -359,6 +359,11 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await callback.message.answer(res)
       elif verdict == "Частично подходит (нужны уточнения)":
         res = await generate_mail_for_candidate_utochnenie(finalist)
+        await callback.message.answer(f"Создано письмо для {candidate['full_name'] or '❌'}")
+        await callback.message.answer(res)
+        
+      elif verdict == "Не подходит":
+        res = await generate_mail_for_candidate_otkaz(finalist)
         await callback.message.answer(f"Создано письмо для {candidate['full_name'] or '❌'}")
         await callback.message.answer(res)
     
