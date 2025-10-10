@@ -8,6 +8,7 @@ import asyncio
 from funcs import format_candidate_json_str
 from striprtf.striprtf import rtf_to_text
 from db import add_otkonechenie_resume
+from kb import utochnit_prichinu_kb
 
 # PDF → текст
 def process_pdf(path: str) -> str:
@@ -73,7 +74,7 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             verdict = result_gpt.get("summary").get("verdict")
             candidate = result_gpt.get("candidate").get("full_name")
             if verdict == "Не подходит":
-                mes = await bot.send_message(user_id, f"❌ Кандидат {candidate} не подходит")
+                mes = await bot.send_message(user_id, f"❌ Кандидат {candidate} не подходит", reply_markup=utochnit_prichinu_kb())
                 await add_otkonechenie_resume(mes.message_id, result)
                 return mail
             # Если результат большой, можно отправлять по частям
