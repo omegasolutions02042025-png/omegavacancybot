@@ -137,7 +137,7 @@ def display_analysis(json_data):
     # --- ТАБЛИЦА СООТВЕТСТВИЯ ---
     output_lines.append("\n" + "="*12 + " ✅ ТАБЛИЦА СООТВЕТСТВИЯ " + "="*12)
     compliance = data.get("compliance_check", {})
-    status_map = { "Да": "✅", "Нет (требуется уточнение)": "❓", "Нет (точно нет)": "❌" }
+    status_map = { "Да": "✅", "Нет (требуется уточнение)": "⚠️", "Нет (точно нет)": "❌" }
     
     must_haves = compliance.get('must_have')
     if must_haves:
