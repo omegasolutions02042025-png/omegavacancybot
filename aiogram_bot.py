@@ -350,15 +350,19 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     #document = FSInputFile("candidates_report.csv")
     #await callback.message.answer_document(document)
    
+    final_spisok = ''
     for finalist in result:
-      candidate = finalist[1]
-      mail = finalist[0]
-      cover_letter = finalist[2]
-      await callback.message.answer(f"Создано письмо для {candidate or '❌'}")
-      await callback.message.answer(mail)
-      if cover_letter:
-        await bot.send_message(CLIENT_CHANNEL, cover_letter)
+      candidate = finalist.keys()
+      verdict = finalist.values()
+      
+      if verdict == 'Полностью подходит':
+        final_spisok += f"{candidate}: ✅ {verdict}\n"
+      elif verdict == 'Частично подходит (нужны уточнения)':
+        final_spisok += f"{candidate}: ⚠️ {verdict}\n"
+      elif verdict == 'Не подходит':
+        final_spisok += f"{candidate}: ❌ {verdict}\n"
     
+    await callback.message.answer(final_spisok)
     shutil.rmtree(user_dir)
     #os.remove("candidates_report.csv")
 
