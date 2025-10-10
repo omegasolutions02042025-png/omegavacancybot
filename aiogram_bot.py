@@ -15,7 +15,7 @@ from gpt import process_vacancy, format_vacancy
 from gpt_gimini import generate_mail_for_candidate_utochnenie, process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist, generate_mail_for_candidate_otkaz
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_bot import telethon_client
-from db import AsyncSessionLocal, add_otkonechenie_resume, get_otkolenie_resume , remove_otkonechenie_resume
+from db import AsyncSessionLocal, add_otkonechenie_resume, get_otkolenie_resume 
 from scan_documents import process_file_and_gpt, create_finalists_table, create_candidates_csv
 import shutil
 import markdown
