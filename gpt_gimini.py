@@ -595,7 +595,7 @@ async def generate_mail_for_candidate_finalist(json_data: dict):
   @telegram_nickname 
   """
 
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-pro')
     generation_config = genai.types.GenerationConfig(temperature=0.1)
 
     
@@ -721,7 +721,7 @@ Omega Solutions (резидент ПВТ Беларуси)
 Группа компаний Omega
 """
 
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-pro')
     generation_config = genai.types.GenerationConfig(temperature=0.1)
 
     response = await model.generate_content_async(prompt, generation_config=generation_config)
@@ -818,7 +818,7 @@ async def generate_mail_for_candidate_otkaz(json_data: dict):
 
 """
 
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-pro')
     generation_config = genai.types.GenerationConfig(temperature=0.1)
 
     response = await model.generate_content_async(prompt, generation_config=generation_config)
