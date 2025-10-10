@@ -7,6 +7,7 @@ from gpt_gimini import sverka_vac_and_resume_json, generate_mail_for_candidate_f
 import asyncio
 from funcs import format_candidate_json_str
 from striprtf.striprtf import rtf_to_text
+from db import add_otkonechenie_resume
 
 # PDF → текст
 def process_pdf(path: str) -> str:
@@ -67,12 +68,18 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
         
         if result_gpt:
             result = display_analysis(result_gpt)
-            
+            result_gpt = clean_json(result_gpt)
+            mail = await create_mails(result_gpt)
+            verdict = result_gpt.get("summary").get("verdict")
+            candidate = result_gpt.get("candidate").get("full_name")
+            if verdict == "Не подходит":
+                mes = await bot.send_message(user_id, f"❌ Кандидат {candidate} не подходит")
+                await add_otkonechenie_resume(mes.message_id, result)
+                return mail
             # Если результат большой, можно отправлять по частям
             for i in range(0, len(result), 4096):
                 await bot.send_message(user_id, result[i:i+4096], parse_mode="HTML")
-            result_gpt = clean_json(result_gpt)
-            mail = await create_mails(result_gpt)
+            
             return mail
         else:
             await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")
@@ -263,20 +270,18 @@ async def create_mails(finalist: dict):
       candidate = finalist.get("candidate", {})
       summary = finalist.get("summary", {})
       verdict = summary.get("verdict", "")
-      ne_podhidit = False
       cover_letter = None
       if verdict == "Полностью подходит":
         res = await generate_mail_for_candidate_finalist(finalist)
         cover_letter = await generate_cover_letter_for_client(finalist)
-        return [res, candidate.get('full_name'), cover_letter, ne_podhidit]
+        return [res, candidate.get('full_name'), cover_letter]
       elif verdict == "Частично подходит (нужны уточнения)":
         res = await generate_mail_for_candidate_utochnenie(finalist)
         cover_letter = await generate_cover_letter_for_client(finalist)
-        return [res, candidate.get('full_name'), cover_letter, ne_podhidit]
+        return [res, candidate.get('full_name'), cover_letter]
       elif verdict == "Не подходит":
-        ne_podhidit = True
         res = await generate_mail_for_candidate_otkaz(finalist)
-        return [res, candidate.get('full_name'), cover_letter, ne_podhidit]
+        return [res, candidate.get('full_name'), cover_letter]
     except Exception as e:
       print(f"❌ Произошла ошибка при создании письма: {e}")
       return None
