@@ -263,18 +263,20 @@ async def create_mails(finalist: dict):
       candidate = finalist.get("candidate", {})
       summary = finalist.get("summary", {})
       verdict = summary.get("verdict", "")
+      ne_podhidit = False
       cover_letter = None
       if verdict == "Полностью подходит":
         res = await generate_mail_for_candidate_finalist(finalist)
         cover_letter = await generate_cover_letter_for_client(finalist)
-        return [res, candidate.get('full_name'), cover_letter]
+        return [res, candidate.get('full_name'), cover_letter, ne_podhidit]
       elif verdict == "Частично подходит (нужны уточнения)":
         res = await generate_mail_for_candidate_utochnenie(finalist)
         cover_letter = await generate_cover_letter_for_client(finalist)
-        return [res, candidate.get('full_name'), cover_letter]
+        return [res, candidate.get('full_name'), cover_letter, ne_podhidit]
       elif verdict == "Не подходит":
+        ne_podhidit = True
         res = await generate_mail_for_candidate_otkaz(finalist)
-        return [res, candidate.get('full_name'), cover_letter]
+        return [res, candidate.get('full_name'), cover_letter, ne_podhidit]
     except Exception as e:
       print(f"❌ Произошла ошибка при создании письма: {e}")
       return None
