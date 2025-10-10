@@ -63,7 +63,7 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
         
 async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_id: int|str):
     try:
-        result_gpt = await asyncio.to_thread(sverka_vac_and_resume_json, vacancy_text, resume_text)
+        result_gpt = await sverka_vac_and_resume_json(resume_text, vacancy_text)
         
         if result_gpt:
             result = display_analysis(result_gpt)

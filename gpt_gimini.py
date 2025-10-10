@@ -368,7 +368,7 @@ async def generate_hashtags_gemini(vacancy_text: str) -> str:
 
 
 
-def sverka_vac_and_resume_json(vacancy_text, resume_text):
+async def sverka_vac_and_resume_json(vacancy_text, resume_text):
     """
     Анализирует соответствие кандидата вакансии и возвращает JSON от Gemini без очистки.
     Добавляет уточняющие пункты только если кандидат подходит или частично подходит.
@@ -452,11 +452,11 @@ def sverka_vac_and_resume_json(vacancy_text, resume_text):
 {resume_text}
 """
 
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-pro')
     generation_config = genai.types.GenerationConfig(temperature=0.1)
 
     try:
-        response = model.generate_content(prompt, generation_config=generation_config)
+        response = model.generate_content_async(prompt, generation_config=generation_config)
         return response.text.strip()
 
     except Exception as e:
@@ -567,7 +567,7 @@ async def generate_mail_for_candidate_finalist(json_data: dict):
     generation_config = genai.types.GenerationConfig(temperature=0.1)
 
     
-    response = model.generate_content(prompt, generation_config=generation_config)
+    response = model.generate_content_async(prompt, generation_config=generation_config)
     return response.text.strip()
   except Exception as e:
       print(f"🔥 Ошибка при формировании письма кандидату: {e}")
@@ -692,7 +692,7 @@ Omega Solutions (резидент ПВТ Беларуси)
     model = genai.GenerativeModel('gemini-2.5-flash')
     generation_config = genai.types.GenerationConfig(temperature=0.1)
 
-    response = model.generate_content(prompt, generation_config=generation_config)
+    response = model.generate_content_async(prompt, generation_config=generation_config)
     return response.text.strip()
 
   except Exception as e:
@@ -789,7 +789,7 @@ async def generate_mail_for_candidate_otkaz(json_data: dict):
     model = genai.GenerativeModel('gemini-2.5-flash')
     generation_config = genai.types.GenerationConfig(temperature=0.1)
 
-    response = model.generate_content(prompt, generation_config=generation_config)
+    response = model.generate_content_async(prompt, generation_config=generation_config)
     return response.text.strip()
 
   except Exception as e:
