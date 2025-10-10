@@ -128,7 +128,7 @@ def display_analysis(json_data):
     candidate = data.get("candidate", {})
     output_lines.append(format_field("ФИО", candidate.get('full_name')))
     output_lines.append(format_field("—Дата рождения", candidate.get('birth_date').get('date')))
-    print(candidate.get('location'))
+    
     output_lines.append(format_field("—Локация", candidate.get('location').get('city')))
     output_lines.append(format_field("—Стек технологий", ", ".join(candidate.get('tech_stack'))) )
 

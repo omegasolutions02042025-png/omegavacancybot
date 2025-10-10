@@ -139,7 +139,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
 
     try:
         text_gpt = await process_vacancy_with_gemini(text)
-        print(text_gpt) 
+        
     except Exception as e:
         await message.answer('Ошибка при обработке вакансии')
         return
@@ -222,7 +222,6 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до:\n{state_contract_text}\n{delay_payment_text}{acts_text}\n{ip_samoz_text}\n\n{text}"
             else:
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
-                print(text_cleaned)
         clean_text = remove_vacancy_id(text_cleaned)
         
         
@@ -326,7 +325,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     user_dir = os.path.join(SAVE_DIR, str(user_id))
     data = await state.get_data()
     vac_text = data.get("vacancy")
-    print(vac_text)
+    
 
     if not os.path.exists(user_dir):
         await callback.message.answer("❌ Нет загруженных файлов для обработки.")
