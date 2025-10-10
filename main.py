@@ -1,7 +1,7 @@
 import asyncio
 import sys
 import signal
-from db import init_db, AsyncSessionLocal
+from db import init_db, AsyncSessionLocal, periodic_cleanup_task
 from aiogram import Bot, Dispatcher
 from telethon_bot import *
 import os
@@ -39,6 +39,7 @@ async def main():
     asyncio.create_task(telethon_client.run_until_disconnected())
     asyncio.create_task(cleanup_by_striked_id(telethon_client, src_chat_id=-1002658129391, dst_chat_id=-1002189931727, bot=bot))
     asyncio.create_task(check_old_messages_and_mark(telethon_client, -1002658129391, bot))
+    asyncio.create_task(periodic_cleanup_task())
     
     await dp.start_polling(bot)
     

@@ -5,7 +5,7 @@ from aiogram.types import CallbackQuery, FSInputFile, Message
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart, Command
-from kb import main_kb, send_kb, scan_vac_rekr_yn_kb
+from kb import *
 from telethon_bot import *
 from funcs import update_channels_and_restart_handler
 import os
@@ -15,10 +15,14 @@ from gpt import process_vacancy, format_vacancy
 from gpt_gimini import generate_mail_for_candidate_utochnenie, process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist, generate_mail_for_candidate_otkaz
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_bot import telethon_client
-from db import AsyncSessionLocal
+from db import AsyncSessionLocal, add_otkonechenie_resume, get_otkolenie_resume , remove_otkonechenie_resume
 from scan_documents import process_file_and_gpt, create_finalists_table, create_candidates_csv
 import shutil
 import markdown
+from dotenv import load_dotenv
+load_dotenv()
+
+CLIENT_CHANNEL = os.getenv('CLIENT_CHANNEL')
 
 bot_router = Router()
 SAVE_DIR = "downloads"
@@ -351,10 +355,15 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
       candidate = finalist[1]
       mail = finalist[0]
       cover_letter = finalist[2]
+      matches = re.findall(r"Вердикт:\s*Не подходит", text)
+      if matches:
+          await callback.message.answer(f"❌{candidate} не подходит", reply_markup=utochnit_prichinu_kb())
+          await add_otkonechenie_resume(callback.message.message_id, callback.message.text)
+          continue
       await callback.message.answer(f"Создано письмо для {candidate or '❌'}")
       await callback.message.answer(mail)
       if cover_letter:
-        await callback.message.answer(cover_letter)
+        await bot.send_message(CLIENT_CHANNEL, cover_letter)
     
     shutil.rmtree(user_dir)
     #os.remove("candidates_report.csv")
@@ -362,9 +371,15 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.message.answer("✅ Обработка завершена.")
     
             
-        
-@bot_router.message(Command("bot"))
-async def bot_hr(message: Message):
-    
-    mess = await message.answer('.')
-    await mess.edit_text(f"<a href='https://t.me/omega_vacancy_bot?start={mess.message_id}'>Нажмите для запуска бота</a>", parse_mode="HTML")
+@bot_router.callback_query(F.data == "utochnit_prichinu")
+async def utochnit_prichinu_bot(callback: CallbackQuery, bot: Bot):
+    try:
+        res = await get_otkolenie_resume(callback.message.message_id)
+        if res:
+            text = res.message_text
+            message_id = res.message_id
+            await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=text, reply_markup=None)
+        else:
+            await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text="❌ Данные об отклонении резюме удалены", reply_markup=None)
+    except Exception as e:
+        print("Ошибка в функции utochnit_prichinu: ", e)

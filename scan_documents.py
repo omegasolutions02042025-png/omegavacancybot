@@ -72,7 +72,7 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             for i in range(0, len(result), 4096):
                 await bot.send_message(user_id, result[i:i+4096], parse_mode="HTML")
             result_gpt = clean_json(result_gpt)
-            mail = await create_mails(result_gpt)
+            mail = await create_mails(result_gpt, bot)
             return mail
         else:
             await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")

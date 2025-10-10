@@ -2,6 +2,8 @@ import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, select, Column, BigInteger
+from datetime import datetime
+
 
 DATABASE_URL = "sqlite+aiosqlite:///channels.db"
 async_engine = create_async_engine(DATABASE_URL, echo=False)
@@ -38,6 +40,17 @@ class Slova(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     filter_text: Mapped[str] = mapped_column(String, nullable=False)
 
+
+
+class OtkonechenieResume(Base):
+    __tablename__ = 'otkonechenie_resume'
+    
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    message_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    message_text = Column(String, nullable=False)
+    message_time = Column(String, nullable=False)
+    
+    
 
 class MessageMapping(Base):
     __tablename__ = "message_mapping"
@@ -220,4 +233,67 @@ async def get_next_sequence_number() -> int:
         return record.last_number
     
     
+    
+    
+async def add_otkonechenie_resume(message_id: int, message_text: str):
+    async with AsyncSessionLocal() as session:
+        otkonechenie = OtkonechenieResume(
+            message_id=message_id,
+            message_text=message_text,
+            message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        )
+        session.add(otkonechenie)
+        await session.commit()
+
+
+
+async def remove_old_otkonechenie_resumes(hours: int = 12):
+    """
+    Удаляет записи из таблицы otkonechenie_resume,
+    у которых message_time старше N часов (по умолчанию 12).
+    """
+    async with AsyncSessionLocal() as session:  # type: AsyncSession
+        try:
+            # Определяем пороговую дату
+            threshold_time = datetime.now() - timedelta(hours=hours)
+
+            # Загружаем все записи
+            result = await session.execute(select(OtkonechenieResume))
+            records = result.scalars().all()
+
+            deleted_count = 0
+
+            for record in records:
+                # message_time хранится в строке "ДД.ММ.ГГГГ ЧЧ:ММ:СС"
+                try:
+                    record_time = datetime.strptime(record.message_time, "%d.%m.%Y %H:%M:%S")
+                    if record_time < threshold_time:
+                        await session.delete(record)
+                        deleted_count += 1
+                except ValueError:
+                    # если формат даты битый — пропускаем
+                    continue
+
+            await session.commit()
+
+            print(f"🧹 Удалено {deleted_count} записей старше {hours} часов.")
+
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при удалении старых записей: {e}")
+
+    
+async def periodic_cleanup_task():
+    while True:
+        try:
+            await remove_old_otkonechenie_resumes(hours=12)
+        except Exception as e:
+            print(f"❌ Ошибка при автоочистке: {e}")
+        await asyncio.sleep(60 * 60) 
+        
+        
+async def get_otkolenie_resume(message_id: int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(OtkonechenieResume).where(OtkonechenieResume.message_id == message_id))
+        return result.scalar_one_or_none()
     

@@ -110,3 +110,8 @@ def scan_vac_rekr_yn_kb():
     builder.button(text='Да', callback_data='yes_vac_rekr')
     builder.button(text='Нет', callback_data='no_vac_rekr')
     return builder.as_markup()
+
+def utochnit_prichinu_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Уточнить причину', callback_data='utochnit_prichinu')
+    return builder.as_markup()
