@@ -52,7 +52,6 @@ class OtkonechenieResume(Base):
     message_time = Column(String, nullable=False)
     
     
-
 class MessageMapping(Base):
     __tablename__ = "message_mapping"
 
@@ -72,8 +71,10 @@ class LastSequenceNumber(Base):
     last_number = Column(Integer, nullable=False)
 
 async def init_db():
+    print("🧱 Инициализация базы данных...")
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    print("✅ Таблицы созданы (если их не было).")
 
 async def add_channel(channel_name: str, channel_id: int):
     async with AsyncSessionLocal() as session:
