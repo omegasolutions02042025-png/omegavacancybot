@@ -72,9 +72,11 @@ class LastSequenceNumber(Base):
 
 async def init_db():
     print("🧱 Инициализация базы данных...")
+    print("📋 Таблицы в metadata:", list(Base.metadata.tables.keys()))
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     print("✅ Таблицы созданы (если их не было).")
+
 
 async def add_channel(channel_name: str, channel_id: int):
     async with AsyncSessionLocal() as session:
