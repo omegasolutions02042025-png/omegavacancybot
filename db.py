@@ -247,7 +247,6 @@ async def add_otkonechenie_resume(message_id: int, message_text: str):
             message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
         )
         session.add(otkonechenie)
-        print(otkonechenie)
         await session.commit()
 
 

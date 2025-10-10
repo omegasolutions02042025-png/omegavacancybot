@@ -278,7 +278,7 @@ async def create_mails(finalist: dict):
         return [res, candidate.get('full_name'), cover_letter]
       elif verdict == "Частично подходит (нужны уточнения)":
         res = await generate_mail_for_candidate_utochnenie(finalist)
-        cover_letter = await generate_cover_letter_for_client(finalist)
+        #cover_letter = await generate_cover_letter_for_client(finalist)
         return [res, candidate.get('full_name'), cover_letter]
       elif verdict == "Не подходит":
         res = await generate_mail_for_candidate_otkaz(finalist)
