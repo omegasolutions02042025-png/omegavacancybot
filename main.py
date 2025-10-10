@@ -30,7 +30,7 @@ signal.signal(signal.SIGINT, handle_sigint)
 
 
 async def main():
-    await init_db()
+    
     await telethon_client.start(phone=PHONE_NUMBER)
     await register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal, bot)
    
@@ -47,6 +47,7 @@ async def main():
 
 if __name__ == "__main__":
     try:
+        asyncio.run(init_db())
         asyncio.run(main())
     except KeyboardInterrupt:
         print("👋 Остановлено пользователем (Ctrl+C)")
