@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, select, Column, BigInteger
 from datetime import datetime
+import asyncio
 
 
 DATABASE_URL = "sqlite+aiosqlite:///channels.db"
