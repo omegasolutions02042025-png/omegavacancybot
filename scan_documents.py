@@ -79,12 +79,14 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             mail_list = await create_mails(result_gpt)
             verdict = result_gpt.get("summary").get("verdict")
             candidate = result_gpt.get("candidate").get("full_name")
+            print(candidate, verdict)
             cover_latter = mail_list[1]
             mail = mail_list[0]
             if verdict == "Не подходит":
                 mes = await bot.send_message(user_id, f"❌ Кандидат {candidate} не подходит", reply_markup=utochnit_prichinu_kb())
+                await bot.send_message(user_id, mail)
                 await add_otkonechenie_resume(mes.message_id, result)
-                return {candidate: verdict}
+                return {'candidate': candidate, 'verdict': verdict}
             
             if cover_latter:
                 await bot.send_message(CLIENT_CHANNEL, cover_latter)
@@ -94,7 +96,7 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             await bot.send_message(user_id, f"Создано письмо для {candidate or '❌'}")
             await bot.send_message(user_id, mail)
             
-            return {candidate: verdict}
+            return {'candidate': candidate, 'verdict': verdict}
         else:
             await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")
     except Exception as e:

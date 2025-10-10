@@ -352,8 +352,8 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
    
     final_spisok = ''
     for finalist in result:
-      candidate = finalist.keys()
-      verdict = finalist.values()
+      candidate = finalist.get('candidate')
+      verdict = finalist.get('verdict')
       
       if verdict == 'Полностью подходит':
         final_spisok += f"{candidate}: ✅ {verdict}\n"
