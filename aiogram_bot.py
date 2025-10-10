@@ -347,30 +347,30 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     #document = FSInputFile("candidates_report.csv")
     #await callback.message.answer_document(document)
    
-    for finalist in result:
-      if isinstance(finalist, str):
-        continue
-      candidate = finalist.get("candidate", {})
-      summary = finalist.get("summary", {})
-      verdict = summary.get("verdict", "")
-      if verdict == "Полностью подходит":
-        res = await generate_mail_for_candidate_finalist(finalist)
-        await callback.message.answer(f"Создано письмо для {candidate['full_name'] or '❌'}")
-        await callback.message.answer(res)
-      elif verdict == "Частично подходит (нужны уточнения)":
-        res = await generate_mail_for_candidate_utochnenie(finalist)
-        await callback.message.answer(f"Создано письмо для {candidate['full_name'] or '❌'}")
-        await callback.message.answer(res)
+    # for finalist in result:
+    #   if isinstance(finalist, str):
+    #     continue
+    #   candidate = finalist.get("candidate", {})
+    #   summary = finalist.get("summary", {})
+    #   verdict = summary.get("verdict", "")
+    #   if verdict == "Полностью подходит":
+    #     res = await generate_mail_for_candidate_finalist(finalist)
+    #     await callback.message.answer(f"Создано письмо для {candidate['full_name'] or '❌'}")
+    #     await callback.message.answer(res)
+    #   elif verdict == "Частично подходит (нужны уточнения)":
+    #     res = await generate_mail_for_candidate_utochnenie(finalist)
+    #     await callback.message.answer(f"Создано письмо для {candidate['full_name'] or '❌'}")
+    #     await callback.message.answer(res)
         
-      elif verdict == "Не подходит":
-        res = await generate_mail_for_candidate_otkaz(finalist)
-        await callback.message.answer(f"Создано письмо для {candidate['full_name'] or '❌'}")
-        await callback.message.answer(res)
+    #   elif verdict == "Не подходит":
+    #     res = await generate_mail_for_candidate_otkaz(finalist)
+    #     await callback.message.answer(f"Создано письмо для {candidate['full_name'] or '❌'}")
+    #     await callback.message.answer(res)
     
-    shutil.rmtree(user_dir)
-    #os.remove("candidates_report.csv")
+    # shutil.rmtree(user_dir)
+    # #os.remove("candidates_report.csv")
 
-    await callback.message.answer("✅ Обработка завершена.")
+    # await callback.message.answer("✅ Обработка завершена.")
     
             
         
