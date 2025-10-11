@@ -226,13 +226,13 @@ async def create_mails(finalist: dict):
       verdict = summary.get("verdict", "")
       if verdict == "Полностью подходит":
         res = await generate_mail_for_candidate_finalist(finalist)
-        return [res]
+        return res
       elif verdict == "Частично подходит (нужны уточнения)":
         res = await generate_mail_for_candidate_utochnenie(finalist)
-        return [res]
+        return res
       elif verdict == "Не подходит":
         res = await generate_mail_for_candidate_otkaz(finalist)
-        return [res]
+        return res
     except Exception as e:
       print(f"❌ Произошла ошибка при создании письма: {e}")
       return None

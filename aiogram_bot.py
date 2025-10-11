@@ -440,7 +440,10 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     except Exception as e:
         print("Ошибка в функции generate_mail_bot: ", e)
     mail = await create_mails(candidate)
-    mail_text = mail[0]
+    if mail:
+        mail_text = mail
+    else:
+        mail_text = "."
     if verdict == "Полностью подходит":
         mes_k = await callback.message.answer("Сгенерировать ли письмо для клиента?", reply_markup=generate_klient_mail_kb())
         client_data = {mes_k.message_id:{'candidate_json': candidate, 'candidate_name': candidate_name}}
