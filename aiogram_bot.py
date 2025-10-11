@@ -347,7 +347,17 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     user_dir = os.path.join(SAVE_DIR, str(user_id))
     data = await state.get_data()
     vac_text = data.get("vacancy")
-    
+    mes3 = data.get("mes3")
+    mes2 = data.get("mes2")
+    mes1 = data.get("mes1")
+
+    if mes1:
+            await bot.delete_message(callback.message.chat.id, mes1)
+    if mes2:
+            await bot.delete_message(callback.message.chat.id, mes2)
+    if mes3:
+            await bot.delete_message(callback.message.chat.id, mes3)
+
 
     if not os.path.exists(user_dir):
         await callback.message.answer("❌ Нет загруженных файлов для обработки.")
@@ -385,7 +395,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
         candidate_data = {messs.message_id:{'candidate_json': finalist, 'sverka_text': sverka_text, 'message_id': message_id, 'verdict': verdict, 'candidate_name': candidate}}
         canditates_data.update(candidate_data)
         
-    await state.update_data(canditate_data= canditates_data)
+    await state.update_data(candidate_data= canditates_data)
     await state.set_state(GenerateMail.waiting_for_mail)
     
     shutil.rmtree(user_dir)
