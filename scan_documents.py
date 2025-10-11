@@ -82,13 +82,13 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             if verdict == "Не подходит":
                 mes = await bot.send_message(user_id, f"❌ Кандидат {candidate} не подходит", reply_markup=utochnit_prichinu_kb())
                 await add_otkonechenie_resume(mes.message_id, result)
-                return {'candidate': candidate, 'verdict': verdict, 'sverka_text': result, 'message_id': mes.message_id}
+                return {'candidate': candidate, 'verdict': verdict, 'sverka_text': result, 'message_id': mes.message_id, 'candidate_json': result_gpt}
             
             # Если результат большой, можно отправлять по частям
             
             mes = await bot.send_message(user_id, result[:4096], parse_mode="HTML")
             
-            return {'candidate': candidate, 'verdict': verdict, 'sverka_text': result, 'message_id': mes.message_id}
+            return {'candidate': candidate, 'verdict': verdict, 'sverka_text': result, 'message_id': mes.message_id, 'candidate_json': result_gpt}
         else:
             await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")
     except Exception as e:
