@@ -353,13 +353,18 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     mes3 = data.get("mes3")
     mes2 = data.get("mes2")
     mes1 = data.get("mes1")
-    
-    if mes1:
-            await bot.delete_message(callback.message.chat.id, mes1)
-    if mes2:
-            await bot.delete_message(callback.message.chat.id, mes2)
-    if mes3:
-            await bot.delete_message(callback.message.chat.id, mes3)
+    try:
+        await bot.delete_message(callback.message.chat.id, mes1)
+    except:
+        pass
+    try:
+        await bot.delete_message(callback.message.chat.id, mes2)
+    except:
+        pass
+    try:
+        await bot.delete_message(callback.message.chat.id, mes3)
+    except:
+        pass
 
 
     if not os.path.exists(user_dir):
