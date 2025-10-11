@@ -95,7 +95,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal, bot: Bot):
                         vacancy_id = extract_vacancy_id(msg.message)
                     # Если сообщение удалено или зачёркнуто
                     if has_strikethrough(msg):
-                        print(f"❌ Сообщение {mapping.src_msg_id} содержит зачёркнутый текст — удаляем функция monitor_and_cleanup")
+                        await bot.send_message(ADMIN_ID, f"❌ Сообщение {mapping.src_msg_id} содержит зачёркнутый текст — удаляем функция monitor_and_cleanup")
                         asyncio.create_task(mark_inactive_and_schedule_delete(
                             telethon_client, mapping, vacancy_id, bot
                         ))
@@ -107,7 +107,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal, bot: Bot):
                     )
                     # Проверка на слово "стоп"
                     if msg.message and stop_pattern.search(msg.message):
-                        print(f"🛑 Сообщение {mapping.src_msg_id} содержит слово 'стоп' — удаляем функция monitor_and_cleanup")
+                        await bot.send_message(ADMIN_ID, f"🛑 Сообщение {mapping.src_msg_id} содержит слово 'стоп' — удаляем функция monitor_and_cleanup")
                         asyncio.create_task(mark_inactive_and_schedule_delete(
                             telethon_client, mapping, vacancy_id,  bot
                         ))
@@ -134,7 +134,7 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal, bot: Bot):
                             deadline_dt = datetime.strptime(f"{day}.{month}.{year} {time_str}", "%d.%m.%Y %H:%M")
                             now_utc = datetime.now(timezone.utc)
                             if deadline_dt.replace(tzinfo=timezone.utc) <= now_utc:
-                                print(f"⏰ Дедлайн для сообщения {mapping.src_msg_id} истёк — удаляем функция monitor_and_cleanup")
+                                await bot.send_message(ADMIN_ID, f"⏰ Дедлайн для сообщения {vacancy_id} {mapping.src_msg_id} истёк — удаляем функция monitor_and_cleanup")
                                 asyncio.create_task(mark_inactive_and_schedule_delete(
                                     telethon_client, mapping, vacancy_id,  bot
                                 ))
@@ -142,11 +142,11 @@ async def monitor_and_cleanup(telethon_client, AsyncSessionLocal, bot: Bot):
                                 continue
 
                         except Exception as e:
-                            print(f"⚠ Ошибка парсинга дедлайна для {mapping.src_msg_id} "
+                            await bot.send_message(ADMIN_ID, f"⚠ Ошибка парсинга дедлайна для {mapping.src_msg_id} "
                                   f"в {mapping.src_chat_id}: {e} функция monitor_and_cleanup")
 
                 except Exception as e:
-                    print(f"Ошибка проверки {mapping.src_msg_id} в {mapping.src_chat_id}: {e} функция monitor_and_cleanup")
+                    await bot.send_message(ADMIN_ID, f"Ошибка проверки {mapping.src_msg_id} в {mapping.src_chat_id}: {e} функция monitor_and_cleanup")
 
         await asyncio.sleep(60)
 
@@ -164,6 +164,7 @@ async def mark_inactive_and_schedule_delete(client: TelegramClient, mapping, vac
             new_text = f"\n\n{vacancy_id} — вакансия неактивна"
         else:
             new_text = "Вакансия неактивна"
+            vacancy_id = None
     
         await client.delete_messages(mapping.dst_chat_id, mapping.dst_msg_id)
 
@@ -172,7 +173,7 @@ async def mark_inactive_and_schedule_delete(client: TelegramClient, mapping, vac
 
         # Закрепляем
         
-        print(f"📌 Закреплено сообщение {message.id} в {mapping.dst_chat_id}")
+        await bot.send_message(ADMIN_ID, f"📌 Закреплено сообщение {vacancy_id} {message.id} в {mapping.dst_chat_id}")
 
         # Ждём 24 часа
         await asyncio.sleep(86400)
@@ -180,10 +181,10 @@ async def mark_inactive_and_schedule_delete(client: TelegramClient, mapping, vac
         # Открепляем и удаляем
         await client.delete_messages(mapping.dst_chat_id, message.id)
         
-        print(f"🗑 Удалено сообщение {message.id} в {mapping.dst_chat_id}")
+        await bot.send_message(ADMIN_ID, f"🗑 Удалено сообщение {vacancy_id} {message.id} в {mapping.dst_chat_id}")
 
     except Exception as e:
-        print(f"Ошибка при изменении/удалении {mapping.dst_msg_id}: {e}")
+        await bot.send_message(ADMIN_ID, f"Ошибка при изменении/удалении {vacancy_id} {mapping.dst_msg_id}: {e}")
   # проверяем каждую минуту
   # проверяем каждую минуту
 
@@ -231,7 +232,7 @@ async def check_and_delete_duplicates(teleton_client: TelegramClient, channel_id
                     )
                     
                     if stop_pattern.search(message.text):
-                        await bot.send_message(ADMIN_ID, f'❌ Стоп-слово найдено в сообщении {message.id} в канале {channel_id} функция check_and_delete_duplicates')
+                        await bot.send_message(ADMIN_ID, f'❌ Стоп-слово найдено в сообщении {vacancy_id} {message.id} в канале {channel_id} функция check_and_delete_duplicates')
                         await message.delete()
                         continue
                     
@@ -243,7 +244,7 @@ async def check_and_delete_duplicates(teleton_client: TelegramClient, channel_id
                     else:
                         seen_ids.add(vacancy_id)
         except Exception as e:
-            print('Ошибка при проверке функции check_and_delete_duplicates', e)
+            await bot.send_message(ADMIN_ID, 'Ошибка при проверке функции check_and_delete_duplicates', e)
         # очищаем сет в конце итерации
         seen_ids.clear()
         
@@ -283,18 +284,18 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id, bot: 
                         if dst_msg.text and vacancy_id in dst_msg.text:
                             
                             if has_strikethrough_id(dst_msg, vacancy_id):
-                                print(f"🗑 Найден зачеркнутый ID {vacancy_id} в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
+                                await bot.send_message(ADMIN_ID, f"🗑 Найден зачеркнутый ID {vacancy_id} в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
                                 title = get_vacancy_title(dst_msg.text)
                                 asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
                                 break  # нашли и удалили → идём к следующему
                             elif stop_pattern.search(dst_msg.text):
-                                print(f"🛑 Найдено слово 'стоп' в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
+                                await bot.send_message(ADMIN_ID, f"🛑 Найдено слово 'стоп' в {vacancy_id} {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
                                 title = get_vacancy_title(dst_msg.text)
                                 asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
                                 break  # нашли и удалили → идём к следующему
                             
                 except Exception as e:
-                        print(f"Ошибка обработки сообщения {msg.id}: {e}")
+                        await bot.send_message(ADMIN_ID, f"Ошибка обработки сообщения {vacancy_id} {msg.id}: {e}")
                         continue
            
         await asyncio.sleep(30)
@@ -310,22 +311,23 @@ async def mark_as_deleted(client, msg_id, chat_id, vacancy_id, name_vac, bot: Bo
             new_text = f"🆔{vacancy_id} — вакансия неактивна"
         else:
             new_text = "Вакансия неактивна"
+            vacancy_id = None
         await client.delete_messages(chat_id, msg_id)
         message = await client.send_message(chat_id, new_text)
 
         # Закрепляем
         
-        print(f"📌 Закреплено сообщение {message.id}")
+        await bot.send_message(ADMIN_ID, f"📌 Закреплено сообщение {vacancy_id} {message.id}")
 
         # Ждём 24 часа
         await asyncio.sleep(86400)
 
         # Открепляем и удаляем
         await client.delete_messages(chat_id, message.id)
-        print(f"🗑 Удалено сообщение {message.id}")
+        await bot.send_message(ADMIN_ID, f"🗑 Удалено сообщение {vacancy_id} {message.id}")
 
     except Exception as e:
-        print(f"Ошибка при изменении/удалении {msg_id}: {e}")
+        await bot.send_message(ADMIN_ID, f"Ошибка при изменении/удалении {vacancy_id} {msg_id}: {e}")
  
     
     
@@ -354,7 +356,6 @@ async def check_old_messages_and_mark(teleton_client: TelegramClient, channel_id
             
 
             if age > max_age:
-                print(f"⚠️ Сообщение {message.id} старше 21 дня ({age.days} дней). Помечаем...")
                 await bot.send_message(ADMIN_ID, f'⚠️Удалено сообщение {message.id} старше 21 дня ({age.days} дней). Помечаем...')
                 await teleton_client.delete_messages(channel_id, message.id)
                 
