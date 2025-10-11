@@ -208,7 +208,7 @@ P) Оставь в тексте срок подачи резюме
 
         clean_text = response.text.strip()
         print("✅ Ответ от Gemini получен.")
-        print(clean_text)
+        
 
         # Проверка на отсечение вакансии
         if clean_text.lower() == 'null':

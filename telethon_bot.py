@@ -50,8 +50,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                 if msg.date >= cutoff_date:
                     msgs.append(msg)
             msgs.sort(key=lambda m: m.date)
-            for msg in msgs:
-                print(msg.date)
+            
             for msg in msgs:
                 text = msg.text
                 if not text:
@@ -314,7 +313,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                     text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до:\n\n{state_contract_text}\n{delay_payment_text} {acts_text}\n{ip_samoz_text}\n\n{text}"
                 else:
                     text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
-            print(text_cleaned[:200])
+            
             formatted_text = await format_vacancy_gemini(text_cleaned, vac_id, message_date)   
         except Exception as e:
             await bot.send_message(ADMIN_ID, f'❌ Ошибка обработки данных вакансии в топике {src_topic_id} в чате {event.chat_id}: {e}')

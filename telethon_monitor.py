@@ -204,7 +204,7 @@ async def check_and_delete_duplicates(teleton_client: TelegramClient, channel_id
                         continue
                     
                     vacancy_id = extract_vacancy_id(message.text)
-                    print
+                    print(f'vacancy_id: {vacancy_id}')
                         
                     
                     
