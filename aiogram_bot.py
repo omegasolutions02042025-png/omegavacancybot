@@ -280,42 +280,45 @@ async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
     
 
 
-async def save_document(message: types.Message, state: FSMContext, bot : Bot):
+async def save_document(message: types.Message, state: FSMContext, bot: Bot):
     document = message.document
     if not document:
         await message.answer("Отправьте резюме в формате PDF/DOCX/RTF/TXT")
         return
 
-    file_info = await bot.get_file(document.file_id)
-    file_path = file_info.file_path
-    file_name = document.file_name
-
-    # --- создаём папку для пользователя ---
     user_id = message.from_user.id
     user_dir = os.path.join(SAVE_DIR, str(user_id))
     os.makedirs(user_dir, exist_ok=True)
 
-    # --- путь для сохранения файла ---
+    file_info = await bot.get_file(document.file_id)
+    file_name = document.file_name
     local_file_path = os.path.join(user_dir, file_name)
-    await bot.download_file(file_path, destination=local_file_path)
-    # --- Обработка media_group_id ---
+    await bot.download_file(file_info.file_path, destination=local_file_path)
+
     data = await state.get_data()
+
+    # если есть старое сообщение с вопросом — удаляем
     if data.get("mes3"):
         try:
-            await bot.delete_message(message.chat.id, data.get("mes3"))
-        except:
+            await bot.delete_message(message.chat.id, data["mes3"])
+        except Exception:
             pass
+
+    # если группа файлов
     if message.media_group_id:
         if data.get("last_media_group_id") != message.media_group_id:
-            # Сохраняем media_group_id и спрашиваем только один раз
-            
-            mes1 = await message.answer(f"📥 Файлы сохранены.")
+            # сохраняем сразу, чтобы другие файлы группы знали об этом
+            await state.update_data(last_media_group_id=message.media_group_id)
+
+            # ждём немного — Telegram ещё догружает остальные файлы
+            await asyncio.sleep(1.0)
+
+            mes1 = await message.answer("📥 Файлы сохранены.")
             mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
-            await state.update_data(last_media_group_id=message.media_group_id, mes1=mes1.message_id, mes2=mes2.message_id)
-            
+            await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
     else:
-        # Для одиночного файла
-        mes1 = await message.answer(f"📥 Файл сохранён.")
+        # одиночный файл
+        mes1 = await message.answer("📥 Файл сохранён.")
         mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
         await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
 
@@ -350,7 +353,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     mes3 = data.get("mes3")
     mes2 = data.get("mes2")
     mes1 = data.get("mes1")
-
+    
     if mes1:
             await bot.delete_message(callback.message.chat.id, mes1)
     if mes2:
