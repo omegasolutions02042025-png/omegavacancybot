@@ -315,7 +315,6 @@ def remove_vacancy_id(text: str) -> str:
 
 async def send_mess_to_group(group_id: int, message: str, vacancy_id: str, bot: Bot):
     seq_num = await get_next_sequence_number()
-    print(message)
     text = remove_vacancy_id(message)
     vacancy_id = vacancy_id[-4:]
     vacancy_id = f'{seq_num:04d}{vacancy_id}'
