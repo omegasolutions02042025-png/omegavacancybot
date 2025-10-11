@@ -222,21 +222,17 @@ async def create_mails(finalist: dict):
     
       if isinstance(finalist, str):
         return None
-      candidate = finalist.get("candidate", {})
       summary = finalist.get("summary", {})
       verdict = summary.get("verdict", "")
-      cover_letter = None
       if verdict == "Полностью подходит":
         res = await generate_mail_for_candidate_finalist(finalist)
-        cover_letter = await generate_cover_letter_for_client(finalist)
-        return [res, cover_letter]
+        return [res]
       elif verdict == "Частично подходит (нужны уточнения)":
         res = await generate_mail_for_candidate_utochnenie(finalist)
-        #cover_letter = await generate_cover_letter_for_client(finalist)
-        return [res, cover_letter]
+        return [res]
       elif verdict == "Не подходит":
         res = await generate_mail_for_candidate_otkaz(finalist)
-        return [res, cover_letter]
+        return [res]
     except Exception as e:
       print(f"❌ Произошла ошибка при создании письма: {e}")
       return None

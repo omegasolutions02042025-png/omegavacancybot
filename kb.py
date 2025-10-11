@@ -120,3 +120,8 @@ async def generate_mail_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text='Сгенерировать', callback_data='generate_mail')
     return builder.as_markup()
+
+async def generate_klient_mail_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Сгенерировать письмо для клиента', callback_data='generate_klient_mail')
+    return builder.as_markup()

@@ -12,7 +12,7 @@ import os
 from dotenv import load_dotenv
 from funcs import *
 from gpt import process_vacancy, format_vacancy
-from gpt_gimini import generate_mail_for_candidate_utochnenie, process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist, generate_mail_for_candidate_otkaz
+from gpt_gimini import generate_mail_for_candidate_utochnenie, process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist, generate_mail_for_candidate_otkaz, generate_cover_letter_for_client
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_bot import telethon_client
 from db import AsyncSessionLocal, add_otkonechenie_resume, get_otkolenie_resume 
@@ -424,24 +424,63 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     sverka_text = candidate_data.get("sverka_text")
     old_message_id = candidate_data.get("message_id")
     candidate_name = candidate_data.get("candidate_name")
+    verdict = candidate_data.get("verdict")
     try:
         await bot.delete_message(chat_id=callback.message.chat.id, message_id=old_message_id)
     except Exception as e:
         print("Ошибка в функции generate_mail_bot: ", e)
     mail = await create_mails(candidate)
     mail_text = mail[0]
-    cover_letter = mail[1]
-    await bot.send_message(callback.message.chat.id, sverka_text)
-    await bot.send_message(callback.message.chat.id, f"Создано письмо для {candidate_name}")
-    await bot.send_message(callback.message.chat.id, mail_text)
+    if verdict == "Полностью подходит":
+        mes_k = await callback.message.answer("Сгенерировать ли письмо для клиента?", reply_markup=generate_klient_mail_kb())
+        client_data = {mes_k.message_id:{'candidate_json': candidate, 'candidate_name': candidate_name}}
+        await state.update_data(client_data=client_data)
+    else:
+        await bot.send_message(callback.message.chat.id, sverka_text)
+        await bot.send_message(callback.message.chat.id, f"Создано письмо для {candidate_name}")
+        await bot.send_message(callback.message.chat.id, mail_text)
     
-    if cover_letter:
-        await bot.send_message(callback.message.chat.id, f"Создано  письмо для клиента по кандидату {candidate_name}")
-        await bot.send_message(callback.message.chat.id, cover_letter)
-    candidate_data_dict.pop(message_id)
-    if not candidate_data_dict:
-        await state.clear()
+    
+    if verdict != "Полностью подходит":
+        if not candidate_data_dict:
+            await state.clear()
+        else:
+            await state.update_data(candidate_data=candidate_data_dict)
     else:
         await state.update_data(candidate_data=candidate_data_dict)
     
-    
+@bot_router.callback_query(F.data == "generate_klient_mail")
+async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await callback.answer()
+    await callback.message.edit_text("📨 Создаю письмо для клиента...")
+
+    message_id = callback.message.message_id
+    data = await state.get_data()
+    client_data_dict = data.get("client_data", {})
+    client_data = client_data_dict.get(message_id)
+    if not client_data:
+        await callback.message.answer("❌ Не удалось найти данные для генерации письма клиента.")
+        return
+
+    candidate = client_data.get("candidate_json")
+    candidate_name = client_data.get("candidate_name", "кандидата")
+
+    try:
+        
+        mail_text = await generate_cover_letter_for_client(candidate)
+    except Exception as e:
+        await callback.message.answer(f"⚠️ Ошибка при генерации письма клиента: {e}")
+        return
+
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    await bot.send_message(callback.message.chat.id, f"✅ Письмо для клиента по кандидату {candidate_name} создано:")
+    await bot.send_message(callback.message.chat.id, mail_text)
+
+    client_data_dict.pop(message_id, None)
+    if not client_data_dict:
+        await state.clear()
+    else:
+        await state.update_data(client_data=client_data_dict)
