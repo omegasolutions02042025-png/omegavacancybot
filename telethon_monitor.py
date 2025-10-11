@@ -204,11 +204,7 @@ async def check_and_delete_duplicates(teleton_client: TelegramClient, channel_id
                         continue
                     
                     vacancy_id = extract_vacancy_id(message.text)
-                    print(f'vacancy_id: {vacancy_id}')
-                        
-                    
-                    
-                    
+            
                     stop_pattern = re.compile(
                         r'(🛑.*(?:СТОП|STOP).*🛑|\bстоп\b|\bstop\b)',
                         re.IGNORECASE
