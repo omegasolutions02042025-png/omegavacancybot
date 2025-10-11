@@ -899,7 +899,7 @@ async def generate_cover_letter_for_client(json_data: dict):
 — Грейд: {grade}  
 — Локация: {location}  
 — Опыт: {full_experience}  
-— Стек: {stack}{"\n— Ставка: " + salary if salary and salary != 'нужно уточнить' else ''}
+— Стек: {stack}\n{"— Ставка: " + salary if salary and salary != 'нужно уточнить' else ''}
 
 5️⃣ **Заключение:**
 Резюме прилагается в формате White Label (на русском, без сокращений, с акцентами на требования вакансии).

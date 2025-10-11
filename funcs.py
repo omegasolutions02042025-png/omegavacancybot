@@ -409,31 +409,34 @@ def format_candidate_json_str(raw_str: str) -> str:
 
 def extract_vacancy_id(text: str) -> str | None:
     """
-    Ищет ID вакансии только в первой строке текста.
-    Поддерживаются форматы:
-      🆔04100101, 🆔QA-8955, QA-8955, DEV-102, 04100101
+    Ищет ID вакансии в первой строке текста.
+    Поддерживает форматы:
+      🆔04100101, 🆔QA-8955, QA-8955, DEV-102, 04100101,
+      BE-9075 (https://t.me/...)
     Возвращает сам ID или None, если не найден.
     """
-    lines = text.strip().splitlines()
-    if not lines:
+    if not text:
         return None
 
-    first_line = lines[0].strip()
+    first_line = text.strip().splitlines()[0].strip()
 
-    # Паттерн: начало строки, опциональная эмодзи, буквы/дефисы, цифры
-    id_pattern = re.compile(r"^(?:🆔\s*)?([\w\-]*\d+)$", re.IGNORECASE)
+    # Ищем ID в начале строки, допускаем, что после него есть скобки или текст
+    id_pattern = re.compile(
+        r"^(?:🆔\s*)?([A-ZА-Я]{1,5}-?\d{3,6})",
+        re.IGNORECASE
+    )
 
-    match = id_pattern.match(first_line)
+    match = id_pattern.search(first_line)
     if match:
-        return match.group(1).strip()
-    
+        return match.group(1).strip().upper()
+
     return None
 
-# text = """QA-1000
+text = """BE-9075 (https://t.me/omega_vacancy_bot?start=2429_BE-9075)
 
 # 📅 Дата публикации: 06.10.2025 09:01
 # 🥇Python Developer
 # ID: ABC-9876
 # Компания: Example Corp
 # """
-# print(extract_vacancy_id(text))
+print(extract_vacancy_id(text))
