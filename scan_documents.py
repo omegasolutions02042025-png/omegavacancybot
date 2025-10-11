@@ -221,6 +221,7 @@ async def create_mails(finalist: dict):
     try:
     
       if isinstance(finalist, str):
+        print("❌ Неверный формат данных финалиста")
         return None
       summary = finalist.get("summary", {})
       verdict = summary.get("verdict", "")
