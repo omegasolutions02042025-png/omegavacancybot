@@ -24,6 +24,26 @@ ADMIN_ID = os.getenv('ADMIN_ID')
 
 
 
+def has_strikethrough_id(message, vacancy_id: str) -> bool:
+    """
+    Проверяет, есть ли зачёркнутый именно ID вакансии (а не любое слово)
+    """
+    if not message.entities:
+        return False
+
+    for entity in message.entities:
+        if entity.__class__.__name__ == 'MessageEntityStrike':
+            start = entity.offset
+            end = start + entity.length
+            text_fragment = message.text[start:end]
+
+            if vacancy_id and vacancy_id in text_fragment:
+                print(f"🔍 Найден зачёркнутый именно ID {vacancy_id} в сообщении {message.id}")
+                return True
+
+    return False
+
+
 def has_strikethrough(message):
     if not message.entities:
         return False
@@ -262,7 +282,7 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id, bot: 
                         
                         if dst_msg.text and vacancy_id in dst_msg.text:
                             
-                            if has_strikethrough(dst_msg):
+                            if has_strikethrough_id(dst_msg, vacancy_id):
                                 print(f"🗑 Найден зачеркнутый ID {vacancy_id} в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
                                 title = get_vacancy_title(dst_msg.text)
                                 asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
