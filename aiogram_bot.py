@@ -439,7 +439,6 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
         await callback.message.answer("❌ Нет данных для генерации письма.")
         return
     candidate = candidate_data.get("candidate_json")
-    print(candidate)
     sverka_text = candidate_data.get("sverka_text")
     old_message_id = candidate_data.get("message_id")
     candidate_name = candidate_data.get("candidate_name")
