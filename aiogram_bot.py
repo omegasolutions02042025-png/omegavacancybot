@@ -409,7 +409,6 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     
     shutil.rmtree(user_dir)
     
-    await callback.message.answer("✅ Обработка завершена.")
     
             
 @bot_router.callback_query(F.data == "utochnit_prichinu")
