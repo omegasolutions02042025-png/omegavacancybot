@@ -76,27 +76,19 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
         if result_gpt:
             result = display_analysis(result_gpt)
             result_gpt = clean_json(result_gpt)
-            mail_list = await create_mails(result_gpt)
             verdict = result_gpt.get("summary").get("verdict")
             candidate = result_gpt.get("candidate").get("full_name")
-            print(candidate, verdict)
-            cover_latter = mail_list[1]
-            mail = mail_list[0]
+            
             if verdict == "Не подходит":
                 mes = await bot.send_message(user_id, f"❌ Кандидат {candidate} не подходит", reply_markup=utochnit_prichinu_kb())
-                await bot.send_message(user_id, mail)
                 await add_otkonechenie_resume(mes.message_id, result)
-                return {'candidate': candidate, 'verdict': verdict}
+                return {'candidate': candidate, 'verdict': verdict, 'sverka_text': result, 'message_id': mes.message_id}
             
-            if cover_latter:
-                await bot.send_message(CLIENT_CHANNEL, cover_latter)
             # Если результат большой, можно отправлять по частям
-            for i in range(0, len(result), 4096):
-                await bot.send_message(user_id, result[i:i+4096], parse_mode="HTML")
-            await bot.send_message(user_id, f"Создано письмо для {candidate or '❌'}")
-            await bot.send_message(user_id, mail)
             
-            return {'candidate': candidate, 'verdict': verdict}
+            mes = await bot.send_message(user_id, result[:4096], parse_mode="HTML")
+            
+            return {'candidate': candidate, 'verdict': verdict, 'sverka_text': result, 'message_id': mes.message_id}
         else:
             await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")
     except Exception as e:
@@ -223,59 +215,6 @@ def create_finalists_table(finalists: list[dict]):
 
 
 
-
-
-import csv
-
-def create_candidates_csv(candidates: list[dict], filename: str = "candidates_report.csv"):
-  """
-  Создает CSV-файл с отчетом по кандидатам.
-
-  Args:
-    candidates: Список словарей, где каждый словарь представляет кандидата.
-    filename: Имя создаваемого CSV-файла.
-  """
-  # Заголовки для CSV файла
-  headers = ["ФИО", "Грейд и Позиция", "Город", "Зарплатные ожидания", "Вердикт"]
-
-  try:
-    # Используем with для автоматического закрытия файла
-    # encoding='utf-8-sig' для корректного отображения кириллицы в Excel
-    # newline='' для правильной обработки переносов строк
-    with open(filename, mode='w', newline='', encoding='utf-8-sig') as csv_file:
-      writer = csv.writer(csv_file)
-
-      # 1. Записываем заголовки
-      writer.writerow(headers)
-
-      # 2. Проходим по списку кандидатов и записываем данные
-      for item in candidates:
-        # Пропускаем некорректные записи в списке (если это просто строка)
-        if isinstance(item, str):
-          continue
-
-        # Безопасно извлекаем вложенные данные
-        candidate_info = item.get("candidate", {})
-        summary_info = item.get("summary", {})
-        location_info = candidate_info.get("location", {})
-        
-        # Собираем данные для одной строки в CSV
-        row = [
-          candidate_info.get("full_name", "N/A"),
-          candidate_info.get("grade_and_position", "N/A"),
-          location_info.get("city", "N/A"),
-          summary_info.get("salary_expectations", "N/A"),
-          summary_info.get("verdict", "N/A")
-        ]
-        
-        # Записываем строку в файл
-        writer.writerow(row)
-        
-    print(f"✅ Файл '{filename}' успешно создан.")
-
-  except Exception as e:
-    print(f"❌ Произошла ошибка при создании файла: {e}")
-    
     
     
 async def create_mails(finalist: dict):

@@ -115,3 +115,8 @@ def utochnit_prichinu_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text='Уточнить причину', callback_data='utochnit_prichinu')
     return builder.as_markup()
+
+async def generate_mail_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Сгенерировать', callback_data='generate_mail')
+    return builder.as_markup()

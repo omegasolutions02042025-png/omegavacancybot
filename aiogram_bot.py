@@ -16,7 +16,7 @@ from gpt_gimini import generate_mail_for_candidate_utochnenie, process_vacancy_w
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_bot import telethon_client
 from db import AsyncSessionLocal, add_otkonechenie_resume, get_otkolenie_resume 
-from scan_documents import process_file_and_gpt, create_finalists_table, create_candidates_csv
+from scan_documents import process_file_and_gpt, create_finalists_table, create_mails
 import shutil
 import markdown
 from dotenv import load_dotenv
@@ -38,6 +38,10 @@ class ScanHand(StatesGroup):
 
 class ScanVacRekr(StatesGroup):
     waiting_for_vac = State()
+
+
+class GenerateMail(StatesGroup):
+    waiting_for_mail = State()
 
 
 TOPIC_MAP = {
@@ -296,25 +300,43 @@ async def save_document(message: types.Message, state: FSMContext, bot : Bot):
     await bot.download_file(file_path, destination=local_file_path)
     # --- Обработка media_group_id ---
     data = await state.get_data()
+    if data.get("mes3"):
+        try:
+            await bot.delete_message(message.chat.id, data.get("mes3"))
+        except:
+            pass
     if message.media_group_id:
         if data.get("last_media_group_id") != message.media_group_id:
             # Сохраняем media_group_id и спрашиваем только один раз
-            await state.update_data(last_media_group_id=message.media_group_id)
-            await message.answer(f"📥 Файлы сохранены.")
-            await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
+            
+            mes1 = await message.answer(f"📥 Файлы сохранены.")
+            mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
+            await state.update_data(last_media_group_id=message.media_group_id, mes1=mes1.message_id, mes2=mes2.message_id)
             
     else:
         # Для одиночного файла
-        await message.answer(f"📥 Файл сохранён.")
-        await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
+        mes1 = await message.answer(f"📥 Файл сохранён.")
+        mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
+        await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
 
-
+@bot_router.message(F.document)
+async def doc_without_state(message: Message):
+    await message.answer("📄 Чтобы загрузить резюме, сначала выберите вакансию в боте.")
 
 
     
 @bot_router.callback_query(F.data == "yes_vac_rekr")
 async def scan_vac_rekr_y(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    await callback.message.answer("Жду файлы")
+    mes3 = await callback.message.answer("Жду файлы")
+    data = await state.get_data()
+    mes1 = data.get("mes1")
+    mes2 = data.get("mes2")
+    try:
+        await bot.delete_message(callback.message.chat.id, mes1)
+        await bot.delete_message(callback.message.chat.id, mes2)
+    except:
+        pass
+    await state.update_data(mes3=mes3.message_id)
     
 
 @bot_router.callback_query(F.data == "no_vac_rekr")
@@ -344,28 +366,30 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     if not result:
         await callback.message.answer("❌ Нет результатов для финального списка")
         return
-    #table = create_finalists_table(result)
-    #await callback.message.answer(table)
-    #create_candidates_csv(result)
-    #document = FSInputFile("candidates_report.csv")
-    #await callback.message.answer_document(document)
-   
-    final_spisok = ''
+    await state.clear()
+    canditates_data = {}
     for finalist in result:
-      candidate = finalist.get('candidate')
-      verdict = finalist.get('verdict')
+        candidate = finalist.get('candidate')
+        verdict = finalist.get('verdict')
+        sverka_text = finalist.get('sverka_text')
+        message_id = finalist.get('message_id')
       
-      if verdict == 'Полностью подходит':
-        final_spisok += f"{candidate}: ✅ {verdict}\n"
-      elif verdict == 'Частично подходит (нужны уточнения)':
-        final_spisok += f"{candidate}: ⚠️ {verdict}\n"
-      elif verdict == 'Не подходит':
-        final_spisok += f"{candidate}: ❌ {verdict}\n"
+        if verdict == 'Полностью подходит':
+            kandidate_verdict = f"{candidate}: ✅ {verdict}\nСгенерировать ли сопроводительное письмо?"
+        elif verdict == 'Частично подходит (нужны уточнения)':
+            kandidate_verdict = f"{candidate}: ⚠️ {verdict}\nСгенерировать ли уточняющее письмо?"
+        elif verdict == 'Не подходит':
+            kandidate_verdict = f"{candidate}: ❌ {verdict}\nПодготовить отказ?"
+        messs = await callback.message.answer('.')
+        await messs.edit_text(text = kandidate_verdict, reply_markup=await generate_mail_kb())
+        candidate_data = {messs.message_id:{'candidate_json': finalist, 'sverka_text': sverka_text, 'message_id': message_id, 'verdict': verdict, 'candidate_name': candidate}}
+        canditates_data.update(candidate_data)
+        
+    await state.update_data(canditate_data= canditates_data)
+    await state.set_state(GenerateMail.waiting_for_mail)
     
-    await callback.message.answer(final_spisok)
     shutil.rmtree(user_dir)
-    #os.remove("candidates_report.csv")
-
+    
     await callback.message.answer("✅ Обработка завершена.")
     
             
@@ -381,3 +405,43 @@ async def utochnit_prichinu_bot(callback: CallbackQuery, bot: Bot):
             await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text="❌ Данные об отклонении резюме удалены", reply_markup=None)
     except Exception as e:
         print("Ошибка в функции utochnit_prichinu: ", e)
+        
+        
+        
+        
+@bot_router.callback_query(F.data == "generate_mail")
+async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await callback.answer()
+    await callback.message.edit_text("Создаю письмо...")
+    message_id = callback.message.message_id
+    data = await state.get_data()
+    candidate_data_dict = data.get("candidate_data", {})
+    candidate_data = candidate_data_dict.get(message_id)
+    if not candidate_data:
+        await callback.message.answer("❌ Нет данных для генерации письма.")
+        return
+    candidate = candidate_data.get("candidate_json")
+    sverka_text = candidate_data.get("sverka_text")
+    old_message_id = candidate_data.get("message_id")
+    candidate_name = candidate_data.get("candidate_name")
+    try:
+        await bot.delete_message(chat_id=callback.message.chat.id, message_id=old_message_id)
+    except Exception as e:
+        print("Ошибка в функции generate_mail_bot: ", e)
+    mail = await create_mails(candidate)
+    mail_text = mail[0]
+    cover_letter = mail[1]
+    await bot.send_message(callback.message.chat.id, sverka_text)
+    await bot.send_message(callback.message.chat.id, f"Создано письмо для {candidate_name}")
+    await bot.send_message(callback.message.chat.id, mail_text)
+    
+    if cover_letter:
+        await bot.send_message(callback.message.chat.id, f"Создано  письмо для клиента по кандидату {candidate_name}")
+        await bot.send_message(callback.message.chat.id, cover_letter)
+    candidate_data_dict.pop(message_id)
+    if not candidate_data_dict:
+        await state.clear()
+    else:
+        await state.update_data(candidate_data=candidate_data_dict)
+    
+    
