@@ -296,16 +296,14 @@ async def save_document(message: types.Message, state: FSMContext, bot):
 
     # --- Проверяем, существует ли уже файл ---
     if os.path.exists(local_file_path):
-        print(f"⚠️ Файл {file_name} уже существует — пропускаем сохранение.")
-        await message.answer(f"⚠️ Файл **{file_name}** уже есть, пропускаю сохранение.")
-        return
+        print(f"⚠️ Файл {file_name} уже существует — пропускаем загрузку, но используем при обработке.")
+    else:
+        # --- Загружаем файл ---
+        file_info = await bot.get_file(document.file_id)
+        await bot.download_file(file_info.file_path, destination=local_file_path)
+        print(f"📁 Файл сохранён: {local_file_path}")
 
-    # --- Загружаем файл ---
-    file_info = await bot.get_file(document.file_id)
-    await bot.download_file(file_info.file_path, destination=local_file_path)
-    print(f"📁 Файл сохранён: {local_file_path}")
-
-    data = await state.get_data()
+        data = await state.get_data()
 
     # --- Удаляем старое сообщение "Жду файлы" ---
     if data.get("mes3"):
