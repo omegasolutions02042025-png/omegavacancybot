@@ -135,3 +135,9 @@ def generate_klient_mail_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text='Сгенерировать письмо для клиента', callback_data='generate_klient_mail')
     return builder.as_markup()
+
+
+def get_all_info_kb(verdict: str):
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Подробнее', callback_data=f'get_all_info:{verdict}')
+    return builder.as_markup()

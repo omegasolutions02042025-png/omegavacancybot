@@ -51,6 +51,23 @@ class OtkonechenieResume(Base):
     message_text = Column(String, nullable=False)
     message_time = Column(String, nullable=False)
     
+class FinalResume(Base):
+    __tablename__ = 'final_resume'
+    
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    message_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    message_text = Column(String, nullable=False)
+    message_time = Column(String, nullable=False)
+
+
+class UtochnenieResume(Base):
+    __tablename__ = 'utochnenie_resume'
+    
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    message_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    message_text = Column(String, nullable=False)
+    message_time = Column(String, nullable=False)
+ 
     
 class MessageMapping(Base):
     __tablename__ = "message_mapping"
@@ -291,6 +308,8 @@ async def periodic_cleanup_task():
     while True:
         try:
             await remove_old_otkonechenie_resumes(hours=12)
+            await remove_old_utochnenie_resumes(hours=12)
+            await remove_old_final_resumes(hours=12)
         except Exception as e:
             print(f"❌ Ошибка при автоочистке: {e}")
         await asyncio.sleep(60 * 60) 
@@ -301,3 +320,100 @@ async def get_otkolenie_resume(message_id: int):
         result = await session.execute(select(OtkonechenieResume).where(OtkonechenieResume.message_id == message_id))
         return result.scalar_one_or_none()
     
+# ===============================================================
+#  FINAL RESUME (ФИНАЛИСТЫ)
+# ===============================================================
+
+async def add_final_resume(message_id: int, message_text: str):
+    async with AsyncSessionLocal() as session:
+        final_resume = FinalResume(
+            message_id=message_id,
+            message_text=message_text,
+            message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        )
+        session.add(final_resume)
+        await session.commit()
+
+
+async def remove_old_final_resumes(hours: int = 12):
+    """Удаляет финальные резюме старше N часов (по умолчанию 12)."""
+    async with AsyncSessionLocal() as session:
+        try:
+            threshold_time = datetime.now() - timedelta(hours=hours)
+            result = await session.execute(select(FinalResume))
+            records = result.scalars().all()
+            deleted_count = 0
+
+            for record in records:
+                try:
+                    record_time = datetime.strptime(record.message_time, "%d.%m.%Y %H:%M:%S")
+                    if record_time < threshold_time:
+                        await session.delete(record)
+                        deleted_count += 1
+                except ValueError:
+                    continue
+
+            await session.commit()
+            print(f"🧹 Удалено {deleted_count} финальных резюме старше {hours} часов.")
+
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при удалении финальных резюме: {e}")
+
+
+async def get_final_resume(message_id: int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(FinalResume).where(FinalResume.message_id == message_id)
+        )
+        return result.scalar_one_or_none()
+
+
+
+# ===============================================================
+#  UTOCHNENIE RESUME (ТРЕБУЮТ УТОЧНЕНИЙ)
+# ===============================================================
+
+async def add_utochnenie_resume(message_id: int, message_text: str):
+    async with AsyncSessionLocal() as session:
+        utochnenie = UtochnenieResume(
+            message_id=message_id,
+            message_text=message_text,
+            message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        )
+        session.add(utochnenie)
+        await session.commit()
+
+
+async def remove_old_utochnenie_resumes(hours: int = 12):
+    """Удаляет записи из таблицы utochnenie_resume, старше N часов."""
+    async with AsyncSessionLocal() as session:
+        try:
+            threshold_time = datetime.now() - timedelta(hours=hours)
+            result = await session.execute(select(UtochnenieResume))
+            records = result.scalars().all()
+            deleted_count = 0
+
+            for record in records:
+                try:
+                    record_time = datetime.strptime(record.message_time, "%d.%m.%Y %H:%M:%S")
+                    if record_time < threshold_time:
+                        await session.delete(record)
+                        deleted_count += 1
+                except ValueError:
+                    continue
+
+            await session.commit()
+            print(f"🧹 Удалено {deleted_count} уточняющих резюме старше {hours} часов.")
+
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при удалении уточняющих резюме: {e}")
+
+
+async def get_utochnenie_resume(message_id: int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(UtochnenieResume).where(UtochnenieResume.message_id == message_id)
+        )
+        return result.scalar_one_or_none()    

@@ -14,7 +14,7 @@ from funcs import *
 from gpt_gimini import generate_mail_for_candidate_utochnenie, process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist, generate_mail_for_candidate_otkaz, generate_cover_letter_for_client
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_bot import telethon_client
-from db import AsyncSessionLocal, add_otkonechenie_resume, get_otkolenie_resume 
+from db import AsyncSessionLocal, add_otkonechenie_resume, add_utochnenie_resume, add_final_resume, get_otkolenie_resume, get_final_resume, get_utochnenie_resume 
 from scan_documents import process_file_and_gpt, create_finalists_table, create_mails
 import shutil
 import markdown
@@ -389,7 +389,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     for file_name in os.listdir(user_dir):
         file_path = os.path.join(user_dir, file_name)
         if os.path.isfile(file_path):
-            tasks.append(process_file_and_gpt(file_path, bot, user_id, vac_text))
+            tasks.append(process_file_and_gpt(file_path, bot, user_id, vac_text, file_name))
 
     if not tasks:
         await callback.message.answer("❌ Не найдено ни одного файла.")
@@ -408,7 +408,6 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
         candidate = finalist.get('candidate')
         verdict = finalist.get('verdict')
         sverka_text = finalist.get('sverka_text')
-        message_id = finalist.get('message_id')
         candidate_json = finalist.get('candidate_json')
 
         if verdict == 'Полностью подходит':
@@ -428,18 +427,17 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             candidate = finalist.get('candidate')
             verdict = finalist.get('verdict')
             sverka_text = finalist.get('sverka_text')
-            message_id = finalist.get('message_id')
             candidate_json = finalist.get('candidate_json')
-            salary = finalist.get('summary', 'не указано').get('salary_expectations', 'не указано')
+            salary = finalist.get('summary', {}).get('salary_expectations', 'не указано')
 
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nСгенерировать ли сопроводительное письмо?"
 
-            messs = await callback.message.answer(kandidate_verdict, reply_markup=generate_mail_kb(verdict))
+            messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
+            await add_final_resume(messs.message_id, sverka_text)
             candidate_data = {
                 messs.message_id: {
                     'candidate_json': candidate_json,
                     'sverka_text': sverka_text,
-                    'message_id': message_id,
                     'verdict': verdict,
                     'candidate_name': candidate
                 }
@@ -453,18 +451,17 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             candidate = finalist.get('candidate')
             verdict = finalist.get('verdict')
             sverka_text = finalist.get('sverka_text')
-            message_id = finalist.get('message_id')
             candidate_json = finalist.get('candidate_json')
-            salary = finalist.get('summary', 'не указано').get('salary_expectations', 'не указано')
+            salary = finalist.get('summary', {}).get('salary_expectations', 'не указано')
 
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nСгенерировать ли уточняющее письмо?"
-
-            messs = await callback.message.answer(kandidate_verdict, reply_markup=generate_mail_kb(verdict))
+            
+            messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
+            await add_utochnenie_resume(messs.message_id, sverka_text)
             candidate_data = {
                 messs.message_id: {
                     'candidate_json': candidate_json,
                     'sverka_text': sverka_text,
-                    'message_id': message_id,
                     'verdict': verdict,
                     'candidate_name': candidate
                 }
@@ -478,18 +475,17 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             candidate = finalist.get('candidate')
             verdict = finalist.get('verdict')
             sverka_text = finalist.get('sverka_text')
-            message_id = finalist.get('message_id')
             candidate_json = finalist.get('candidate_json')
             salary = finalist.get('summary', {}).get('salary_expectations', 'не указано')
 
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nПодготовить отказ?"
 
-            messs = await callback.message.answer(kandidate_verdict, reply_markup=generate_mail_kb(verdict))
+            messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
+            await add_otkonechenie_resume(messs.message_id, sverka_text)
             candidate_data = {
                 messs.message_id: {
                     'candidate_json': candidate_json,
                     'sverka_text': sverka_text,
-                    'message_id': message_id,
                     'verdict': verdict,
                     'candidate_name': candidate
                 }
@@ -531,8 +527,6 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
         await callback.message.answer("❌ Нет данных для генерации письма.")
         return
     candidate = candidate_data.get("candidate_json")
-    sverka_text = candidate_data.get("sverka_text")
-    old_message_id = candidate_data.get("message_id")
     candidate_name = candidate_data.get("candidate_name")
     verdict = candidate_data.get("verdict")
     user_name = (
@@ -600,3 +594,28 @@ async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, b
         await state.clear()
     else:
         await state.update_data(client_data=client_data_dict)
+
+
+
+@bot_router.callback_query(F.data.startswith("get_all_info:"))
+async def get_all_info_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    verdict = callback.data.split(":")[1]
+    message_id = callback.message.message_id
+    if verdict == "Полностью подходит":
+        sverka = await get_final_resume(message_id)
+        if sverka:
+            await callback.message.edit_text(sverka.message_text, reply_markup=generate_mail_kb(verdict))
+        else:
+            await callback.message.answer("❌ Не удалось найти данные для генерации письма клиента.")
+    elif verdict == "Частично подходит (нужны уточнения)":
+        sverka = await get_utochnenie_resume(message_id)
+        if sverka:
+            await callback.message.edit_text(sverka.message_text, reply_markup=generate_mail_kb(verdict))
+        else:
+            await callback.message.answer("❌ Не удалось найти данные для генерации письма клиента.")
+    elif verdict == "Не подходит":
+        sverka = await get_otkolenie_resume(message_id)
+        if sverka:
+            await callback.message.edit_text(sverka.message_text, reply_markup=generate_mail_kb(verdict))
+        else:
+            await callback.message.answer("❌ Не удалось найти данные для генерации письма клиента.")

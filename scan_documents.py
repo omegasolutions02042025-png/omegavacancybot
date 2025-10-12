@@ -7,7 +7,7 @@ from gpt_gimini import sverka_vac_and_resume_json, generate_mail_for_candidate_f
 import asyncio
 from funcs import format_candidate_json_str
 from striprtf.striprtf import rtf_to_text
-from db import add_otkonechenie_resume
+from db import add_otkonechenie_resume, add_final_resume, add_utochnenie_resume
 from kb import utochnit_prichinu_kb
 from dotenv import load_dotenv
 import textract
@@ -66,7 +66,7 @@ def process_txt(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
-async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: str):
+async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: str, file_name: str):
     ext = path.split(".")[-1].lower()
     
     try:
@@ -84,7 +84,7 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
             await bot.send_message(user_id, f"⚠️ Формат {ext} не поддерживается: {path}")
             return
         
-        text_gpt = await background_sverka(resume_text=text, vacancy_text=vac_text, bot=bot, user_id=user_id)
+        text_gpt = await background_sverka(resume_text=text, vacancy_text=vac_text, bot=bot, user_id=user_id, file_name=file_name)
         
         os.remove(path)
     except Exception as e:
@@ -92,9 +92,9 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
     finally:
         return text_gpt or None
         
-async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_id: int|str):
+async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_id: int|str, file_name: str):
     try:
-        result_gpt = await sverka_vac_and_resume_json(resume_text, vacancy_text)
+        result_gpt = await sverka_vac_and_resume_json(resume_text, vacancy_text, file_name)
         
         if result_gpt:
             result = display_analysis(result_gpt)
@@ -102,16 +102,7 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             verdict = result_gpt.get("summary").get("verdict")
             candidate = result_gpt.get("candidate").get("full_name")
             
-            if verdict == "Не подходит":
-                mes = await bot.send_message(user_id, f"❌ Кандидат {candidate} не подходит", reply_markup=utochnit_prichinu_kb())
-                await add_otkonechenie_resume(mes.message_id, result)
-                return {'candidate': candidate, 'verdict': verdict, 'sverka_text': result, 'message_id': mes.message_id, 'candidate_json': result_gpt}
-            
-            # Если результат большой, можно отправлять по частям
-            
-            mes = await bot.send_message(user_id, result[:4096], parse_mode="HTML")
-            
-            return {'candidate': candidate, 'verdict': verdict, 'sverka_text': result, 'message_id': mes.message_id, 'candidate_json': result_gpt}
+            return {'candidate': candidate, 'verdict': verdict, 'sverka_text': result, 'candidate_json': result_gpt}
         else:
             await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")
     except Exception as e:

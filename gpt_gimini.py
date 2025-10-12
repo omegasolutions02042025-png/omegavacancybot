@@ -368,7 +368,7 @@ async def generate_hashtags_gemini(vacancy_text: str) -> str:
 
 
 
-async def sverka_vac_and_resume_json(vacancy_text, resume_text):
+async def sverka_vac_and_resume_json(vacancy_text, resume_text, file_name):
     """
     Анализирует соответствие кандидата вакансии и возвращает JSON от Gemini без очистки.
     Добавляет уточняющие пункты только если кандидат подходит или частично подходит.
@@ -428,7 +428,8 @@ NICE_TO_HAVE
 — город,
 — контакты (телефон, e-mail, Telegram),
 — зарплатные ожидания,
-укажи их в must_have как ошибки оформления:
+то возьми их в названии файла '{file_name}'.
+Если и там нет — укажи их в must_have как ошибки оформления:
 
 {{
   "requirement": "Не указано <название поля>",
