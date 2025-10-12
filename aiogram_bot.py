@@ -430,7 +430,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             candidate_json = finalist.get('candidate_json')
             salary = finalist.get('summary', {}).get('salary_expectations', 'не указано')
 
-            kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nСгенерировать ли сопроводительное письмо?"
+            kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}"
 
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
             await add_final_resume(messs.message_id, sverka_text)
@@ -454,7 +454,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             candidate_json = finalist.get('candidate_json')
             salary = finalist.get('summary', {}).get('salary_expectations', 'не указано')
 
-            kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nСгенерировать ли уточняющее письмо?"
+            kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}"
             
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
             await add_utochnenie_resume(messs.message_id, sverka_text)
@@ -478,7 +478,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             candidate_json = finalist.get('candidate_json')
             salary = finalist.get('summary', {}).get('salary_expectations', 'не указано')
 
-            kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nПодготовить отказ?"
+            kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}"
 
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
             await add_otkonechenie_resume(messs.message_id, sverka_text)
