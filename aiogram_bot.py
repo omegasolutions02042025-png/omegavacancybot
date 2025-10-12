@@ -304,25 +304,35 @@ async def save_document(message: types.Message, state: FSMContext, bot: Bot):
         except:
             pass
 
-    # === Блокировка обработки группы ===
     media_group_id = message.media_group_id
-    if media_group_id:
-        # Если это новый group_id — реагируем один раз
-        if data.get("current_media_group_id") != media_group_id:
-            # сохраняем идентификатор, чтобы другие файлы группы не вызывали повтор
-            await state.update_data(current_media_group_id=media_group_id)
 
-            # небольшая задержка, чтобы Telegram успел доставить все файлы
+    # === Блокировка от повторной реакции ===
+    if media_group_id:
+        group_lock = data.get("group_lock", False)
+
+        # если уже обрабатывается какая-то группа — не реагируем
+        if group_lock:
+            return
+
+        current_group_id = data.get("current_media_group_id")
+        if current_group_id != media_group_id:
+            # Ставим блокировку, чтобы не отреагировать несколько раз
+            await state.update_data(group_lock=True, current_media_group_id=media_group_id)
+
+            # ждём пока Telegram догрузит все файлы группы
             await asyncio.sleep(1.2)
 
             mes1 = await message.answer("📥 Файлы сохранены.")
             mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
-            await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
-        else:
-            # остальные файлы из той же группы просто сохраняем — без сообщений
-            return
+
+            # снимаем блокировку
+            await state.update_data(
+                mes1=mes1.message_id,
+                mes2=mes2.message_id,
+                group_lock=False
+            )
     else:
-        # Одиночный файл
+        # одиночный файл — всё как раньше
         mes1 = await message.answer("📥 Файл сохранён.")
         mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
         await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
