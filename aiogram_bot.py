@@ -581,10 +581,6 @@ async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, b
         await callback.message.answer(f"⚠️ Ошибка при генерации письма клиента: {e}")
         return
 
-    try:
-        await callback.message.delete()
-    except Exception:
-        pass
     await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=f"✅ Письмо для клиента по кандидату {candidate_name} создано и отправлено в группу!", reply_markup=None)
     await asyncio.sleep(3)
     await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=f"Вот текст письма:\n{mail_text}", reply_markup=None)
