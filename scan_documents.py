@@ -47,8 +47,34 @@ def process_pdf(path: str) -> str:
 
 # DOCX → текст
 def process_docx(path: str) -> str:
-    doc = Document(path)
-    return "\n".join([p.text for p in doc.paragraphs])
+    """
+    Извлекает весь текст из .docx, включая таблицы и вложенные ячейки.
+    Возвращает объединённый текст.
+    """
+    try:
+        doc = Document(path)
+        texts = []
+
+        # --- Параграфы ---
+        for paragraph in doc.paragraphs:
+            if paragraph.text.strip():
+                texts.append(paragraph.text.strip())
+
+        # --- Таблицы ---
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    cell_text = cell.text.strip()
+                    if cell_text:
+                        texts.append(cell_text)
+
+        # Удаляем дубликаты и объединяем
+        text = "\n".join(dict.fromkeys(texts))
+        return text.strip()
+
+    except Exception as e:
+        print(f"❌ Ошибка чтения DOCX: {e}")
+        return ""
 
 # RTF → текст
 def process_rtf(path: str) -> str:
