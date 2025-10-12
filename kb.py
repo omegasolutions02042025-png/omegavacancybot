@@ -119,15 +119,15 @@ def utochnit_prichinu_kb():
 def generate_mail_kb(verdict: str):
     if verdict == 'Полностью подходит':
         builder = InlineKeyboardBuilder()
-        builder.button(text='Сгенерировать письмо для кандидата?', callback_data='generate_mail')
+        builder.button(text='Сгенерировать письмо для кандидата', callback_data='generate_mail')
         return builder.as_markup()
     elif verdict == 'Частично подходит (нужны уточнения)':
         builder = InlineKeyboardBuilder()
-        builder.button(text='Сгенерировать уточняющее письмо?', callback_data='generate_mail')
+        builder.button(text='Сгенерировать уточняющее письмо', callback_data='generate_mail')
         return builder.as_markup()
     elif verdict == 'Не подходит':
         builder = InlineKeyboardBuilder()
-        builder.button(text='Сгенерировать отказ?', callback_data='generate_mail')
+        builder.button(text='Сгенерировать отказ', callback_data='generate_mail')
         return builder.as_markup()
     return None
 

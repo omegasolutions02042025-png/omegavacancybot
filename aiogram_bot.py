@@ -292,13 +292,21 @@ async def save_document(message: types.Message, state: FSMContext, bot):
     user_dir = os.path.join(SAVE_DIR, str(user_id))
     os.makedirs(user_dir, exist_ok=True)
 
-    file_info = await bot.get_file(document.file_id)
     file_name = document.file_name
     local_file_path = os.path.join(user_dir, file_name)
+
+    # --- Проверяем, существует ли уже файл ---
+    if os.path.exists(local_file_path):
+        print(f"⚠️ Файл {file_name} уже существует — пропускаем сохранение.")
+        await message.answer(f"⚠️ Файл **{file_name}** уже есть, пропускаю сохранение.")
+        return
+
+    # --- Загружаем файл ---
+    file_info = await bot.get_file(document.file_id)
     await bot.download_file(file_info.file_path, destination=local_file_path)
+    print(f"📁 Файл сохранён: {local_file_path}")
 
     data = await state.get_data()
-    media_group_id = message.media_group_id
 
     # --- Удаляем старое сообщение "Жду файлы" ---
     if data.get("mes3"):
@@ -308,25 +316,28 @@ async def save_document(message: types.Message, state: FSMContext, bot):
             pass
 
     # === Если сообщение часть группы ===
+    media_group_id = message.media_group_id
     if media_group_id:
-        # Проверяем, была ли уже эта группа
+        # Проверяем, обрабатывается ли уже эта группа
         if ACTIVE_MEDIA_GROUPS.get(media_group_id):
-            # уже обрабатывается — просто сохраняем файл
+            # уже есть обработка этой группы — просто сохраняем файл
             return
 
-        # Помечаем группу как активную (чтобы не дублировать)
+        # Помечаем группу как активную
         ACTIVE_MEDIA_GROUPS[media_group_id] = True
+        print(f"📦 Начало обработки группы файлов {media_group_id}")
 
-        # Ждём, пока Telegram доставит остальные файлы группы
+        # ждём, пока Telegram догрузит остальные файлы группы
         await asyncio.sleep(2.0)
 
         mes1 = await message.answer("📥 Файлы сохранены.")
         mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
         await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
 
-        # Сбрасываем блокировку через 10 секунд (если вдруг Telegram затупит)
+        # снимаем блокировку через 10 секунд
         await asyncio.sleep(10)
         ACTIVE_MEDIA_GROUPS.pop(media_group_id, None)
+        print(f"✅ Группа {media_group_id} обработана и разблокирована.")
 
     else:
         # --- Одиночный файл ---
@@ -523,7 +534,7 @@ async def utochnit_prichinu_bot(callback: CallbackQuery, bot: Bot):
 @bot_router.callback_query(F.data == "generate_mail")
 async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
-    await callback.message.edit_text("Создаю письмо...")
+    await callback.answer()
     message_id = callback.message.message_id
     data = await state.get_data()
     candidate_data_dict = data.get("candidate_data", {})
@@ -542,11 +553,12 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     else:
         mail_text = "."
     if verdict == "Полностью подходит":
-        await bot.edit_message_text(callback.message.chat.id, message_id, mail_text, reply_markup=generate_klient_mail_kb())
+        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text, reply_markup=generate_klient_mail_kb())
         client_data = {message_id:{'candidate_json': candidate, 'candidate_name': candidate_name}}
         await state.update_data(client_data=client_data)
     else:
-        await bot.edit_message_text(callback.message.chat.id, message_id, mail_text)
+        await callback.answer(f"📨 Создано письмо для кандидата {candidate_name} !", show_alert=True)
+        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text)
     
     
     if verdict != "Полностью подходит":
