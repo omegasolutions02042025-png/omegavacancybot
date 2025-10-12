@@ -1,4 +1,3 @@
-from aiogram.types import user
 import google.generativeai as genai
 import asyncio
 import json
