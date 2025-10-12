@@ -8,7 +8,6 @@ import random
 from telethon import TelegramClient, events
 from telethon.tl.types import Channel, Chat, User
 from db import get_all_channels, add_message_mapping, remove_message_mapping, get_all_message_mappings, get_next_sequence_number
-from gpt import del_contacts_gpt, process_vacancy, format_vacancy
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from typing import Tuple, Optional
 from funcs import is_russia_only_citizenship, oplata_filter, check_project_duration, send_mess_to_group, get_message_datetime, extract_vacancy_id_and_text, remove_vacancy_id
