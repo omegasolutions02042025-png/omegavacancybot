@@ -602,18 +602,21 @@ async def get_all_info_bot(callback: CallbackQuery, state: FSMContext, bot: Bot)
     verdict = callback.data.split(":")[1]
     message_id = callback.message.message_id
     if verdict == "PP":
+        verdict = "Полностью подходит"
         sverka = await get_final_resume(message_id)
         if sverka:
             await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=sverka.message_text, reply_markup=generate_mail_kb(verdict))
         else:
             await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text="❌ Не удалось найти данные для генерации письма клиента.")
     elif verdict == "CP":
+        verdict = "Частично подходит (нужны уточнения)"
         sverka = await get_utochnenie_resume(message_id)
         if sverka:
             await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=sverka.message_text, reply_markup=generate_mail_kb(verdict))
         else:
             await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text="❌ Не удалось найти данные для генерации письма клиента.")
     elif verdict == "NP":
+        verdict = "Не подходит"
         sverka = await get_otkolenie_resume(message_id)
         if sverka:
             await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=sverka.message_text, reply_markup=generate_mail_kb(verdict))
