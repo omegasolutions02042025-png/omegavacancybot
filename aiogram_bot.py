@@ -601,19 +601,19 @@ async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, b
 async def get_all_info_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     verdict = callback.data.split(":")[1]
     message_id = callback.message.message_id
-    if verdict == "Полностью подходит":
+    if verdict == "PP":
         sverka = await get_final_resume(message_id)
         if sverka:
             await callback.message.edit_text(sverka.message_text, reply_markup=generate_mail_kb(verdict))
         else:
             await callback.message.answer("❌ Не удалось найти данные для генерации письма клиента.")
-    elif verdict == "Частично подходит (нужны уточнения)":
+    elif verdict == "CP":
         sverka = await get_utochnenie_resume(message_id)
         if sverka:
             await callback.message.edit_text(sverka.message_text, reply_markup=generate_mail_kb(verdict))
         else:
             await callback.message.answer("❌ Не удалось найти данные для генерации письма клиента.")
-    elif verdict == "Не подходит":
+    elif verdict == "NP":
         sverka = await get_otkolenie_resume(message_id)
         if sverka:
             await callback.message.edit_text(sverka.message_text, reply_markup=generate_mail_kb(verdict))

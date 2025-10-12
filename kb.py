@@ -139,5 +139,11 @@ def generate_klient_mail_kb():
 
 def get_all_info_kb(verdict: str):
     builder = InlineKeyboardBuilder()
-    builder.button(text='Подробнее', callback_data=f'get_all_info:{verdict}')
+    if verdict == 'Полностью подходит':
+        callback = 'PP'
+    elif verdict == 'Частично подходит (нужны уточнения)':
+        callback = 'CP'
+    elif verdict == 'Не подходит':
+        callback = 'NP'
+    builder.button(text='Подробнее', callback_data=f'get_all_info:{callback}')
     return builder.as_markup()
