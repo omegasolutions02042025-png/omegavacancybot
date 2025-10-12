@@ -534,7 +534,8 @@ async def utochnit_prichinu_bot(callback: CallbackQuery, bot: Bot):
 @bot_router.callback_query(F.data == "generate_mail")
 async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
-    await callback.answer()
+    await callback.answer('Подготовка письма...', show_alert=True)
+    await bot.edit_message_reply_markup(chat_id=callback.message.chat.id, message_id=callback.message.message_id, reply_markup=None)
     message_id = callback.message.message_id
     data = await state.get_data()
     candidate_data_dict = data.get("candidate_data", {})
@@ -558,7 +559,8 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
         client_data = {message_id:{'candidate_json': candidate, 'candidate_name': candidate_name}}
         await state.update_data(client_data=client_data)
     else:
-        await callback.answer(f"📨 Создано письмо для кандидата {candidate_name} !", show_alert=True)
+        await bot.edit_message_text(text = f"📨 Создано письмо для кандидата {candidate_name} !", chat_id=callback.message.chat.id, message_id=message_id)
+        await asyncio.sleep(3)
         await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text)
     
     
@@ -573,7 +575,7 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
 @bot_router.callback_query(F.data == "generate_klient_mail")
 async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
-    await callback.answer("📨 Создаю письмо для клиента...")
+    await callback.answer("📨 Создаю письмо для клиента...", show_alert=True)
 
     message_id = callback.message.message_id
     data = await state.get_data()
@@ -597,7 +599,9 @@ async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, b
         await callback.message.delete()
     except Exception:
         pass
-    await callback.answer(callback.message.chat.id, f"✅ Письмо для клиента по кандидату {candidate_name} создано и отправлено в группу!", show_alert=True)
+    await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=f"✅ Письмо для клиента по кандидату {candidate_name} создано и отправлено в группу!", reply_markup=None)
+    await asyncio.sleep(3)
+    await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=f"Вот текст письма:\n{mail_text}", reply_markup=None)
     await bot.send_message(CLIENT_CHANNEL, mail_text)
 
     client_data_dict.pop(message_id, None)
