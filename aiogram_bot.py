@@ -538,7 +538,11 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     old_message_id = candidate_data.get("message_id")
     candidate_name = candidate_data.get("candidate_name")
     verdict = candidate_data.get("verdict")
-    user_name = str(f"@{callback.message.chat.username} or {callback.message.chat.first_name}" or 'Не указано')
+    user_name = (
+            f"@{callback.message.chat.username}"
+            if callback.message.chat.username
+            else (callback.message.chat.first_name or "Не указано")
+        )
     mail = await create_mails(candidate, user_name)
     if mail:
         mail_text = mail
