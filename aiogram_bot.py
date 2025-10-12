@@ -361,8 +361,7 @@ async def scan_vac_rekr_y(callback: CallbackQuery, state: FSMContext, bot: Bot):
     mes1 = data.get("mes1")
     mes2 = data.get("mes2")
     try:
-        await bot.delete_message(callback.message.chat.id, mes1)
-        await bot.delete_message(callback.message.chat.id, mes2)
+        await bot.delete_messages(callback.message.chat.id, [mes1, mes2])
     except:
         pass
     await state.update_data(mes3=mes3.message_id)
@@ -380,15 +379,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     mes2 = data.get("mes2")
     mes1 = data.get("mes1")
     try:
-        await bot.delete_message(callback.message.chat.id, mes1)
-    except:
-        pass
-    try:
-        await bot.delete_message(callback.message.chat.id, mes2)
-    except:
-        pass
-    try:
-        await bot.delete_message(callback.message.chat.id, mes3)
+        await bot.delete_messages(callback.message.chat.id, [mes1, mes2, mes3])
     except:
         pass
 
