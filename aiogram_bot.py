@@ -526,7 +526,6 @@ async def utochnit_prichinu_bot(callback: CallbackQuery, bot: Bot):
 async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
     await callback.message.edit_text('Подготовка письма...')
-    await bot.edit_message_reply_markup(chat_id=callback.message.chat.id, message_id=callback.message.message_id, reply_markup=None)
     message_id = callback.message.message_id
     data = await state.get_data()
     candidate_data_dict = data.get("candidate_data", {})
