@@ -51,7 +51,7 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
     try:
         if ext == "pdf":
             text = process_pdf(path)
-        elif ext == "docx":
+        elif ext == "docx" or ext == "doc":
             text = process_docx(path)
         elif ext == "rtf":
             text = process_rtf(path)
