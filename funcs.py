@@ -1,7 +1,6 @@
 import inspect
 from collections import namedtuple
 from db import get_next_sequence_number
-from gpt import generate_hashtags_from_text
 from gpt_gimini import generate_hashtags_gemini
 from aiogram import Bot
 from datetime import datetime
