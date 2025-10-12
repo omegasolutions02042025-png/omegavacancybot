@@ -442,7 +442,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             sverka_text = finalist.get('sverka_text')
             message_id = finalist.get('message_id')
             candidate_json = finalist.get('candidate_json')
-            salary = finalist.get('summary', {}).get('salary_expectations', {})
+            salary = finalist.get('summary', 'не указано').get('salary_expectations', 'не указано')
 
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nСгенерировать ли сопроводительное письмо?"
 
@@ -467,7 +467,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             sverka_text = finalist.get('sverka_text')
             message_id = finalist.get('message_id')
             candidate_json = finalist.get('candidate_json')
-            salary = finalist.get('summary', {}).get('salary_expectations', {})
+            salary = finalist.get('summary', 'не указано').get('salary_expectations', 'не указано')
 
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nСгенерировать ли уточняющее письмо?"
 
@@ -492,7 +492,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             sverka_text = finalist.get('sverka_text')
             message_id = finalist.get('message_id')
             candidate_json = finalist.get('candidate_json')
-            salary = finalist.get('summary', {}).get('salary_expectations', {})
+            salary = finalist.get('summary', 'не указано').get('salary_expectations', 'не указано')
 
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nПодготовить отказ?"
 
@@ -547,7 +547,8 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     old_message_id = candidate_data.get("message_id")
     candidate_name = candidate_data.get("candidate_name")
     verdict = candidate_data.get("verdict")
-    mail = await create_mails(candidate)
+    user_name = str(callback.message.chat.username or callback.message.chat.first_name or 'Не указано')
+    mail = await create_mails(candidate, user_name)
     if mail:
         mail_text = mail
     else:

@@ -217,7 +217,7 @@ def create_finalists_table(finalists: list[dict]):
 
     
     
-async def create_mails(finalist: dict):
+async def create_mails(finalist: dict, user_name: str):
     try:
     
       if isinstance(finalist, str):
@@ -226,13 +226,13 @@ async def create_mails(finalist: dict):
       summary = finalist.get("summary", {})
       verdict = summary.get("verdict", "")
       if verdict == "Полностью подходит":
-        res = await generate_mail_for_candidate_finalist(finalist)
+        res = await generate_mail_for_candidate_finalist(finalist, user_name)
         return res
       elif verdict == "Частично подходит (нужны уточнения)":
-        res = await generate_mail_for_candidate_utochnenie(finalist)
+        res = await generate_mail_for_candidate_utochnenie(finalist, user_name)
         return res
       elif verdict == "Не подходит":
-        res = await generate_mail_for_candidate_otkaz(finalist)
+        res = await generate_mail_for_candidate_otkaz(finalist, user_name)
         return res
     except Exception as e:
       print(f"❌ Произошла ошибка при создании письма: {e}")
