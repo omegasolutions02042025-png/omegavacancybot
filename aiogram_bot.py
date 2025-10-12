@@ -280,7 +280,9 @@ async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
     
 
 
-async def save_document(message: types.Message, state: FSMContext, bot: Bot):
+ACTIVE_MEDIA_GROUPS = {}
+
+async def save_document(message: types.Message, state: FSMContext, bot):
     document = message.document
     if not document:
         await message.answer("Отправьте резюме в формате PDF/DOCX/RTF/TXT")
@@ -296,43 +298,38 @@ async def save_document(message: types.Message, state: FSMContext, bot: Bot):
     await bot.download_file(file_info.file_path, destination=local_file_path)
 
     data = await state.get_data()
+    media_group_id = message.media_group_id
 
-    # Удаляем старое сообщение "Жду файлы", если есть
+    # --- Удаляем старое сообщение "Жду файлы" ---
     if data.get("mes3"):
         try:
             await bot.delete_message(message.chat.id, data["mes3"])
         except:
             pass
 
-    media_group_id = message.media_group_id
-
-    # === Блокировка от повторной реакции ===
+    # === Если сообщение часть группы ===
     if media_group_id:
-        group_lock = data.get("group_lock", False)
-
-        # если уже обрабатывается какая-то группа — не реагируем
-        if group_lock:
+        # Проверяем, была ли уже эта группа
+        if ACTIVE_MEDIA_GROUPS.get(media_group_id):
+            # уже обрабатывается — просто сохраняем файл
             return
 
-        current_group_id = data.get("current_media_group_id")
-        if current_group_id != media_group_id:
-            # Ставим блокировку, чтобы не отреагировать несколько раз
-            await state.update_data(group_lock=True, current_media_group_id=media_group_id)
+        # Помечаем группу как активную (чтобы не дублировать)
+        ACTIVE_MEDIA_GROUPS[media_group_id] = True
 
-            # ждём пока Telegram догрузит все файлы группы
-            await asyncio.sleep(1.2)
+        # Ждём, пока Telegram доставит остальные файлы группы
+        await asyncio.sleep(2.0)
 
-            mes1 = await message.answer("📥 Файлы сохранены.")
-            mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
+        mes1 = await message.answer("📥 Файлы сохранены.")
+        mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
+        await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
 
-            # снимаем блокировку
-            await state.update_data(
-                mes1=mes1.message_id,
-                mes2=mes2.message_id,
-                group_lock=False
-            )
+        # Сбрасываем блокировку через 10 секунд (если вдруг Telegram затупит)
+        await asyncio.sleep(10)
+        ACTIVE_MEDIA_GROUPS.pop(media_group_id, None)
+
     else:
-        # одиночный файл — всё как раньше
+        # --- Одиночный файл ---
         mes1 = await message.answer("📥 Файл сохранён.")
         mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
         await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
