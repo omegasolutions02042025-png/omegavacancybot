@@ -604,18 +604,18 @@ async def get_all_info_bot(callback: CallbackQuery, state: FSMContext, bot: Bot)
     if verdict == "PP":
         sverka = await get_final_resume(message_id)
         if sverka:
-            await callback.message.edit_text(sverka.message_text, reply_markup=generate_mail_kb(verdict))
+            await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=sverka.message_text, reply_markup=generate_mail_kb(verdict))
         else:
-            await callback.message.answer("❌ Не удалось найти данные для генерации письма клиента.")
+            await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text="❌ Не удалось найти данные для генерации письма клиента.")
     elif verdict == "CP":
         sverka = await get_utochnenie_resume(message_id)
         if sverka:
-            await callback.message.edit_text(sverka.message_text, reply_markup=generate_mail_kb(verdict))
+            await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=sverka.message_text, reply_markup=generate_mail_kb(verdict))
         else:
-            await callback.message.answer("❌ Не удалось найти данные для генерации письма клиента.")
+            await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text="❌ Не удалось найти данные для генерации письма клиента.")
     elif verdict == "NP":
         sverka = await get_otkolenie_resume(message_id)
         if sverka:
-            await callback.message.edit_text(sverka.message_text, reply_markup=generate_mail_kb(verdict))
+            await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=sverka.message_text, reply_markup=generate_mail_kb(verdict))
         else:
-            await callback.message.answer("❌ Не удалось найти данные для генерации письма клиента.")
+            await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text="❌ Не удалось найти данные для генерации письма клиента.")
