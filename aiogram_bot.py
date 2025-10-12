@@ -11,7 +11,6 @@ from funcs import update_channels_and_restart_handler
 import os
 from dotenv import load_dotenv
 from funcs import *
-from gpt import process_vacancy, format_vacancy
 from gpt_gimini import generate_mail_for_candidate_utochnenie, process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist, generate_mail_for_candidate_otkaz, generate_cover_letter_for_client
 from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
 from telethon_bot import telethon_client
