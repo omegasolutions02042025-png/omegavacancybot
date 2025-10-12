@@ -492,7 +492,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             sverka_text = finalist.get('sverka_text')
             message_id = finalist.get('message_id')
             candidate_json = finalist.get('candidate_json')
-            salary = finalist.get('summary', 'не указано').get('salary_expectations', 'не указано')
+            salary = finalist.get('summary', {}).get('salary_expectations', 'не указано')
 
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nПодготовить отказ?"
 
