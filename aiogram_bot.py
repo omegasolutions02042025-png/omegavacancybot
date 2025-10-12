@@ -297,30 +297,38 @@ async def save_document(message: types.Message, state: FSMContext, bot: Bot):
 
     data = await state.get_data()
 
-    # если есть старое сообщение с вопросом — удаляем
+    # Удаляем старое сообщение "Жду файлы", если есть
     if data.get("mes3"):
         try:
             await bot.delete_message(message.chat.id, data["mes3"])
-        except Exception:
+        except:
             pass
 
-    # если группа файлов
-    if message.media_group_id:
-        if data.get("last_media_group_id") != message.media_group_id:
-            # сохраняем сразу, чтобы другие файлы группы знали об этом
-            await state.update_data(last_media_group_id=message.media_group_id)
+    # === Блокировка обработки группы ===
+    media_group_id = message.media_group_id
+    if media_group_id:
+        # Если это новый group_id — реагируем один раз
+        if data.get("current_media_group_id") != media_group_id:
+            # сохраняем идентификатор, чтобы другие файлы группы не вызывали повтор
+            await state.update_data(current_media_group_id=media_group_id)
 
-            # ждём немного — Telegram ещё догружает остальные файлы
-            await asyncio.sleep(1.0)
+            # небольшая задержка, чтобы Telegram успел доставить все файлы
+            await asyncio.sleep(1.2)
 
             mes1 = await message.answer("📥 Файлы сохранены.")
             mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
             await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
+        else:
+            # остальные файлы из той же группы просто сохраняем — без сообщений
+            return
     else:
-        # одиночный файл
+        # Одиночный файл
         mes1 = await message.answer("📥 Файл сохранён.")
         mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
         await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
+
+
+
 
 @bot_router.message(F.document)
 async def doc_without_state(message: Message):
@@ -385,26 +393,101 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await callback.message.answer("❌ Нет результатов для финального списка")
         return
     await state.clear()
+    finalist_list = []
+    utochnit_list = []
+    otkaz_list = []
     canditates_data = {}
+
     for finalist in result:
         candidate = finalist.get('candidate')
         verdict = finalist.get('verdict')
         sverka_text = finalist.get('sverka_text')
         message_id = finalist.get('message_id')
         candidate_json = finalist.get('candidate_json')
-      
+
         if verdict == 'Полностью подходит':
-            kandidate_verdict = f"{candidate}: ✅ {verdict}\nСгенерировать ли сопроводительное письмо?"
+            finalist_list.append(finalist)
         elif verdict == 'Частично подходит (нужны уточнения)':
-            kandidate_verdict = f"{candidate}: ⚠️ {verdict}\nСгенерировать ли уточняющее письмо?"
+            utochnit_list.append(finalist)
         elif verdict == 'Не подходит':
+            otkaz_list.append(finalist)
+
+    # === Отправка по группам ===
+    await callback.message.answer("📊 СВОДКА ПО ВСЕМ КАНДИДАТАМ")
+
+    # 1️⃣ Финалисты
+    if finalist_list:
+        await callback.message.answer("🏆 Финалисты:")
+        for finalist in finalist_list:
+            candidate = finalist.get('candidate')
+            verdict = finalist.get('verdict')
+            sverka_text = finalist.get('sverka_text')
+            message_id = finalist.get('message_id')
+            candidate_json = finalist.get('candidate_json')
+
+            kandidate_verdict = f"{candidate}: ✅ {verdict}\nСгенерировать ли сопроводительное письмо?"
+
+            messs = await callback.message.answer(kandidate_verdict, reply_markup=generate_mail_kb(verdict))
+            candidate_data = {
+                messs.message_id: {
+                    'candidate_json': candidate_json,
+                    'sverka_text': sverka_text,
+                    'message_id': message_id,
+                    'verdict': verdict,
+                    'candidate_name': candidate
+                }
+            }
+            canditates_data.update(candidate_data)
+
+    # 2️⃣ Требуют уточнения
+    if utochnit_list:
+        await callback.message.answer("🟡 Требуют уточнений:")
+        for finalist in utochnit_list:
+            candidate = finalist.get('candidate')
+            verdict = finalist.get('verdict')
+            sverka_text = finalist.get('sverka_text')
+            message_id = finalist.get('message_id')
+            candidate_json = finalist.get('candidate_json')
+
+            kandidate_verdict = f"{candidate}: ⚠️ {verdict}\nСгенерировать ли уточняющее письмо?"
+
+            messs = await callback.message.answer(kandidate_verdict, reply_markup=generate_mail_kb(verdict))
+            candidate_data = {
+                messs.message_id: {
+                    'candidate_json': candidate_json,
+                    'sverka_text': sverka_text,
+                    'message_id': message_id,
+                    'verdict': verdict,
+                    'candidate_name': candidate
+                }
+            }
+            canditates_data.update(candidate_data)
+
+    # 3️⃣ Отказы
+    if otkaz_list:
+        await callback.message.answer("🔴 Не подходят:")
+        for finalist in otkaz_list:
+            candidate = finalist.get('candidate')
+            verdict = finalist.get('verdict')
+            sverka_text = finalist.get('sverka_text')
+            message_id = finalist.get('message_id')
+            candidate_json = finalist.get('candidate_json')
+
             kandidate_verdict = f"{candidate}: ❌ {verdict}\nПодготовить отказ?"
-        messs = await callback.message.answer('.')
-        await messs.edit_text(text = kandidate_verdict, reply_markup=await generate_mail_kb())
-        candidate_data = {messs.message_id:{'candidate_json': candidate_json, 'sverka_text': sverka_text, 'message_id': message_id, 'verdict': verdict, 'candidate_name': candidate}}
-        canditates_data.update(candidate_data)
-        
-    await state.update_data(candidate_data= canditates_data)
+
+            messs = await callback.message.answer(kandidate_verdict, reply_markup=generate_mail_kb(verdict))
+            candidate_data = {
+                messs.message_id: {
+                    'candidate_json': candidate_json,
+                    'sverka_text': sverka_text,
+                    'message_id': message_id,
+                    'verdict': verdict,
+                    'candidate_name': candidate
+                }
+            }
+            canditates_data.update(candidate_data)
+
+    await state.update_data(candidate_data=canditates_data)
     await state.set_state(GenerateMail.waiting_for_mail)
     
     shutil.rmtree(user_dir)
@@ -443,23 +526,17 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     old_message_id = candidate_data.get("message_id")
     candidate_name = candidate_data.get("candidate_name")
     verdict = candidate_data.get("verdict")
-    try:
-        await bot.delete_message(chat_id=callback.message.chat.id, message_id=old_message_id)
-    except Exception as e:
-        print("Ошибка в функции generate_mail_bot: ", e)
     mail = await create_mails(candidate)
     if mail:
         mail_text = mail
     else:
         mail_text = "."
     if verdict == "Полностью подходит":
-        mes_k = await callback.message.answer("Сгенерировать ли письмо для клиента?", reply_markup=generate_klient_mail_kb())
-        client_data = {mes_k.message_id:{'candidate_json': candidate, 'candidate_name': candidate_name}}
+        await bot.edit_message_text(callback.message.chat.id, message_id, mail_text, reply_markup=generate_klient_mail_kb())
+        client_data = {message_id:{'candidate_json': candidate, 'candidate_name': candidate_name}}
         await state.update_data(client_data=client_data)
     else:
-        await bot.send_message(callback.message.chat.id, sverka_text)
-        await bot.send_message(callback.message.chat.id, f"Создано письмо для {candidate_name}")
-        await bot.send_message(callback.message.chat.id, mail_text)
+        await bot.edit_message_text(callback.message.chat.id, message_id, mail_text)
     
     
     if verdict != "Полностью подходит":
@@ -473,7 +550,7 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
 @bot_router.callback_query(F.data == "generate_klient_mail")
 async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
-    await callback.message.edit_text("📨 Создаю письмо для клиента...")
+    await callback.answer("📨 Создаю письмо для клиента...")
 
     message_id = callback.message.message_id
     data = await state.get_data()
@@ -497,8 +574,8 @@ async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, b
         await callback.message.delete()
     except Exception:
         pass
-    await bot.send_message(callback.message.chat.id, f"✅ Письмо для клиента по кандидату {candidate_name} создано:")
-    await bot.send_message(callback.message.chat.id, mail_text)
+    await callback.answer(callback.message.chat.id, f"✅ Письмо для клиента по кандидату {candidate_name} создано и отправлено в группу!", show_alert=True)
+    await bot.send_message(CLIENT_CHANNEL, mail_text)
 
     client_data_dict.pop(message_id, None)
     if not client_data_dict:
