@@ -529,6 +529,7 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     candidate = candidate_data.get("candidate_json")
     candidate_name = candidate_data.get("candidate_name")
     verdict = candidate_data.get("verdict")
+    print(verdict)
     user_name = (
             f"@{callback.message.chat.username}"
             if callback.message.chat.username
