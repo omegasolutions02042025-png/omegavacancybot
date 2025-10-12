@@ -10,11 +10,32 @@ from striprtf.striprtf import rtf_to_text
 from db import add_otkonechenie_resume
 from kb import utochnit_prichinu_kb
 from dotenv import load_dotenv
-
+import textract
 load_dotenv()
 
 
+
 CLIENT_CHANNEL = os.getenv('CLIENT_CHANNEL')
+
+def process_doc(path: str) -> str:
+    """
+    Извлекает текст из .doc (старый формат Word 97–2003) с помощью textract.
+    Возвращает очищенный текст без пустых строк.
+    """
+    try:
+        text = textract.process(path).decode("utf-8", errors="ignore")
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        return "\n".join(lines)
+    except FileNotFoundError:
+        print(f"⚠️ Файл не найден: {path}")
+        return ""
+    except textract.exceptions.ShellError as e:
+        print(f"❌ Ошибка textract при обработке {path}: {e}")
+        return ""
+    except Exception as e:
+        print(f"⚠️ Ошибка при чтении DOC-файла {path}: {e}")
+        return ""
+
 
 # PDF → текст
 def process_pdf(path: str) -> str:
@@ -51,8 +72,10 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
     try:
         if ext == "pdf":
             text = process_pdf(path)
-        elif ext == "docx" or ext == "doc":
+        elif ext == "docx":
             text = process_docx(path)
+        elif ext == "doc":
+            text = process_doc(path)
         elif ext == "rtf":
             text = process_rtf(path)
         elif ext == "txt":
