@@ -534,7 +534,7 @@ async def utochnit_prichinu_bot(callback: CallbackQuery, bot: Bot):
 @bot_router.callback_query(F.data == "generate_mail")
 async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
-    await callback.answer('Подготовка письма...', show_alert=True)
+    await callback.message.edit_text('Подготовка письма...')
     await bot.edit_message_reply_markup(chat_id=callback.message.chat.id, message_id=callback.message.message_id, reply_markup=None)
     message_id = callback.message.message_id
     data = await state.get_data()
@@ -548,7 +548,7 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     old_message_id = candidate_data.get("message_id")
     candidate_name = candidate_data.get("candidate_name")
     verdict = candidate_data.get("verdict")
-    user_name = str(callback.message.chat.username or callback.message.chat.first_name or 'Не указано')
+    user_name = str(f"@{callback.message.chat.username} or {callback.message.chat.first_name}" or 'Не указано')
     mail = await create_mails(candidate, user_name)
     if mail:
         mail_text = mail
@@ -575,7 +575,7 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
 @bot_router.callback_query(F.data == "generate_klient_mail")
 async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
-    await callback.answer("📨 Создаю письмо для клиента...", show_alert=True)
+    await callback.message.edit_text("📨 Создаю письмо для клиента...")
 
     message_id = callback.message.message_id
     data = await state.get_data()
