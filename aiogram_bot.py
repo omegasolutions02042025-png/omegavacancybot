@@ -431,8 +431,9 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             sverka_text = finalist.get('sverka_text')
             message_id = finalist.get('message_id')
             candidate_json = finalist.get('candidate_json')
+            salary = finalist.get('summary', {}).get('salary_expectations', {})
 
-            kandidate_verdict = f"{candidate}: ✅ {verdict}\nСгенерировать ли сопроводительное письмо?"
+            kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nСгенерировать ли сопроводительное письмо?"
 
             messs = await callback.message.answer(kandidate_verdict, reply_markup=generate_mail_kb(verdict))
             candidate_data = {
@@ -455,8 +456,9 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             sverka_text = finalist.get('sverka_text')
             message_id = finalist.get('message_id')
             candidate_json = finalist.get('candidate_json')
+            salary = finalist.get('summary', {}).get('salary_expectations', {})
 
-            kandidate_verdict = f"{candidate}: ⚠️ {verdict}\nСгенерировать ли уточняющее письмо?"
+            kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nСгенерировать ли уточняющее письмо?"
 
             messs = await callback.message.answer(kandidate_verdict, reply_markup=generate_mail_kb(verdict))
             candidate_data = {
@@ -479,8 +481,9 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             sverka_text = finalist.get('sverka_text')
             message_id = finalist.get('message_id')
             candidate_json = finalist.get('candidate_json')
+            salary = finalist.get('summary', {}).get('salary_expectations', {})
 
-            kandidate_verdict = f"{candidate}: ❌ {verdict}\nПодготовить отказ?"
+            kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}\nПодготовить отказ?"
 
             messs = await callback.message.answer(kandidate_verdict, reply_markup=generate_mail_kb(verdict))
             candidate_data = {

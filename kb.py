@@ -116,7 +116,7 @@ def utochnit_prichinu_kb():
     builder.button(text='Уточнить причину', callback_data='utochnit_prichinu')
     return builder.as_markup()
 
-async def generate_mail_kb(verdict: str):
+def generate_mail_kb(verdict: str):
     if verdict == 'Полностью подходит':
         builder = InlineKeyboardBuilder()
         builder.button(text='Сгенерировать письмо для кандидата?', callback_data='generate_mail')
@@ -131,7 +131,7 @@ async def generate_mail_kb(verdict: str):
         return builder.as_markup()
     return None
 
-async def generate_klient_mail_kb():
+def generate_klient_mail_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text='Сгенерировать письмо для клиента', callback_data='generate_klient_mail')
     return builder.as_markup()
