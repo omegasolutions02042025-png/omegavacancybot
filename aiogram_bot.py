@@ -281,7 +281,13 @@ async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
 
 ACTIVE_MEDIA_GROUPS = {}
 
-async def save_document(message: types.Message, state: FSMContext, bot):
+async def save_document(message: Message, state: FSMContext, bot: Bot):
+    """
+    Сохраняет документ кандидата.
+    — Если файл уже существует, не перезаписывает.
+    — Если загружено более 10 файлов, отправляет только одно сообщение '📥 Файлы сохранены'.
+    """
+
     document = message.document
     if not document:
         await message.answer("Отправьте резюме в формате PDF/DOCX/RTF/TXT")
@@ -294,6 +300,11 @@ async def save_document(message: types.Message, state: FSMContext, bot):
     file_name = document.file_name
     local_file_path = os.path.join(user_dir, file_name)
 
+    # ✅ Получаем данные состояния
+    data = await state.get_data()
+    files_count = data.get("files_count", 0)
+    summary_message_id = data.get("summary_message_id")
+
     # --- Проверяем, существует ли уже файл ---
     if os.path.exists(local_file_path):
         print(f"⚠️ Файл {file_name} уже существует — пропускаем загрузку, но используем при обработке.")
@@ -303,44 +314,43 @@ async def save_document(message: types.Message, state: FSMContext, bot):
         await bot.download_file(file_info.file_path, destination=local_file_path)
         print(f"📁 Файл сохранён: {local_file_path}")
 
-        data = await state.get_data()
+    # --- Увеличиваем счётчик файлов ---
+    files_count += 1
+    await state.update_data(files_count=files_count)
 
-    # --- Удаляем старое сообщение "Жду файлы" ---
-    if data.get("mes3"):
-        try:
-            await bot.delete_message(message.chat.id, data["mes3"])
-        except:
-            pass
-
-    # === Если сообщение часть группы ===
-    media_group_id = message.media_group_id
-    if media_group_id:
-        # Проверяем, обрабатывается ли уже эта группа
-        if ACTIVE_MEDIA_GROUPS.get(media_group_id):
-            # уже есть обработка этой группы — просто сохраняем файл
-            return
-
-        # Помечаем группу как активную
-        ACTIVE_MEDIA_GROUPS[media_group_id] = True
-        print(f"📦 Начало обработки группы файлов {media_group_id}")
-
-        # ждём, пока Telegram догрузит остальные файлы группы
-        await asyncio.sleep(2.0)
-
-        mes1 = await message.answer("📥 Файлы сохранены.")
-        mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
-        await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
-
-        # снимаем блокировку через 10 секунд
-        await asyncio.sleep(10)
-        ACTIVE_MEDIA_GROUPS.pop(media_group_id, None)
-        print(f"✅ Группа {media_group_id} обработана и разблокирована.")
-
+    # === Если файлов стало больше 10 ===
+    if files_count >= 10:
+        # Если уже есть сообщение — просто обновляем текст
+        if summary_message_id:
+            try:
+                await bot.edit_message_text(
+                    chat_id=message.chat.id,
+                    message_id=summary_message_id,
+                    text=f"📦 Загружено уже {files_count} файлов. Все сохранены ✅"
+                )
+            except Exception:
+                pass
+        else:
+            # Если нет — отправляем новое сводное сообщение
+            summary_msg = await message.answer(f"📦 Загружено {files_count} файлов. Все сохранены ✅")
+            await state.update_data(summary_message_id=summary_msg.message_id)
     else:
-        # --- Одиночный файл ---
+        # --- Для первых 9 файлов отвечаем стандартно ---
         mes1 = await message.answer("📥 Файл сохранён.")
         mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
         await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
+
+    # --- Если пользователь отправляет медиа-группу ---
+    media_group_id = message.media_group_id
+    if media_group_id:
+        if ACTIVE_MEDIA_GROUPS.get(media_group_id):
+            return
+
+        ACTIVE_MEDIA_GROUPS[media_group_id] = True
+        await asyncio.sleep(2.0)
+
+        print(f"📦 Обработка группы файлов {media_group_id} (пользователь {user_id}) завершена.")
+        ACTIVE_MEDIA_GROUPS.pop(media_group_id, None)
 
 
 
