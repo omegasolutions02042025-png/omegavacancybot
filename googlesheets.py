@@ -94,14 +94,14 @@ async def search_and_extract_values(
                 return None
 
             search_col_index = ord(search_column.upper()) - ord("A")
-            search_range = list(range(int(search_value) - 20, int(search_value) + 21))
 
-            target_row_index = None
-            exact_match_row = None
+            best_match_row = None
+            best_diff = float("inf")
+            best_value = None
 
             for row_index, row in enumerate(all_values):
                 if row_index == 0:
-                    continue
+                    continue  # пропускаем заголовок
                 if len(row) <= search_col_index:
                     continue
 
@@ -110,31 +110,42 @@ async def search_and_extract_values(
                     continue
 
                 try:
-                    cell_value = cell_value.strip().split(",")[0]
-                    numeric_value = int(re.sub(r"[^\d]", "", cell_value))
+                    # чистим строку от всего, кроме цифр
+                    cleaned = re.sub(r"[^\d]", "", cell_value)
+                    if not cleaned:
+                        continue
 
-                    if numeric_value == search_value:
-                        exact_match_row = row_index
-                        target_row_index = row_index
+                    numeric_value = int(cleaned)
+                    diff = abs(numeric_value - search_value)
+
+                    # если точное совпадение — сразу выбираем
+                    if diff == 0:
+                        best_match_row = row_index
+                        best_value = numeric_value
                         break
 
-                    if numeric_value in search_range:
-                        target_row_index = row_index
-                        break
+                    # если близкое значение в пределах ±20 и ближе предыдущих
+                    if diff <= 20 and diff < best_diff:
+                        best_diff = diff
+                        best_match_row = row_index
+                        best_value = numeric_value
+
                 except Exception:
                     continue
 
-            if target_row_index is None:
+            if best_match_row is None:
+                print(f"⚠️ Не найдено совпадений для {search_value}")
                 return None
 
-            target_row = all_values[target_row_index]
+            target_row = all_values[best_match_row]
+            print(f"🔍 Найдена строка {best_match_row+1} — значение {best_value} (разница {best_diff})")
             result = {"extracted_values": {}}
 
             for col_letter in extract_columns:
                 col_index = ord(col_letter.upper()) - ord("A")
                 if len(target_row) > col_index:
                     clean_value = target_row[col_index].replace("\xa0", "").strip()
-                    print(clean_value)
+                    
                     if len(extract_columns) == 1:
                         rounded = (int(clean_value) // 1000) * 1000
                         clean_value = f"{rounded:,}".replace(",", " ")
