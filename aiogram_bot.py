@@ -176,6 +176,14 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
         only_fulltime = text_gpt.get("only_fulltime")
         short_project = text_gpt.get("short_project")
         long_payment = text_gpt.get("long_payment")
+        location = text_gpt.get("location")
+        rf_loc = False
+        rb_loc = False
+        for i in location:
+            if i == 'РФ':
+                rf_loc = True
+            if i == 'РБ':
+                rb_loc = True
         
         
         
@@ -199,38 +207,126 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
         
         # Блок для обработки ставки
         if rate is None or int(rate) == 0:
-            text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
+    # если ставки нет — общий текст
+            text_cleaned = (
+                f"🆔{vac_id}\n\n"
+                f"{vacancy}\n\n"
+                f"Месячная ставка (на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n"
+                f"{no_rate_delay}\n\n"
+                f"{text}"
+                                )
         else:
             rate = int(rate)
-            rate_sng_contract = await search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ')
-            rate_sng_ip = await search_and_extract_values('N', rate, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ')
-            if rate_sng_contract and rate_sng_ip:
-                print('rate_sng_contract ', rate_sng_contract)
-                print('rate_sng_ip ', rate_sng_ip)
-                rate_sng_contract = rate_sng_contract.get('B')
-                rate_ip_sam = rate_sng_ip.get('B')
-                rounded = (int(rate_ip_sam) // 1000) * 1000
-                rate_ip_sam = f"{rounded:,}".replace(",", " ")
-                gross = rate_sng_ip.get('L')
+            rate_rf_contract = None
+            rate_rf_ip = None
+            rate_rb_contract = None
+            rate_rb_ip = None
+
+            # --- варианты для РФ ---
+            if rf_loc:
+                rate_rf_contract = await search_and_extract_values(
+                    'M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ'
+                )
+                rate_rf_ip = await search_and_extract_values(
+                    'N', rate, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ'
+                )
+
+            # --- варианты для РБ ---
+            if rb_loc:
+                rate_rb_contract = await search_and_extract_values(
+                    'M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ'
+                )
+                rate_rb_ip = await search_and_extract_values(
+                    'N', rate, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ'
+                )
+
+            # --- объединённая логика оформления ---
+            def build_salary_block(flag_rf=False, flag_rb=False):
+                """Внутренняя функция для форматирования текста ставок"""
+                flag_text = "🇷🇺" if flag_rf else "🇧🇾"
+                region = "РФ" if flag_rf else "РБ"
+
+                # выбираем нужные пары
+                contract_data = rate_rf_contract if flag_rf else rate_rb_contract
+                ip_data = rate_rf_ip if flag_rf else rate_rb_ip
+
+                if not contract_data or not ip_data:
+                    return (
+                        f"{flag_text}\n💰 Месячная ставка для юр лица {region}: "
+                        f"смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n"
+                    )
+
+                rate_contract = contract_data.get('B')
+                rate_ip = ip_data.get('B')
+                gross = ip_data.get('L')
+
+                # округляем IP/самозанятый до 1000
+                try:
+                    rounded = (int(rate_ip) // 1000) * 1000
+                    rate_ip = f"{rounded:,}".replace(",", " ")
+                except Exception:
+                    pass
+
+                # форматы актирования и зачёркиваний
                 if acts:
-                    acts_text = f"Актирование: поквартальное\n"
-                    state_contract_text = f"<s>Ежемесячная выплата Штат/Контракт (на руки) до : {rate_sng_contract} RUB (с выплатой зарплаты 11 числа месяца следующего за отчетным)</s>"
+                    acts_text = "Актирование: поквартальное\n"
+                    state_contract_text = (
+                        f"<s>Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
+                        f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)</s>"
+                    )
                 else:
-                    acts_text = 'Актирование: ежемесячное\n'
-                    state_contract_text = f"Ежемесячная выплата Штат/Контракт (на руки) до : {rate_sng_contract} RUB (с выплатой зарплаты 11 числа месяца следующего за отчетным)"
+                    acts_text = "Актирование: ежемесячное\n"
+                    state_contract_text = (
+                        f"Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
+                        f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)"
+                    )
+
+                # зачёркивания по условиям
                 if short_project or long_payment:
                     state_contract_text = f"<s>{state_contract_text}</s>"
+
                 if only_fulltime:
-                    ip_samoz_text = f"<s>ИП/Самозанятый : {rate_ip_sam} RUB</s>"
+                    ip_text = f"<s>ИП/Самозанятый: {rate_ip} RUB</s>"
                 else:
-                    ip_samoz_text = f"ИП/Самозанятый : {rate_ip_sam} RUB"
-                        
-                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n🇧🇾\n💰 Месячная ставка для юр лица РБ:\n{state_contract_text}\n{delay_payment_text}{acts_text}{gross}RUB/час(Gross)\n{ip_samoz_text}\n\n{text}"
+                    ip_text = f"ИП/Самозанятый: {rate_ip} RUB"
+
+                return (
+                    f"{flag_text}\n"
+                    f"💰 Месячная ставка для юр лица {region}:\n"
+                    f"{state_contract_text}\n"
+                    f"{delay_payment_text}{acts_text}{gross} RUB/час (Gross)\n"
+                    f"{ip_text}\n"
+                )
+
+            # --- итоговое формирование ---
+            salary_text = ""
+
+            if rf_loc and rb_loc:
+                # обе страны
+                salary_text = build_salary_block(flag_rb=True) + "\n" + build_salary_block(flag_rf=True)
+            elif rf_loc:
+                # только РФ
+                salary_text = build_salary_block(flag_rf=True)
+            elif rb_loc:
+                # только РБ
+                salary_text = build_salary_block(flag_rb=True)
             else:
-                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n🇧🇾\n💰 Месячная ставка для юр лица РБ: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
-        clean_text = remove_vacancy_id(text_cleaned)
-        
-        
+                # ни одна не указана
+                salary_text = (
+                    "💰 Месячная ставка: смотрим ваши предложения "
+                    "(приоритет на минимальную)\n\n"
+                    f"{no_rate_delay}\n"
+                )
+
+            # --- финальное объединение ---
+            text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n{salary_text}\n{text}"
+
+    # очистка идентификатора
+            clean_text = remove_vacancy_id(text_cleaned)
+
+
+            
+            
                 
         try:
             await message.answer(text_cleaned, parse_mode='HTML')
