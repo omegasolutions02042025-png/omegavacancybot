@@ -281,11 +281,17 @@ async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
 
 ACTIVE_MEDIA_GROUPS = {}
 
-async def save_document(message: Message, state: FSMContext, bot: Bot):
+UPLOAD_DELAY = 2.0  # сколько ждать после последнего файла, прежде чем ответить
+
+# глобальный буфер для пользователей (таймеры и задачи)
+USER_UPLOAD_TASKS = {}
+
+async def save_document(message: types.Message, state: FSMContext, bot):
     """
-    Сохраняет документ кандидата.
-    — Если файл уже существует, не перезаписывает.
-    — Если загружено более 10 файлов, отправляет только одно сообщение '📥 Файлы сохранены'.
+    Сохраняет документы пользователя с защитой от спама.
+    — Не спамит сообщениями при массовой загрузке (debounce-логика)
+    — Если загружено ≥10 файлов — выводит одно сводное сообщение
+    — Сбрасывает счётчик через 10 секунд без активности
     """
 
     document = message.document
@@ -300,57 +306,66 @@ async def save_document(message: Message, state: FSMContext, bot: Bot):
     file_name = document.file_name
     local_file_path = os.path.join(user_dir, file_name)
 
-    # ✅ Получаем данные состояния
+    # Получаем текущее состояние
     data = await state.get_data()
     files_count = data.get("files_count", 0)
     summary_message_id = data.get("summary_message_id")
 
-    # --- Проверяем, существует ли уже файл ---
-    if os.path.exists(local_file_path):
-        print(f"⚠️ Файл {file_name} уже существует — пропускаем загрузку, но используем при обработке.")
-    else:
-        # --- Загружаем файл ---
+    # Сохраняем файл
+    if not os.path.exists(local_file_path):
         file_info = await bot.get_file(document.file_id)
         await bot.download_file(file_info.file_path, destination=local_file_path)
-        print(f"📁 Файл сохранён: {local_file_path}")
-
-    # --- Увеличиваем счётчик файлов ---
-    files_count += 1
-    await state.update_data(files_count=files_count)
-
-    # === Если файлов стало больше 10 ===
-    if files_count >= 10:
-        # Если уже есть сообщение — просто обновляем текст
-        if summary_message_id:
-            try:
-                await bot.edit_message_text(
-                    chat_id=message.chat.id,
-                    message_id=summary_message_id,
-                    text=f"📦 Загружено уже {files_count} файлов. Все сохранены ✅"
-                )
-            except Exception:
-                pass
-        else:
-            # Если нет — отправляем новое сводное сообщение
-            summary_msg = await message.answer(f"📦 Загружено {files_count} файлов. Все сохранены ✅")
-            await state.update_data(summary_message_id=summary_msg.message_id)
+        print(f"📁 [{user_id}] Файл сохранён: {file_name}")
     else:
-        # --- Для первых 9 файлов отвечаем стандартно ---
-        mes1 = await message.answer("📥 Файл сохранён.")
-        mes2 = await message.answer("Хотите добавить ещё файлы?", reply_markup=scan_vac_rekr_yn_kb())
-        await state.update_data(mes1=mes1.message_id, mes2=mes2.message_id)
+        print(f"⚠️ [{user_id}] Файл уже существует: {file_name}")
 
-    # --- Если пользователь отправляет медиа-группу ---
-    media_group_id = message.media_group_id
-    if media_group_id:
-        if ACTIVE_MEDIA_GROUPS.get(media_group_id):
-            return
+    # Увеличиваем счётчик файлов
+    files_count += 1
+    now = asyncio.get_event_loop().time()
+    await state.update_data(files_count=files_count, last_upload_time=now)
 
-        ACTIVE_MEDIA_GROUPS[media_group_id] = True
-        await asyncio.sleep(2.0)
+    # 🕓 Если у пользователя уже есть таймер — отменяем его
+    if USER_UPLOAD_TASKS.get(user_id):
+        USER_UPLOAD_TASKS[user_id].cancel()
 
-        print(f"📦 Обработка группы файлов {media_group_id} (пользователь {user_id}) завершена.")
-        ACTIVE_MEDIA_GROUPS.pop(media_group_id, None)
+    # 🧩 Создаём новый таймер на 2 секунды (debounce)
+    async def delayed_summary():
+        try:
+            await asyncio.sleep(UPLOAD_DELAY)
+            current_data = await state.get_data()
+            count = current_data.get("files_count", 0)
+            last_time = current_data.get("last_upload_time", 0)
+
+            # Проверяем, прошло ли достаточно времени без новых загрузок
+            if asyncio.get_event_loop().time() - last_time >= UPLOAD_DELAY - 0.1:
+                if count >= 10:
+                    # Сводное сообщение при большом количестве файлов
+                    text = f"📦 Загружено {count} файлов. Все сохранены ✅"
+                elif count > 1:
+                    text = f"📥 Загружено {count} файлов. Все сохранены ✅"
+                else:
+                    text = "📥 Файл сохранён ✅"
+
+                # Если уже есть сообщение — редактируем его
+                if summary_message_id:
+                    try:
+                        await bot.edit_message_text(chat_id=message.chat.id, message_id=summary_message_id, text=text)
+                    except:
+                        pass
+                else:
+                    msg = await message.answer(text)
+                    await state.update_data(summary_message_id=msg.message_id)
+
+                # Сбрасываем состояние через 10 секунд
+                await asyncio.sleep(10)
+                await state.update_data(files_count=0, summary_message_id=None)
+                print(f"♻️ [{user_id}] Счётчик файлов сброшен ({count} файлов).")
+
+        except asyncio.CancelledError:
+            pass
+
+    task = asyncio.create_task(delayed_summary())
+    USER_UPLOAD_TASKS[user_id] = task
 
 
 
