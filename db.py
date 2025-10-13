@@ -5,6 +5,7 @@ from sqlalchemy import Integer, String, select, Column, BigInteger
 from datetime import datetime, timedelta
 import asyncio
 from sqlalchemy import JSON
+import json
 
 
 DATABASE_URL = "sqlite+aiosqlite:///channels.db"
@@ -50,7 +51,7 @@ class OtkonechenieResume(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     message_id: Mapped[int] = mapped_column(Integer, nullable=False)
     message_text = Column(String, nullable=False)
-    json_text = Column(JSON, nullable=False)
+    json_text = Column(String, nullable=False)
     message_time = Column(String, nullable=False)
     
 class FinalResume(Base):
@@ -59,7 +60,7 @@ class FinalResume(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     message_id: Mapped[int] = mapped_column(Integer, nullable=False)
     message_text = Column(String, nullable=False)
-    json_text = Column(JSON, nullable=False)
+    json_text = Column(String, nullable=False)
     message_time = Column(String, nullable=False)
 
 
@@ -69,7 +70,7 @@ class UtochnenieResume(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     message_id: Mapped[int] = mapped_column(Integer, nullable=False)
     message_text = Column(String, nullable=False)
-    json_text = Column(JSON, nullable=False)
+    json_text = Column(String, nullable=False)
     message_time = Column(String, nullable=False)
  
     
@@ -261,6 +262,9 @@ async def get_next_sequence_number() -> int:
     
     
 async def add_otkonechenie_resume(message_id: int, message_text: str, json_text: dict):
+    if isinstance(json_text, dict):
+        json_text = json.dumps(json_text)
+        
     async with AsyncSessionLocal() as session:
         otkonechenie = OtkonechenieResume(
             message_id=message_id,
@@ -334,6 +338,10 @@ async def add_final_resume(message_id: int, message_text: str, json_text: dict):
     Добавляет или обновляет запись FinalResume.
     Если message_id уже существует — обновляет текст и JSON.
     """
+    if isinstance(json_text, dict):
+        json_text = json.dumps(json_text)
+        
+        
     async with AsyncSessionLocal() as session:
         try:
             # Проверяем, есть ли уже запись с таким message_id
@@ -407,6 +415,9 @@ async def get_final_resume(message_id: int):
 # ===============================================================
 
 async def add_utochnenie_resume(message_id: int, message_text: str, json_text: dict):
+    if isinstance(json_text, dict):
+        json_text = json.dumps(json_text)
+        
     async with AsyncSessionLocal() as session:
         utochnenie = UtochnenieResume(
             message_id=message_id,

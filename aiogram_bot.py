@@ -546,7 +546,10 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     if not data:
         await callback.message.answer("❌ Нет данных для генерации письма.")
         return
-    candidate = data.json_text  
+    candidate = data.json_text
+    if isinstance(candidate, str):
+        candidate = json.loads(candidate)
+    
     candidate_name = candidate["candidate"]["full_name"]
     verdict = data["summary"]["verdict"]
     user_name = (
@@ -584,6 +587,9 @@ async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, b
         return
 
     candidate = data.json_text
+    if isinstance(candidate, str):
+        candidate = json.loads(candidate)
+    
     candidate_name = candidate.get("candidate").get("full_name")
 
     try:
@@ -641,7 +647,10 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
         await callback.message.answer("❌ Нет данных для отправки письма кандидату.")
         return
     candidate = data.json_text
-    contacts = data.get("candidate").get("contacts")
+    if isinstance(candidate, str):
+        candidate = json.loads(candidate)
+    
+    contacts = candidate.get("candidate").get("contacts")
     if not contacts:
         await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
         return
