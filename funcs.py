@@ -501,67 +501,26 @@ DevX - интегрированная среда разработки, испо�
 print(extract_vacancy_id(text))
 
 
-
-import aiohttp
-import asyncio
+import requests
 from bs4 import BeautifulSoup
 
-async def parse_cb_rf() -> dict:
-    """
-    Асинхронно парсит курсы валют с сайта ЦБ РФ (https://www.cbr.ru/currency_base/daily/)
-    и возвращает словарь с ключами USD, EUR, BYN.
-    """
-    url = 'https://www.cbr.ru/currency_base/daily/'
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                      "Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Referer": "https://www.cbr.ru/",
-        "X-Requested-With": "XMLHttpRequest"
-    }
-
+def parse_cb_rf():
     try:
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(url, timeout=15) as response:
-                if response.status != 200:
-                    print(f"⚠️ Ошибка при запросе ЦБ РФ: {response.status}")
-                    return None
-
-                html = await response.text()
-
-        # Парсинг HTML в отдельном потоке (чтобы не блокировать event loop)
-        def parse_html(html_text: str):
-            soup = BeautifulSoup(html_text, 'html.parser')
-            table = soup.find('table', {'class': 'data'}).find_all('tr')
-
-            def extract_currency(index: int) -> float:
-                try:
-                    value = table[index].find_all('td')[-1].text
-                    return float(value.replace(" ", "").replace(",", "."))
-                except Exception:
-                    return 0.0
-
-            usd = extract_currency(16)
-            eur = extract_currency(18)
-            byn = extract_currency(7)
-            return {'USD': usd, 'EUR': eur, 'BYN': byn}
-
-        result = await asyncio.to_thread(parse_html, html)
-
-        # Валидация результата
-        if not all(result.values()):
-            print("⚠️ Не удалось извлечь все курсы валют.")
-        else:
-            print(f"✅ Курсы ЦБ РФ: USD={result['USD']} | EUR={result['EUR']} | BYN={result['BYN']}")
-
-        return result
-
-    except aiohttp.ClientError as e:
-        print(f"❌ Ошибка подключения к ЦБ РФ: {e}")
-        return None
-    except asyncio.TimeoutError:
-        print("⏰ Тайм-аут при подключении к ЦБ РФ")
-        return None
+        url = 'https://www.cbr.ru/currency_base/daily/'
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                          "Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Referer": "https://www.banki.ru/products/currency/cb/",
+            "X-Requested-With": "XMLHttpRequest"
+        }
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        table = soup.find('table', {'class': 'data'}).find_all('tr')
+        usd = table[16].find_all('td')[-1].text.replace(" ", "").replace(",", ".")
+        eur = table[18].find_all('td')[-1].text.replace(" ", "").replace(",", ".")
+        byn = table[7].find_all('td')[-1].text.replace(" ", "").replace(",", ".")
+        return {'USD': float(usd), 'EUR': float(eur), 'BYN': float(byn)}
     except Exception as e:
-        print(f"❌ Ошибка парсинга ЦБ РФ: {e}")
+        print(f"Error parsing cb_rf: {e}")
         return None

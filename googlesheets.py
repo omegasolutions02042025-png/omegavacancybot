@@ -198,7 +198,7 @@ async def update_currency_sheet(bot: Bot, ADMIN_ID: int):
 
 
     while True:
-        curses = await parse_cb_rf()
+        curses = await asyncio.to_thread(parse_cb_rf)
         usd, eur, byn = curses["USD"], curses["EUR"], curses["BYN"]
 
         for sheet_name in sheet_names:
