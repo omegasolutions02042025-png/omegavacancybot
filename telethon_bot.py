@@ -368,5 +368,7 @@ async def send_message_by_username(username: str, text: str):
             entity = await client.get_entity(username)
             await client.send_message(entity, text)
             print(f"✅ Сообщение отправлено пользователю @{username}")
+            return True
         except Exception as e:
             print(f"❌ Ошибка при отправке @{username}: {e}")
+            return False

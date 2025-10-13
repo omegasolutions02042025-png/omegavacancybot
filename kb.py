@@ -117,6 +117,8 @@ def utochnit_prichinu_kb():
     return builder.as_markup()
 
 def generate_mail_kb(verdict_text: str):
+    print(verdict_text)
+    callback = None
     if verdict_text == 'Полностью подходит':
         callback = 'PP'
         builder = InlineKeyboardBuilder()
