@@ -559,7 +559,7 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
             if callback.message.chat.username
             else (callback.message.chat.first_name or "Не указано")
         )
-    mail = await create_mails(candidate, user_name)
+    mail = await create_mails(candidate_json, user_name)
     if mail:
         mail_text = mail
     else:
@@ -596,7 +596,7 @@ async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, b
 
     try:
         
-        mail_text = await generate_cover_letter_for_client(candidate)
+        mail_text = await generate_cover_letter_for_client(candidate_json)
     except Exception as e:
         await callback.message.answer(f"⚠️ Ошибка при генерации письма клиента: {e}")
         return
@@ -652,7 +652,7 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
     if isinstance(candidate, str):
         candidate_json = json.loads(candidate)
     
-    contacts = candidate_json.get("candidate").get("contacts")
+    contacts = candidate_json.get("candidate", {}).get("contacts", {})
     if not contacts:
         await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
         return
