@@ -193,32 +193,26 @@ def create_contacts_kb(contacts: dict,verdict : str):
     """
     builder = InlineKeyboardBuilder()
 
-    if verdict == 'Полностью подходит':
-        callback = 'PP'
-    elif verdict == 'Частично подходит (нужны уточнения)':
-        callback = 'CP'
-    elif verdict == 'Не подходит':
-        callback = 'NP'
 
     # Email
     email = contacts.get("email")
     if email and email.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="📧 Email", callback_data=f"con:e:{email}:{callback}")
+        builder.button(text="📧 Email", callback_data=f"con:e:{email}:{verdict}")
 
     # Telegram
     telegram = contacts.get("telegram")
     if telegram and telegram.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="💬 Telegram", callback_data=f"con:t:{telegram}:{callback}")
+        builder.button(text="💬 Telegram", callback_data=f"con:t:{telegram}:{verdict}")
 
     # LinkedIn
     linkedin = contacts.get("linkedin")
     if linkedin and linkedin.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="🔗 LinkedIn", callback_data=f"con:l:{linkedin}:{callback}")
+        builder.button(text="🔗 LinkedIn", callback_data=f"con:l:{linkedin}:{verdict}")
 
     # Телефон (если нужно отображать)
     phone = contacts.get("phone")
     if phone and phone.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="📞 Телефон", callback_data=f"con:p:{phone}:{callback}")
+        builder.button(text="📞 Телефон", callback_data=f"con:p:{phone}:{verdict}")
 
     builder.adjust(2)
     return builder.as_markup()
