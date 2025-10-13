@@ -8,6 +8,7 @@ import os
 from dotenv import load_dotenv
 from telethon_monitor import cleanup_by_striked_id, check_and_delete_duplicates, monitor_and_cleanup, check_old_messages_and_mark
 from aiogram_bot import bot_router, TOPIC_MAP
+from googlesheets import update_currency_sheet
 
 
 load_dotenv()
@@ -40,7 +41,7 @@ async def main():
     asyncio.create_task(cleanup_by_striked_id(telethon_client, src_chat_id=-1002658129391, dst_chat_id=-1002189931727, bot=bot))
     asyncio.create_task(check_old_messages_and_mark(telethon_client, -1002658129391, bot))
     asyncio.create_task(periodic_cleanup_task())
-    
+    asyncio.create_task(update_currency_sheet(bot, ADMIN_ID))    
     await dp.start_polling(bot)
     
     

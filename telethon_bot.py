@@ -124,9 +124,9 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
                     else:
                         rate = float(rate)
-                        rate_sng_contract = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ')
-                        rate_sng_ip = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (ИП) СНГ')
-                        rate_sng_samozanyatii = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (Самозанятый) СНГ')
+                        rate_sng_contract = await search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ')
+                        rate_sng_ip = await search_and_extract_values('M', rate, ['B'], 'Расчет ставки (ИП) СНГ')
+                        rate_sng_samozanyatii = await search_and_extract_values('M', rate, ['B'], 'Расчет ставки (Самозанятый) СНГ')
                         if rate_sng_contract and rate_sng_ip and rate_sng_samozanyatii:
                             rate_sng_contract = rate_sng_contract.get('B')
                             rate_sng_ip = rate_sng_ip.get('B')
@@ -287,9 +287,9 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                 text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
             else:
                 rate = float(rate)
-                rate_sng_contract = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ')
-                rate_sng_ip = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (ИП) СНГ')
-                rate_sng_samozanyatii = search_and_extract_values('M', rate, ['B'], 'Расчет ставки (Самозанятый) СНГ')
+                rate_sng_contract = await search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ')
+                rate_sng_ip = await search_and_extract_values('M', rate, ['B'], 'Расчет ставки (ИП) СНГ')
+                rate_sng_samozanyatii = await search_and_extract_values('M', rate, ['B'], 'Расчет ставки (Самозанятый) СНГ')
                 if rate_sng_contract and rate_sng_ip and rate_sng_samozanyatii:
                     rate_sng_contract = rate_sng_contract.get('B')
                     rate_sng_ip = rate_sng_ip.get('B')
