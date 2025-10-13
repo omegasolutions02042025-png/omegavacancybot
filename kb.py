@@ -192,22 +192,22 @@ def create_contacts_kb(contacts: dict):
     # Email
     email = contacts.get("email")
     if email and email.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="📧 Email", callback_data=f"con:email:{email}")
+        builder.button(text="📧 Email", callback_data=f"con:{email}")
 
     # Telegram
     telegram = contacts.get("telegram")
     if telegram and telegram.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="💬 Telegram", callback_data=f"con:telegram:{telegram}")
+        builder.button(text="💬 Telegram", callback_data=f"con:{telegram}")
 
     # LinkedIn
     linkedin = contacts.get("linkedin")
     if linkedin and linkedin.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="🔗 LinkedIn", callback_data=f"con:linkedin:{linkedin}")
+        builder.button(text="🔗 LinkedIn", callback_data=f"con:{linkedin}")
 
     # Телефон (если нужно отображать)
     phone = contacts.get("phone")
     if phone and phone.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="📞 Телефон", callback_data=f"con:phone:{phone}")
+        builder.button(text="📞 Телефон", callback_data=f"con:{phone}")
 
     builder.adjust(2)
     return builder.as_markup()
