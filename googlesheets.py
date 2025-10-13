@@ -77,14 +77,15 @@ async def search_and_extract_values(
     search_column: str,
     search_value: float,
     extract_columns: List[str],
-    worksheet_name: str = "Resume_Database"
+    worksheet_name: str = "Resume_Database",
+    sheet_url: str = SHEET_URL,
 ) -> Optional[Dict[str, Any]]:
     """Асинхронно ищет значение и извлекает данные из указанных колонок."""
     
     def _sync_task():
         try:
             gc = get_gspread_client()
-            spreadsheet = gc.open_by_url(SHEET_URL)
+            spreadsheet = gc.open_by_url(sheet_url)
             ws = spreadsheet.worksheet(worksheet_name)
             all_values = ws.get_all_values()
 

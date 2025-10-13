@@ -203,28 +203,27 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
         else:
             rate = float(rate)
             rate_sng_contract = await search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ')
-            rate_sng_ip = await search_and_extract_values('M', rate, ['B'], 'Расчет ставки (ИП) СНГ')
-            rate_sng_samozanyatii = await search_and_extract_values('M', rate, ['B'], 'Расчет ставки (Самозанятый) СНГ')
-            if rate_sng_contract and rate_sng_ip and rate_sng_samozanyatii:
+            rate_sng_ip = await search_and_extract_values('N', rate, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ')
+            if rate_sng_contract and rate_sng_ip:
                 rate_sng_contract = rate_sng_contract.get('B')
-                rate_sng_ip = rate_sng_ip.get('B')
-                rate_sng_samozanyatii = rate_sng_samozanyatii.get('B')
+                rate_ip_sam = rate_sng_ip.get('B')
+                gross = rate_sng_ip.get('L')
                 if acts:
                     acts_text = f"Актирование: поквартальное\n"
-                    state_contract_text = f"<s>Ежемесячная выплата Штат/Контракт : {rate_sng_contract} RUB</s>"
+                    state_contract_text = f"<s>Ежемесячная выплата Штат/Контракт (на руки) до : {rate_sng_contract} RUB (с выплатой зарплаты 11 числа месяца следующего за отчетным)</s>"
                 else:
                     acts_text = 'Актирование: ежемесячное\n'
-                    state_contract_text = f"Ежемесячная выплата Штат/Контракт : {rate_sng_contract} RUB"
+                    state_contract_text = f"Ежемесячная выплата Штат/Контракт (на руки) до : {rate_sng_contract} RUB (с выплатой зарплаты 11 числа месяца следующего за отчетным)"
                 if short_project or long_payment:
                     state_contract_text = f"<s>{state_contract_text}</s>"
                 if only_fulltime:
-                    ip_samoz_text = f"<s>ИП : {rate_sng_ip} RUB,\n Самозанятый : {rate_sng_samozanyatii} RUB</s>"
+                    ip_samoz_text = f"<s>ИП/Самозанятый : {rate_ip_sam} RUB</s>"
                 else:
-                    ip_samoz_text = f"ИП : {rate_sng_ip} RUB,\n Самозанятый : {rate_sng_samozanyatii} RUB"
+                    ip_samoz_text = f"ИП/Самозанятый : {rate_ip_sam} RUB"
                         
-                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до:\n{state_contract_text}\n{delay_payment_text}{acts_text}\n{ip_samoz_text}\n\n{text}"
+                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n🇧🇾\n💰 Месячная ставка для юр лица РБ:\n{state_contract_text}\n{delay_payment_text}{acts_text}\n{gross}RUB/час(Gross)\n{ip_samoz_text}\n\n{text}"
             else:
-                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
+                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n🇧🇾\n💰 Месячная ставка для юр лица РБ: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
         clean_text = remove_vacancy_id(text_cleaned)
         
         
