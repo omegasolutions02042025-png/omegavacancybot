@@ -176,7 +176,7 @@ def send_mail_or_generate_client_mail_kb(verdict: str):
     return builder.as_markup()
 
 
-def create_contacts_kb(contacts: dict):
+def create_contacts_kb(contacts: dict,verdict : str):
     """
     Создаёт inline-клавиатуру для доступных контактов кандидата.
     Пример входных данных:
@@ -189,25 +189,32 @@ def create_contacts_kb(contacts: dict):
     """
     builder = InlineKeyboardBuilder()
 
+    if verdict == 'Полностью подходит':
+        callback = 'PP'
+    elif verdict == 'Частично подходит (нужны уточнения)':
+        callback = 'CP'
+    elif verdict == 'Не подходит':
+        callback = 'NP'
+
     # Email
     email = contacts.get("email")
     if email and email.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="📧 Email", callback_data=f"con:{email}")
+        builder.button(text="📧 Email", callback_data=f"con:e:{email}:{callback}")
 
     # Telegram
     telegram = contacts.get("telegram")
     if telegram and telegram.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="💬 Telegram", callback_data=f"con:{telegram}")
+        builder.button(text="💬 Telegram", callback_data=f"con:t:{telegram}:{callback}")
 
     # LinkedIn
     linkedin = contacts.get("linkedin")
     if linkedin and linkedin.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="🔗 LinkedIn", callback_data=f"con:{linkedin}")
+        builder.button(text="🔗 LinkedIn", callback_data=f"con:l:{linkedin}:{callback}")
 
     # Телефон (если нужно отображать)
     phone = contacts.get("phone")
     if phone and phone.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="📞 Телефон", callback_data=f"con:{phone}")
+        builder.button(text="📞 Телефон", callback_data=f"con:p:{phone}:{callback}")
 
     builder.adjust(2)
     return builder.as_markup()

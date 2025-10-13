@@ -262,19 +262,40 @@ async def get_next_sequence_number() -> int:
     
     
 async def add_otkonechenie_resume(message_id: int, message_text: str, json_text: dict):
+    """
+    Добавляет или обновляет запись OtkonechenieResume.
+    Если message_id уже существует — обновляет текст и JSON.
+    """
     if isinstance(json_text, dict):
         json_text = json.dumps(json_text)
-        
-    async with AsyncSessionLocal() as session:
-        otkonechenie = OtkonechenieResume(
-            message_id=message_id,
-            message_text=message_text,
-            json_text=json_text,
-            message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
-        )
-        session.add(otkonechenie)
-        await session.commit()
 
+    async with AsyncSessionLocal() as session:
+        try:
+            result = await session.execute(
+                select(OtkonechenieResume).where(OtkonechenieResume.message_id == message_id)
+            )
+            existing_record = result.scalar_one_or_none()
+
+            if existing_record:
+                existing_record.message_text = message_text
+                existing_record.json_text = json_text
+                existing_record.message_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+                print(f"♻️ Обновлена запись OtkonechenieResume с message_id={message_id}")
+            else:
+                new_record = OtkonechenieResume(
+                    message_id=message_id,
+                    message_text=message_text,
+                    json_text=json_text,
+                    message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+                )
+                session.add(new_record)
+                print(f"✅ Добавлена новая запись OtkonechenieResume с message_id={message_id}")
+
+            await session.commit()
+
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при добавлении/обновлении OtkonechenieResume: {e}")
 
 
 async def remove_old_otkonechenie_resumes(hours: int = 12):
@@ -415,18 +436,40 @@ async def get_final_resume(message_id: int):
 # ===============================================================
 
 async def add_utochnenie_resume(message_id: int, message_text: str, json_text: dict):
+    """
+    Добавляет или обновляет запись UtochnenieResume.
+    Если message_id уже существует — обновляет текст и JSON.
+    """
     if isinstance(json_text, dict):
         json_text = json.dumps(json_text)
-        
+
     async with AsyncSessionLocal() as session:
-        utochnenie = UtochnenieResume(
-            message_id=message_id,
-            message_text=message_text,
-            json_text=json_text,
-            message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
-        )
-        session.add(utochnenie)
-        await session.commit()
+        try:
+            result = await session.execute(
+                select(UtochnenieResume).where(UtochnenieResume.message_id == message_id)
+            )
+            existing_record = result.scalar_one_or_none()
+
+            if existing_record:
+                existing_record.message_text = message_text
+                existing_record.json_text = json_text
+                existing_record.message_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+                print(f"♻️ Обновлена запись UtochnenieResume с message_id={message_id}")
+            else:
+                new_record = UtochnenieResume(
+                    message_id=message_id,
+                    message_text=message_text,
+                    json_text=json_text,
+                    message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+                )
+                session.add(new_record)
+                print(f"✅ Добавлена новая запись UtochnenieResume с message_id={message_id}")
+
+            await session.commit()
+
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при добавлении/обновлении UtochnenieResume: {e}")
 
 
 async def remove_old_utochnenie_resumes(hours: int = 12):

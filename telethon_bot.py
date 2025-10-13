@@ -357,3 +357,16 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
             )
             await bot.send_message(ADMIN_ID, f'✅ Вакансия добавлена в канал в топике {src_topic_id} в чате {event.chat_id}')
 
+
+async def send_message_by_username(username: str, text: str):
+    async with TelegramClient('session_name', api_id, api_hash) as client:
+        try:
+            # username можно писать без "@"
+            if username.startswith("@"):
+                username = username[1:]
+            
+            entity = await client.get_entity(username)
+            await client.send_message(entity, text)
+            print(f"✅ Сообщение отправлено пользователю @{username}")
+        except Exception as e:
+            print(f"❌ Ошибка при отправке @{username}: {e}")

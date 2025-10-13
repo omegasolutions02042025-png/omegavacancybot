@@ -575,7 +575,10 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
         await bot.edit_message_text(text = f"📨 Создано письмо для кандидата {candidate_name} !", chat_id=callback.message.chat.id, message_id=message_id)
         await asyncio.sleep(3)
         await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text, reply_markup=send_mail_to_candidate_kb(verdict))
-    
+        if verdict == "Частично подходит (нужны уточнения)":
+            await add_utochnenie_resume(message_id, mail_text, candidate)
+        elif verdict == "Не подходит":
+            await add_otkonechenie_resume(message_id, mail_text, candidate)
     
 @bot_router.callback_query(F.data == "generate_klient_mail")
 async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
@@ -657,11 +660,37 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
         await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
         return
     else:
-        await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=create_contacts_kb(contacts))
+        await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=create_contacts_kb(contacts, verdict))
     
 @bot_router.callback_query(F.data.startswith("con:"))
 async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
+    
     source = callback.data.split(":")[1]
-    await callback.message.edit_text(f"source: {source}")
+    contact = callback.data.split(":")[2]
+    verdict = callback.data.split(":")[3]
+    if verdict == "PP":
+        data = await get_final_resume(callback.message.message_id)
+    elif verdict == "CP":
+        data = await get_utochnenie_resume(callback.message.message_id)
+    elif verdict == "NP":
+        data = await get_otkolenie_resume(callback.message.message_id)
+    if not data:
+        await callback.message.answer("❌ Нет данных для отправки письма кандидату.")
+        return
+    
+    
+    candidate = data.json_text
+    mail_text = data.message_text
+    if isinstance(candidate, str):
+        candidate_json = json.loads(candidate)
+    
+    contacts = candidate_json.get("candidate", {}).get("contacts", {})
+    if not contacts:
+        await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
+        return
+    await callback.message.edit_text(f"source: {source}\ncontact: {contact}\nverdict: {verdict}")
+    if source == "t":
+        await send_message_by_username("@op1an4r1um", mail_text)
+    
     
