@@ -280,7 +280,7 @@ async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
 
 
 ACTIVE_MEDIA_GROUPS = {}
-
+RESET_DELAY = 10.0
 UPLOAD_DELAY = 2.0  # сколько ждать после последнего файла, прежде чем ответить
 
 # глобальный буфер для пользователей (таймеры и задачи)
@@ -288,10 +288,10 @@ USER_UPLOAD_TASKS = {}
 
 async def save_document(message: types.Message, state: FSMContext, bot):
     """
-    Сохраняет документы пользователя с защитой от спама.
-    — Не спамит сообщениями при массовой загрузке (debounce-логика)
-    — Если загружено ≥10 файлов — выводит одно сводное сообщение
-    — Сбрасывает счётчик через 10 секунд без активности
+    Сохраняет документы пользователя.
+    — Не спамит при массовой загрузке.
+    — После паузы 2 сек отправляет одно сообщение с кнопками "Добавить ещё файлы?".
+    — После 10 сек без новых загрузок — сбрасывает счётчик.
     """
 
     document = message.document
@@ -324,11 +324,11 @@ async def save_document(message: types.Message, state: FSMContext, bot):
     now = asyncio.get_event_loop().time()
     await state.update_data(files_count=files_count, last_upload_time=now)
 
-    # 🕓 Если у пользователя уже есть таймер — отменяем его
+    # Отменяем предыдущий таймер, если есть
     if USER_UPLOAD_TASKS.get(user_id):
         USER_UPLOAD_TASKS[user_id].cancel()
 
-    # 🧩 Создаём новый таймер на 2 секунды (debounce)
+    # ⏳ Таймер с задержкой для вывода итогового сообщения
     async def delayed_summary():
         try:
             await asyncio.sleep(UPLOAD_DELAY)
@@ -336,37 +336,51 @@ async def save_document(message: types.Message, state: FSMContext, bot):
             count = current_data.get("files_count", 0)
             last_time = current_data.get("last_upload_time", 0)
 
-            # Проверяем, прошло ли достаточно времени без новых загрузок
+            # Проверяем, прошло ли достаточно времени без новых файлов
             if asyncio.get_event_loop().time() - last_time >= UPLOAD_DELAY - 0.1:
                 if count >= 10:
-                    # Сводное сообщение при большом количестве файлов
                     text = f"📦 Загружено {count} файлов. Все сохранены ✅"
                 elif count > 1:
                     text = f"📥 Загружено {count} файлов. Все сохранены ✅"
                 else:
                     text = "📥 Файл сохранён ✅"
 
-                # Если уже есть сообщение — редактируем его
+                # Если уже есть сообщение — редактируем, иначе создаём новое
                 if summary_message_id:
                     try:
-                        await bot.edit_message_text(chat_id=message.chat.id, message_id=summary_message_id, text=text)
+                        await bot.edit_message_text(
+                            chat_id=message.chat.id,
+                            message_id=summary_message_id,
+                            text=text
+                        )
                     except:
                         pass
+                    # Добавляем кнопки
+                    await bot.send_message(
+                        chat_id=message.chat.id,
+                        text="Хотите добавить ещё файлы?",
+                        reply_markup=scan_vac_rekr_yn_kb()
+                    )
                 else:
                     msg = await message.answer(text)
+                    await bot.send_message(
+                        chat_id=message.chat.id,
+                        text="Хотите добавить ещё файлы?",
+                        reply_markup=scan_vac_rekr_yn_kb()
+                    )
                     await state.update_data(summary_message_id=msg.message_id)
 
-                # Сбрасываем состояние через 10 секунд
-                await asyncio.sleep(10)
+                # Сбрасываем счётчик через 10 секунд
+                await asyncio.sleep(RESET_DELAY)
                 await state.update_data(files_count=0, summary_message_id=None)
-                print(f"♻️ [{user_id}] Счётчик файлов сброшен ({count} файлов).")
+                print(f"♻️ [{user_id}] Сброс счётчика файлов ({count} шт).")
 
         except asyncio.CancelledError:
             pass
 
+    # Запускаем новый таймер
     task = asyncio.create_task(delayed_summary())
     USER_UPLOAD_TASKS[user_id] = task
-
 
 
 
