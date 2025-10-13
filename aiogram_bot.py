@@ -209,6 +209,8 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                 print('rate_sng_ip ', rate_sng_ip)
                 rate_sng_contract = rate_sng_contract.get('B')
                 rate_ip_sam = rate_sng_ip.get('B')
+                rounded = (int(rate_sng_contract) // 1000) * 1000
+                rate_sng_contract = f"{rounded:,}".replace(",", " ")
                 gross = rate_sng_ip.get('L')
                 if acts:
                     acts_text = f"Актирование: поквартальное\n"

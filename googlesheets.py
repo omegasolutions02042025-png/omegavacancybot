@@ -135,9 +135,12 @@ async def search_and_extract_values(
                 if len(target_row) > col_index:
                     clean_value = target_row[col_index].replace("\xa0", "").strip()
                     print(clean_value)
-                    rounded = (int(clean_value) // 1000) * 1000
-                    clean_value = f"{rounded:,}".replace(",", " ")
-                    result["extracted_values"][col_letter] = clean_value
+                    if len(extract_columns) == 1:
+                        rounded = (int(clean_value) // 1000) * 1000
+                        clean_value = f"{rounded:,}".replace(",", " ")
+                        result["extracted_values"][col_letter] = clean_value
+                    else:
+                        result["extracted_values"][col_letter] = clean_value
                 else:
                     result["extracted_values"][col_letter] = ""
 
