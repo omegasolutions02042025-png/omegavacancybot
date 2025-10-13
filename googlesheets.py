@@ -180,10 +180,10 @@ async def fill_column_with_sequential_numbers(
             return False
         except gspread.exceptions.APIError as e:
             # Развёрнутый текст API-ошибки
-            print(f"❌ APIError fill_column_with_sequential_numbers: {e}\n{traceback.format_exc()}")
+            print(f"❌ APIError fill_column_with_sequential_numbers: {e}")
             return False
         except Exception as e:
-            print(f"❌ Ошибка fill_column_with_sequential_numbers: {e}\n{traceback.format_exc()}")
+            print(f"❌ Ошибка fill_column_with_sequential_numbers: {e}")
             return False
 
     return await asyncio.to_thread(_sync_task)
