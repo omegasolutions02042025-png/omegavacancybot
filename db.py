@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, select, Column, BigInteger
 from datetime import datetime, timedelta
 import asyncio
+from sqlalchemy import JSON
 
 
 DATABASE_URL = "sqlite+aiosqlite:///channels.db"
@@ -49,7 +50,7 @@ class OtkonechenieResume(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     message_id: Mapped[int] = mapped_column(Integer, nullable=False)
     message_text = Column(String, nullable=False)
-    json_text = Column(String, nullable=False)
+    json_text = Column(JSON, nullable=False)
     message_time = Column(String, nullable=False)
     
 class FinalResume(Base):
@@ -58,7 +59,7 @@ class FinalResume(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     message_id: Mapped[int] = mapped_column(Integer, nullable=False)
     message_text = Column(String, nullable=False)
-    json_text = Column(String, nullable=False)
+    json_text = Column(JSON, nullable=False)
     message_time = Column(String, nullable=False)
 
 
@@ -68,7 +69,7 @@ class UtochnenieResume(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     message_id: Mapped[int] = mapped_column(Integer, nullable=False)
     message_text = Column(String, nullable=False)
-    json_text = Column(String, nullable=False)
+    json_text = Column(JSON, nullable=False)
     message_time = Column(String, nullable=False)
  
     
