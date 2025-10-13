@@ -659,4 +659,9 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
     else:
         await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=create_contacts_kb(contacts))
     
+@bot_router.callback_query(F.data.startswith("con:"))
+async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await callback.answer()
+    source = callback.data.split(":")[1]
+    await callback.message.edit_text(f"source: {source}")
     
