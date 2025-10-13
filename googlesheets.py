@@ -175,8 +175,15 @@ async def fill_column_with_sequential_numbers(
             ws.update(range_a1, values)
             print(f"✅ Колонка {column_letter} заполнена ({worksheet_name})")
             return True
+        except gspread.WorksheetNotFound:
+            print(f"❌ Лист '{worksheet_name}' не найден в таблице {sheet_id}")
+            return False
+        except gspread.exceptions.APIError as e:
+            # Развёрнутый текст API-ошибки
+            print(f"❌ APIError fill_column_with_sequential_numbers: {e}\n{traceback.format_exc()}")
+            return False
         except Exception as e:
-            print(f"❌ Ошибка fill_column_with_sequential_numbers: {e}")
+            print(f"❌ Ошибка fill_column_with_sequential_numbers: {e}\n{traceback.format_exc()}")
             return False
 
     return await asyncio.to_thread(_sync_task)
