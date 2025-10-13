@@ -116,18 +116,21 @@ def utochnit_prichinu_kb():
     builder.button(text='Уточнить причину', callback_data='utochnit_prichinu')
     return builder.as_markup()
 
-def generate_mail_kb(verdict: str):
-    if verdict == 'Полностью подходит':
+def generate_mail_kb(verdict_text: str):
+    if verdict_text == 'Полностью подходит':
+        callback = 'PP'
         builder = InlineKeyboardBuilder()
-        builder.button(text='Сгенерировать письмо для кандидата', callback_data='generate_mail')
+        builder.button(text='Сгенерировать письмо для кандидата', callback_data=f'generate_mail:{callback}')
         return builder.as_markup()
-    elif verdict == 'Частично подходит (нужны уточнения)':
+    elif verdict_text == 'Частично подходит (нужны уточнения)':
+        callback = 'CP'
         builder = InlineKeyboardBuilder()
-        builder.button(text='Сгенерировать уточняющее письмо', callback_data='generate_mail')
+        builder.button(text='Сгенерировать уточняющее письмо', callback_data=f'generate_mail:{callback}')
         return builder.as_markup()
-    elif verdict == 'Не подходит':
+    elif verdict_text == 'Не подходит':
+        callback = 'NP'
         builder = InlineKeyboardBuilder()
-        builder.button(text='Сгенерировать отказ', callback_data='generate_mail')
+        builder.button(text='Сгенерировать отказ', callback_data=f'generate_mail:{callback}')
         return builder.as_markup()
     return None
 
@@ -146,4 +149,43 @@ def get_all_info_kb(verdict: str):
     elif verdict == 'Не подходит':
         callback = 'NP'
     builder.button(text='Подробнее', callback_data=f'get_all_info:{callback}')
+    return builder.as_markup()
+
+
+def send_mail_to_candidate_kb(verdict: str):
+    if verdict == 'Полностью подходит':
+        callback = 'PP'
+    elif verdict == 'Частично подходит (нужны уточнения)':
+        callback = 'CP'
+    elif verdict == 'Не подходит':
+        callback = 'NP'
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Отправить письмо кандидату', callback_data=f'send_mail_to_candidate:{callback}')
+    return builder.as_markup()
+
+def send_mail_or_generate_client_mail_kb(verdict: str):
+    if verdict == 'Полностью подходит':
+        callback = 'PP'
+    elif verdict == 'Частично подходит (нужны уточнения)':
+        callback = 'CP'
+    elif verdict == 'Не подходит':
+        callback = 'NP'
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Отправить письмо кандидату', callback_data=f'send_mail_to_candidate:{callback}')
+    builder.button(text='Сгенерировать письмо для клиента', callback_data='generate_klient_mail')
+    return builder.as_markup()
+
+
+def create_contacts_kb(data: dict):
+    builder = InlineKeyboardBuilder()
+    for contact in data:
+        if contact.get("phone"):
+            continue
+        elif contact.get("email"):
+            builder.button(text="Email", callback_data=f'con:{contact.get("email")}')
+        elif contact.get("telegram"):
+            builder.button(text="Telegram", callback_data=f'con:{contact.get("telegram")}')
+        elif contact.get("linkedin"):
+            continue
+    builder.adjust(2)
     return builder.as_markup()

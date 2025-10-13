@@ -472,7 +472,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}"
 
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
-            await add_final_resume(messs.message_id, sverka_text)
+            await add_final_resume(messs.message_id, sverka_text, candidate_json)
             candidate_data = {
                 messs.message_id: {
                     'candidate_json': candidate_json,
@@ -481,7 +481,6 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
                     'candidate_name': candidate
                 }
             }
-            canditates_data.update(candidate_data)
 
     # 2️⃣ Требуют уточнения
     if utochnit_list:
@@ -496,7 +495,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}"
             
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
-            await add_utochnenie_resume(messs.message_id, sverka_text)
+            await add_utochnenie_resume(messs.message_id, sverka_text, candidate_json)
             candidate_data = {
                 messs.message_id: {
                     'candidate_json': candidate_json,
@@ -505,7 +504,6 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
                     'candidate_name': candidate
                 }
             }
-            canditates_data.update(candidate_data)
 
     # 3️⃣ Отказы
     if otkaz_list:
@@ -520,7 +518,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}"
 
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
-            await add_otkonechenie_resume(messs.message_id, sverka_text)
+            await add_otkonechenie_resume(messs.message_id, sverka_text, candidate_json)
             candidate_data = {
                 messs.message_id: {
                     'candidate_json': candidate_json,
@@ -529,9 +527,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
                     'candidate_name': candidate
                 }
             }
-            canditates_data.update(candidate_data)
 
-    await state.update_data(candidate_data=canditates_data)
     await state.set_state(GenerateMail.waiting_for_mail)
     
     shutil.rmtree(user_dir)
@@ -554,21 +550,25 @@ async def utochnit_prichinu_bot(callback: CallbackQuery, bot: Bot):
         
         
         
-@bot_router.callback_query(F.data == "generate_mail")
+@bot_router.callback_query(F.data.startswith("generate_mail:"))
 async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
     await callback.message.edit_text('Подготовка письма...')
     message_id = callback.message.message_id
-    data = await state.get_data()
-    candidate_data_dict = data.get("candidate_data", {})
-    candidate_data = candidate_data_dict.get(message_id)
-    if not candidate_data:
+    verdict = callback.data.split(":")[1]
+    if verdict == "PP":
+        data = await get_final_resume(message_id)
+    elif verdict == "CP":
+        data = await get_utochnenie_resume(message_id)
+    elif verdict == "NP":
+        data = await get_otkolenie_resume(message_id)
+    
+    if not data:
         await callback.message.answer("❌ Нет данных для генерации письма.")
         return
-    candidate = candidate_data.get("candidate_json")
-    candidate_name = candidate_data.get("candidate_name")
-    verdict = candidate_data.get("verdict")
-    print(verdict)
+    candidate = data.json_text  
+    candidate_name = candidate.get("candidate").get("full_name")
+    verdict = data.get("summary").get("verdict")
     user_name = (
             f"@{callback.message.chat.username}"
             if callback.message.chat.username
@@ -580,22 +580,17 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     else:
         mail_text = "."
     if verdict == "Полностью подходит":
-        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text, reply_markup=generate_klient_mail_kb())
-        client_data = {message_id:{'candidate_json': candidate, 'candidate_name': candidate_name}}
-        await state.update_data(client_data=client_data)
+        await bot.edit_message_text(text = f"📨 Создано письмо для кандидата {candidate_name} !", chat_id=callback.message.chat.id, message_id=message_id)
+        await asyncio.sleep(3)
+        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text, reply_markup=send_mail_or_generate_client_mail_kb(verdict))
+        await add_final_resume(message_id, mail_text, candidate)
+        
+        
     else:
         await bot.edit_message_text(text = f"📨 Создано письмо для кандидата {candidate_name} !", chat_id=callback.message.chat.id, message_id=message_id)
         await asyncio.sleep(3)
-        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text)
+        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text, reply_markup=send_mail_to_candidate_kb(verdict))
     
-    
-    if verdict != "Полностью подходит":
-        if not candidate_data_dict:
-            await state.clear()
-        else:
-            await state.update_data(candidate_data=candidate_data_dict)
-    else:
-        await state.update_data(candidate_data=candidate_data_dict)
     
 @bot_router.callback_query(F.data == "generate_klient_mail")
 async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
@@ -603,15 +598,13 @@ async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, b
     await callback.message.edit_text("📨 Создаю письмо для клиента...")
 
     message_id = callback.message.message_id
-    data = await state.get_data()
-    client_data_dict = data.get("client_data", {})
-    client_data = client_data_dict.get(message_id)
-    if not client_data:
+    data = await get_final_resume(message_id)
+    if not data:
         await callback.message.answer("❌ Не удалось найти данные для генерации письма клиента.")
         return
 
-    candidate = client_data.get("candidate_json")
-    candidate_name = client_data.get("candidate_name", "кандидата")
+    candidate = data.json_text
+    candidate_name = candidate.get("candidate").get("full_name")
 
     try:
         
@@ -625,11 +618,6 @@ async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, b
     await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=f"Вот текст письма:\n{mail_text}", reply_markup=None)
     await bot.send_message(CLIENT_CHANNEL, mail_text)
 
-    client_data_dict.pop(message_id, None)
-    if not client_data_dict:
-        await state.clear()
-    else:
-        await state.update_data(client_data=client_data_dict)
 
 
 
@@ -658,3 +646,26 @@ async def get_all_info_bot(callback: CallbackQuery, state: FSMContext, bot: Bot)
             await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=sverka.message_text, reply_markup=generate_mail_kb(verdict))
         else:
             await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text="❌ Не удалось найти данные для генерации письма клиента.")
+            
+@bot_router.callback_query(F.data.startswith("send_mail_to_candidate"))
+async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    verdict = callback.data.split(":")[1]
+    message_id = callback.message.message_id
+    if verdict == "PP":
+        data = await get_final_resume(message_id)
+    elif verdict == "CP":
+        data = await get_utochnenie_resume(message_id)
+    elif verdict == "NP":
+        data = await get_otkolenie_resume(message_id)
+    if not data:
+        await callback.message.answer("❌ Нет данных для отправки письма кандидату.")
+        return
+    candidate = data.json_text
+    contacts = data.get("candidate").get("contacts")
+    if not contacts:
+        await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
+        return
+    else:
+        await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=create_contacts_kb(contacts))
+    
+    

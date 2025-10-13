@@ -49,6 +49,7 @@ class OtkonechenieResume(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     message_id: Mapped[int] = mapped_column(Integer, nullable=False)
     message_text = Column(String, nullable=False)
+    json_text = Column(String, nullable=False)
     message_time = Column(String, nullable=False)
     
 class FinalResume(Base):
@@ -57,6 +58,7 @@ class FinalResume(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     message_id: Mapped[int] = mapped_column(Integer, nullable=False)
     message_text = Column(String, nullable=False)
+    json_text = Column(String, nullable=False)
     message_time = Column(String, nullable=False)
 
 
@@ -66,6 +68,7 @@ class UtochnenieResume(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     message_id: Mapped[int] = mapped_column(Integer, nullable=False)
     message_text = Column(String, nullable=False)
+    json_text = Column(String, nullable=False)
     message_time = Column(String, nullable=False)
  
     
@@ -256,11 +259,12 @@ async def get_next_sequence_number() -> int:
     
     
     
-async def add_otkonechenie_resume(message_id: int, message_text: str):
+async def add_otkonechenie_resume(message_id: int, message_text: str, json_text: str):
     async with AsyncSessionLocal() as session:
         otkonechenie = OtkonechenieResume(
             message_id=message_id,
             message_text=message_text,
+            json_text=json_text,
             message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
         )
         session.add(otkonechenie)
@@ -324,15 +328,42 @@ async def get_otkolenie_resume(message_id: int):
 #  FINAL RESUME (ФИНАЛИСТЫ)
 # ===============================================================
 
-async def add_final_resume(message_id: int, message_text: str):
+async def add_final_resume(message_id: int, message_text: str, json_text: str):
+    """
+    Добавляет или обновляет запись FinalResume.
+    Если message_id уже существует — обновляет текст и JSON.
+    """
     async with AsyncSessionLocal() as session:
-        final_resume = FinalResume(
-            message_id=message_id,
-            message_text=message_text,
-            message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
-        )
-        session.add(final_resume)
-        await session.commit()
+        try:
+            # Проверяем, есть ли уже запись с таким message_id
+            result = await session.execute(
+                select(FinalResume).where(FinalResume.message_id == message_id)
+            )
+            existing_record = result.scalar_one_or_none()
+
+            if existing_record:
+                # Обновляем поля
+                existing_record.message_text = message_text
+                existing_record.json_text = json_text
+                existing_record.message_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+                print(f"♻️ Обновлена запись FinalResume с message_id={message_id}")
+            else:
+                # Создаём новую запись
+                new_record = FinalResume(
+                    message_id=message_id,
+                    message_text=message_text,
+                    json_text=json_text,
+                    message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+                )
+                session.add(new_record)
+                print(f"✅ Добавлена новая запись FinalResume с message_id={message_id}")
+
+            await session.commit()
+
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при добавлении/обновлении FinalResume: {e}")
+
 
 
 async def remove_old_final_resumes(hours: int = 12):
@@ -374,11 +405,12 @@ async def get_final_resume(message_id: int):
 #  UTOCHNENIE RESUME (ТРЕБУЮТ УТОЧНЕНИЙ)
 # ===============================================================
 
-async def add_utochnenie_resume(message_id: int, message_text: str):
+async def add_utochnenie_resume(message_id: int, message_text: str, json_text: str):
     async with AsyncSessionLocal() as session:
         utochnenie = UtochnenieResume(
             message_id=message_id,
             message_text=message_text,
+            json_text=json_text,
             message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
         )
         session.add(utochnenie)
