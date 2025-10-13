@@ -260,7 +260,7 @@ async def get_next_sequence_number() -> int:
     
     
     
-async def add_otkonechenie_resume(message_id: int, message_text: str, json_text: str):
+async def add_otkonechenie_resume(message_id: int, message_text: str, json_text: dict):
     async with AsyncSessionLocal() as session:
         otkonechenie = OtkonechenieResume(
             message_id=message_id,
@@ -329,7 +329,7 @@ async def get_otkolenie_resume(message_id: int):
 #  FINAL RESUME (ФИНАЛИСТЫ)
 # ===============================================================
 
-async def add_final_resume(message_id: int, message_text: str, json_text: str):
+async def add_final_resume(message_id: int, message_text: str, json_text: dict):
     """
     Добавляет или обновляет запись FinalResume.
     Если message_id уже существует — обновляет текст и JSON.
@@ -406,7 +406,7 @@ async def get_final_resume(message_id: int):
 #  UTOCHNENIE RESUME (ТРЕБУЮТ УТОЧНЕНИЙ)
 # ===============================================================
 
-async def add_utochnenie_resume(message_id: int, message_text: str, json_text: str):
+async def add_utochnenie_resume(message_id: int, message_text: str, json_text: dict):
     async with AsyncSessionLocal() as session:
         utochnenie = UtochnenieResume(
             message_id=message_id,

@@ -467,20 +467,13 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             verdict = finalist.get('verdict')
             sverka_text = finalist.get('sverka_text')
             candidate_json = finalist.get('candidate_json')
-            salary = finalist.get('summary', {}).get('salary_expectations', 'не указано')
+            salary = candidate_json.get('summary', {}).get('salary_expectations', 'не указано')
 
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}"
 
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
             await add_final_resume(messs.message_id, sverka_text, candidate_json)
-            candidate_data = {
-                messs.message_id: {
-                    'candidate_json': candidate_json,
-                    'sverka_text': sverka_text,
-                    'verdict': verdict,
-                    'candidate_name': candidate
-                }
-            }
+            
 
     # 2️⃣ Требуют уточнения
     if utochnit_list:
@@ -490,20 +483,13 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             verdict = finalist.get('verdict')
             sverka_text = finalist.get('sverka_text')
             candidate_json = finalist.get('candidate_json')
-            salary = finalist.get('summary', {}).get('salary_expectations', 'не указано')
+            salary = candidate_json.get('summary', {}).get('salary_expectations', 'не указано')
 
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}"
             
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
             await add_utochnenie_resume(messs.message_id, sverka_text, candidate_json)
-            candidate_data = {
-                messs.message_id: {
-                    'candidate_json': candidate_json,
-                    'sverka_text': sverka_text,
-                    'verdict': verdict,
-                    'candidate_name': candidate
-                }
-            }
+            
 
     # 3️⃣ Отказы
     if otkaz_list:
@@ -513,20 +499,14 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             verdict = finalist.get('verdict')
             sverka_text = finalist.get('sverka_text')
             candidate_json = finalist.get('candidate_json')
-            salary = finalist.get('summary', {}).get('salary_expectations', 'не указано')
+            salary = candidate_json.get('summary', {}).get('salary_expectations', 'не указано')
 
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}"
 
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
             await add_otkonechenie_resume(messs.message_id, sverka_text, candidate_json)
-            candidate_data = {
-                messs.message_id: {
-                    'candidate_json': candidate_json,
-                    'sverka_text': sverka_text,
-                    'verdict': verdict,
-                    'candidate_name': candidate
-                }
-            }
+            
+            
 
     await state.set_state(GenerateMail.waiting_for_mail)
     
@@ -567,8 +547,8 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
         await callback.message.answer("❌ Нет данных для генерации письма.")
         return
     candidate = data.json_text  
-    candidate_name = candidate.get("candidate").get("full_name")
-    verdict = data.get("summary").get("verdict")
+    candidate_name = candidate["candidate"]["full_name"]
+    verdict = data["summary"]["verdict"]
     user_name = (
             f"@{callback.message.chat.username}"
             if callback.message.chat.username
