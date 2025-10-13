@@ -359,16 +359,16 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
 
 
 async def send_message_by_username(username: str, text: str):
-    async with TelegramClient('session_name', api_id, api_hash) as client:
         try:
             # username можно писать без "@"
             if username.startswith("@"):
                 username = username[1:]
             
-            entity = await client.get_entity(username)
-            await client.send_message(entity, text)
+            entity = await telethon_client.get_entity(username)
+            await telethon_client.send_message(entity, text)
             print(f"✅ Сообщение отправлено пользователю @{username}")
             return True
         except Exception as e:
             print(f"❌ Ошибка при отправке @{username}: {e}")
             return False
+        
