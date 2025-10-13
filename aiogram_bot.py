@@ -201,7 +201,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
         if rate is None or int(rate) == 0:
             text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
         else:
-            rate = float(rate)
+            rate = int(rate)
             rate_sng_contract = await search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ')
             rate_sng_ip = await search_and_extract_values('N', rate, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ')
             if rate_sng_contract and rate_sng_ip:

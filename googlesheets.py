@@ -80,7 +80,8 @@ async def search_and_extract_values(
     worksheet_name: str = "Resume_Database",
     sheet_url: str = SHEET_URL,
 ) -> Optional[Dict[str, Any]]:
-    """Асинхронно ищет значение и извлекает данные из указанных колонок."""
+    """Асинхронно ищет значение и извлекает данные из указанных колонок.
+    Сначала ищет точное совпадение, если не находит - ищет ближайшее значение."""
     
     def _sync_task():
         try:
@@ -94,10 +95,14 @@ async def search_and_extract_values(
                 return None
 
             search_col_index = ord(search_column.upper()) - ord("A")
-
+            target_row = None
             best_match_row = None
             best_diff = float("inf")
             best_value = None
+            found_exact_match = False
+
+            # Преобразуем искомое значение в int
+            target_search_value = int(search_value)
 
             for row_index, row in enumerate(all_values):
                 if row_index == 0:
@@ -110,35 +115,45 @@ async def search_and_extract_values(
                     continue
 
                 try:
-                    # чистим строку от всего, кроме цифр
-                    cleaned = re.sub(r"[^\d]", "", cell_value)
+                    # удаляем неразрывные пробелы, валюты, символы %, "руб", пробелы и т.п.
+                    cleaned = cell_value.replace("\u202f", "").replace("\xa0", "").lower()
+                    cleaned = re.sub(r"[^\d,\.]", "", cleaned)  # оставляем только цифры, точку и запятую
                     if not cleaned:
                         continue
 
-                    numeric_value = int(cleaned)
-                    diff = abs(numeric_value - search_value)
+                    # заменяем запятую на точку и превращаем в float → int
+                    numeric_value = int(float(cleaned.replace(",", ".")))
 
-                    # если точное совпадение — сразу выбираем
-                    if diff == 0:
+                    # 1. Проверяем на точное совпадение
+                    if numeric_value == target_search_value and not found_exact_match:
+                        target_row = row
                         best_match_row = row_index
                         best_value = numeric_value
-                        break
-
-                    # если близкое значение в пределах ±20 и ближе предыдущих
-                    if diff <= 20 and diff < best_diff:
-                        best_diff = diff
-                        best_match_row = row_index
-                        best_value = numeric_value
+                        found_exact_match = True
+                        print(f"✅ Найдено точное совпадение в строке {best_match_row+1} — значение {best_value}")
+                        break  # Прерываем поиск, так как нашли точное совпадение
+                    
+                    # 2. Если точного совпадения нет, ищем ближайшее значение
+                    if not found_exact_match:
+                        diff = abs(numeric_value - target_search_value)
+                        
+                        # Проверяем, что разница не превышает 5% от искомого значения
+                        if diff < best_diff and diff <= target_search_value * 0.05:
+                            best_diff = diff
+                            best_match_row = row_index
+                            best_value = numeric_value
 
                 except Exception:
                     continue
 
-            if best_match_row is None:
+            # Если не нашли точного совпадения, используем ближайшее
+            if not found_exact_match and best_match_row is not None:
+                target_row = all_values[best_match_row]
+                print(f"🔍 Найдено ближайшее значение в строке {best_match_row+1} — значение {best_value} (разница {best_diff})")
+            elif best_match_row is None:
                 print(f"⚠️ Не найдено совпадений для {search_value}")
                 return None
 
-            target_row = all_values[best_match_row]
-            print(f"🔍 Найдена строка {best_match_row+1} — значение {best_value} (разница {best_diff})")
             result = {"extracted_values": {}}
 
             for col_letter in extract_columns:
@@ -234,3 +249,7 @@ async def update_currency_sheet(bot: Bot, ADMIN_ID: int):
 
         await bot.send_message(ADMIN_ID, f"✅ Курсы валют обновлены: BYN {byn}, USD {usd}, EUR {eur}")
         await asyncio.sleep(86400)
+
+
+
+#print(asyncio.run(search_and_extract_values("N",910,["B","L"],'Расчет ставки (Самозанятый/ИП) СНГ')))
