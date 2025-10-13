@@ -202,11 +202,11 @@ async def update_currency_sheet(bot: Bot, ADMIN_ID: int):
         usd, eur, byn = curses["USD"], curses["EUR"], curses["BYN"]
 
         for sheet_name in sheet_names:
-            await fill_column_with_sequential_numbers("G", sheet_name, 2, usd, sheet_id)
+            await fill_column_with_sequential_numbers("H", sheet_name, 2, usd, sheet_id)
             await asyncio.sleep(2)
-            await fill_column_with_sequential_numbers("H", sheet_name, 2, eur, sheet_id)
+            await fill_column_with_sequential_numbers("I", sheet_name, 2, eur, sheet_id)
             await asyncio.sleep(2)
-            await fill_column_with_sequential_numbers("F", sheet_name, 2, byn, sheet_id)
+            await fill_column_with_sequential_numbers("G", sheet_name, 2, byn, sheet_id)
             await asyncio.sleep(2)
 
         await bot.send_message(ADMIN_ID, f"✅ Курсы валют обновлены: BYN {byn}, USD {usd}, EUR {eur}")
