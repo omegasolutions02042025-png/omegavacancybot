@@ -155,6 +155,8 @@ def get_all_info_kb(verdict: str):
 
 
 def send_mail_to_candidate_kb(verdict: str):
+    print(verdict)
+    callback = None
     if verdict == 'Полностью подходит':
         callback = 'PP'
     elif verdict == 'Частично подходит (нужны уточнения)':
