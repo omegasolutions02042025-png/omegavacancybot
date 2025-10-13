@@ -205,6 +205,8 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
             rate_sng_contract = await search_and_extract_values('M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ')
             rate_sng_ip = await search_and_extract_values('N', rate, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ')
             if rate_sng_contract and rate_sng_ip:
+                print('rate_sng_contract ', rate_sng_contract)
+                print('rate_sng_ip ', rate_sng_ip)
                 rate_sng_contract = rate_sng_contract.get('B')
                 rate_ip_sam = rate_sng_ip.get('B')
                 gross = rate_sng_ip.get('L')
@@ -221,7 +223,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                 else:
                     ip_samoz_text = f"ИП/Самозанятый : {rate_ip_sam} RUB"
                         
-                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n🇧🇾\n💰 Месячная ставка для юр лица РБ:\n{state_contract_text}\n{delay_payment_text}{acts_text}\n{gross}RUB/час(Gross)\n{ip_samoz_text}\n\n{text}"
+                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n🇧🇾\n💰 Месячная ставка для юр лица РБ:\n{state_contract_text}\n{delay_payment_text}{acts_text}{gross}RUB/час(Gross)\n{ip_samoz_text}\n\n{text}"
             else:
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n🇧🇾\n💰 Месячная ставка для юр лица РБ: смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n\n{text}"
         clean_text = remove_vacancy_id(text_cleaned)
