@@ -193,7 +193,8 @@ async def fill_column_with_sequential_numbers(
 # ======================
 async def update_currency_sheet(bot: Bot, ADMIN_ID: int):
     """Асинхронно обновляет курсы валют каждые 24 часа."""
-    sheet_names = ['Расчет ставки (штат) ЮЛ РФ', 'Расчет ставки (ИП) ЮЛ РФ']
+    sheet_name_1 = 'Расчет ставки (штат) ЮЛ РФ'
+    sheet_name_2 = 'Расчет ставки (ИП) ЮЛ РФ'
     sheet_id = '1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
 
 
@@ -201,13 +202,19 @@ async def update_currency_sheet(bot: Bot, ADMIN_ID: int):
         curses = await asyncio.to_thread(parse_cb_rf)
         usd, eur, byn = curses["USD"], curses["EUR"], curses["BYN"]
 
-        for sheet_name in sheet_names:
-            await fill_column_with_sequential_numbers("H", sheet_name, 2, usd, sheet_id)
-            await asyncio.sleep(2)
-            await fill_column_with_sequential_numbers("I", sheet_name, 2, eur, sheet_id)
-            await asyncio.sleep(2)
-            await fill_column_with_sequential_numbers("G", sheet_name, 2, byn, sheet_id)
-            await asyncio.sleep(2)
+        await fill_column_with_sequential_numbers("G", sheet_name_1, 2, usd, sheet_id)
+        await asyncio.sleep(2)
+        await fill_column_with_sequential_numbers("H", sheet_name_1, 2, eur, sheet_id)
+        await asyncio.sleep(2)
+        await fill_column_with_sequential_numbers("F", sheet_name_1, 2, byn, sheet_id)
+        await asyncio.sleep(2)
+
+        await fill_column_with_sequential_numbers("H", sheet_name_2, 2, usd, sheet_id)
+        await asyncio.sleep(2)
+        await fill_column_with_sequential_numbers("I", sheet_name_2, 2, eur, sheet_id)
+        await asyncio.sleep(2)
+        await fill_column_with_sequential_numbers("G", sheet_name_2, 2, byn, sheet_id)
+    
 
         await bot.send_message(ADMIN_ID, f"✅ Курсы валют обновлены: BYN {byn}, USD {usd}, EUR {eur}")
         await asyncio.sleep(86400)
