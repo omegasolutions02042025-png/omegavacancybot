@@ -141,10 +141,10 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         # --- варианты для РФ ---
                         if rf_loc:
                             rate_rf_contract = await search_and_extract_values(
-                                'M', rate, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1ApDxmH0BL4rbuKTni6cj-D_d0vJ5KG45sEQjOyXM3PY'
+                                'K', rate, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                             )
                             rate_rf_ip = await search_and_extract_values(
-                                'N', rate, ['B', 'L'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1ApDxmH0BL4rbuKTni6cj-D_d0vJ5KG45sEQjOyXM3PY'
+                                'K', rate, ['B', 'J'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                             )
 
                         # --- варианты для РБ ---
@@ -392,10 +392,10 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                 # --- варианты для РФ ---
                 if rf_loc:
                     rate_rf_contract = await search_and_extract_values(
-                        'M', rate, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1ApDxmH0BL4rbuKTni6cj-D_d0vJ5KG45sEQjOyXM3PY'
+                        'K', rate, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                     )
                     rate_rf_ip = await search_and_extract_values(
-                        'N', rate, ['B', 'L'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1ApDxmH0BL4rbuKTni6cj-D_d0vJ5KG45sEQjOyXM3PY'
+                        'K', rate, ['B', 'J'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                     )
 
                 # --- варианты для РБ ---
