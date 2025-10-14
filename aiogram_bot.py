@@ -608,7 +608,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
             await add_otkonechenie_resume(messs.message_id, sverka_text, candidate_json)
             
-            
+    await callback.message.answer("✅ Резюме сканированы!\n\nДобавить еще резюме?", reply_markup=add_another_resume_kb())      
 
     await state.set_state()
     
@@ -813,6 +813,9 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
         success = await send_message_by_username(contact, mail_text)
         if success:
            await callback.message.edit_text("✅ Сообщение отправлено пользователю")
+           await asyncio.sleep(3)
+           contacts.pop('telegram')
+           await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=create_contacts_kb(contacts, verdict))
         else:
            await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
     
@@ -828,6 +831,29 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
         )
         if success:
            await callback.message.edit_text("✅ Сообщение отправлено пользователю")
+           await asyncio.sleep(3)
+           contacts.pop('email')
+           await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=create_contacts_kb(contacts, verdict))
         else:
            await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
         
+        
+        
+        
+def call_kb(phone: str) -> InlineKeyboardMarkup:
+    # На мобильных клиентах откроет звонилку
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📞 Позвонить", url=f"tel:{phone}")],
+        [InlineKeyboardButton(text="📋 Показать номер для копирования", url=f"https://t.me/share/url?url={phone}")]
+        # второй вариант открывает окно «поделиться» с заполненным номером
+    ])
+
+@bot_router.message(F.text == "/phone")
+async def send_phone(m: Message):
+    # Вариант 1: кнопка «Позвонить» + номер для копирования
+    text = (
+        "Вот номер. Нажмите кнопку ниже, чтобы позвонить, "
+        "или скопируйте из строки:\n"
+        f"{hcode(PHONE)}"
+    )
+    await m.answer(text, reply_markup=call_kb(PHONE))
