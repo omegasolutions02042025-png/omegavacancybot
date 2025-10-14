@@ -851,5 +851,5 @@ async def send_phone(m: Message, bot: Bot):
         "или скопируйте из строки:\n"
         f"{hcode(PHONE)}"
     )
-    await m.answer(text, reply_markup=call_kb(PHONE))
+    await m.answer(text)
     await bot.send_contact(chat_id=m.chat.id, phone_number=PHONE, first_name="Omega Solutions")
