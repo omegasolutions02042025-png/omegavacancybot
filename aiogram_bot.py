@@ -842,16 +842,9 @@ from aiogram.utils.markdown import hcode
         
 PHONE = "+79990000000"      
         
-def call_kb(phone: str) -> InlineKeyboardMarkup:
-    # На мобильных клиентах откроет звонилку
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📞 Позвонить", url=f"tel:{phone}")],
-        [InlineKeyboardButton(text="📋 Показать номер для копирования", url=f"https://t.me/share/url?url={phone}")]
-        # второй вариант открывает окно «поделиться» с заполненным номером
-    ])
 
 @bot_router.message(F.text == "/phone")
-async def send_phone(m: Message):
+async def send_phone(m: Message, bot: Bot):
     # Вариант 1: кнопка «Позвонить» + номер для копирования
     text = (
         "Вот номер. Нажмите кнопку ниже, чтобы позвонить, "
@@ -859,3 +852,4 @@ async def send_phone(m: Message):
         f"{hcode(PHONE)}"
     )
     await m.answer(text, reply_markup=call_kb(PHONE))
+    await bot.send_contact(chat_id=m.chat.id, phone_number=PHONE, first_name="Omega Solutions")
