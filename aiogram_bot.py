@@ -258,7 +258,11 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
 
                 rate_contract = contract_data.get('B')
                 rate_ip = ip_data.get('B')
-                gross = ip_data.get('L')
+                gross = None
+                if ip_data.get('L'):
+                    gross = ip_data.get('L')
+                else:
+                    gross = ip_data.get('J')
 
                 # округляем IP/самозанятый до 1000
                 try:

@@ -174,7 +174,11 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
 
                             rate_contract = contract_data.get('B')
                             rate_ip = ip_data.get('B')
-                            gross = ip_data.get('L')
+                            gross = None
+                            if ip_data.get('L'):
+                                gross = ip_data.get('L')
+                            else:
+                                gross = ip_data.get('J')
 
                             # округляем IP/самозанятый до 1000
                             try:
@@ -425,7 +429,11 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
 
                     rate_contract = contract_data.get('B')
                     rate_ip = ip_data.get('B')
-                    gross = ip_data.get('L')
+                    gross = None
+                    if ip_data.get('L'):
+                        gross = ip_data.get('L')
+                    else:
+                        gross = ip_data.get('J')
 
                     # округляем IP/самозанятый до 1000
                     try:
