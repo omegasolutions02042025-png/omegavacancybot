@@ -290,15 +290,14 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                     state_contract_text = f"<s>{state_contract_text}</s>"
 
                 if only_fulltime:
-                    ip_text = f"<s>Вариант 2. Выплата ИП/Самозанятый: {rate_ip} RUB</s>"
+                    ip_text = f"<s>Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 165 раб. часов): {rate_ip} RUB</s>"
                 else:
-                    ip_text = f"Вариант 2. Выплата ИП/Самозанятый: {rate_ip} RUB"
+                    ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 165 раб. часов): {rate_ip} RUB'
 
                 return (
                     f"{flag_text}"
                     f"💰 Месячная ставка для юр лица {region}:\n"
-                    f"{state_contract_text}\n"
-                    f"{delay_payment_text}{acts_text}{gross} RUB/час (Gross)\n"
+                    f"{state_contract_text}\n\n"
                     f"{ip_text}\n"
                 )
 
