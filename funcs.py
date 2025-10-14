@@ -416,11 +416,13 @@ def extract_vacancy_id(text: str) -> str | None:
     Возвращает ID в верхнем регистре (например, "BE-8968" или "8823").
     """
     if not text:
+        print("text is empty")
         return None
 
     # 🟡 Берём первую непустую строку
     lines = [line.strip() for line in text.strip().splitlines() if line.strip()]
     if not lines:
+        print("lines is empty")
         return None
     first_line = lines[0]
 
