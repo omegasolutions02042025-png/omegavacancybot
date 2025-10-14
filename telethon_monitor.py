@@ -411,7 +411,7 @@ from telethon import TelegramClient, events
 async def on_edit(message):
     # Твоя логика реакции на правку
     print(f"✏️ Edited: chat={message.chat_id}, msg_id={message.id}")
-    print(message.text or "")
+    
 
 async def register_simple_edit_listener(client: TelegramClient, channel):
     @client.on(events.MessageEdited(chats=[channel]))
