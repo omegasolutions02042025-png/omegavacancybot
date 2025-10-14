@@ -225,10 +225,10 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
             # --- варианты для РФ ---
             if rf_loc:
                 rate_rf_contract = await search_and_extract_values(
-                    'M', rate, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1ApDxmH0BL4rbuKTni6cj-D_d0vJ5KG45sEQjOyXM3PY'
+                    'M', rate, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                 )
                 rate_rf_ip = await search_and_extract_values(
-                    'N', rate, ['B', 'L'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1ApDxmH0BL4rbuKTni6cj-D_d0vJ5KG45sEQjOyXM3PY'
+                    'N', rate, ['B', 'L'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                 )
 
             # --- варианты для РБ ---
