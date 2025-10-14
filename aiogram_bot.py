@@ -225,10 +225,10 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
             # --- варианты для РФ ---
             if rf_loc:
                 rate_rf_contract = await search_and_extract_values(
-                    'M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ'
+                    'M', rate, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1ApDxmH0BL4rbuKTni6cj-D_d0vJ5KG45sEQjOyXM3PY'
                 )
                 rate_rf_ip = await search_and_extract_values(
-                    'N', rate, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ'
+                    'N', rate, ['B', 'L'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1ApDxmH0BL4rbuKTni6cj-D_d0vJ5KG45sEQjOyXM3PY'
                 )
 
             # --- варианты для РБ ---
@@ -320,16 +320,16 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
 
             # --- финальное объединение ---
             text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n{salary_text}\n{text}"
-
-    # очистка идентификатора
-            clean_text = remove_vacancy_id(text_cleaned)
+            
+        formatted_text = await format_vacancy_gemini(text_cleaned, vac_id)
+        clean_text = remove_vacancy_id(formatted_text)
 
 
             
             
                 
         try:
-            await message.answer(text_cleaned, parse_mode='HTML')
+            await message.answer(formatted_text, parse_mode='HTML')
         except Exception as e:
             await message.answer(f'Ошибка при отправке вакансии {e}')
             return
