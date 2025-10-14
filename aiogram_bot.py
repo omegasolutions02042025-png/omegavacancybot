@@ -228,7 +228,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                     'K', rate, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                 )
                 rate_rf_ip = await search_and_extract_values(
-                    'K', rate, ['B', 'L'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
+                    'K', rate, ['B', 'J'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                 )
                 print(rate_rf_contract, rate_rf_ip)
             # --- варианты для РБ ---
