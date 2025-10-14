@@ -61,7 +61,20 @@ async def send_email_gmail(
 
 
 
+import asyncio
 
+async def main():
+    await send_email_gmail(
+        sender_email='omegasolutions02042025@gmail.com',
+        app_password='beoc taay ilbx vwvi',  # обязательно App Password
+        recipient_email='artursimoncik@gmail.com',
+        subject='Тестовое письмо',
+        body='Привет! Это HTML-письмо.',
+        html=False,
+        attachments=['resume.pdf']  # можно передавать список файлов
+    )
+
+asyncio.run(main())
 
 
 import imaplib
@@ -119,3 +132,5 @@ def fetch_last_emails(
 
     mail.logout()
     return emails
+
+

@@ -9,6 +9,7 @@ from db import *
 from funcs import get_vacancy_title, extract_vacancy_id
 from datetime import datetime, timezone, timedelta
 from telethon import TelegramClient
+from telethon.tl.functions.channels import GetForumTopicsRequest
 load_dotenv()
 
 API_ID = os.getenv("API_ID")
@@ -76,7 +77,7 @@ from datetime import datetime, timezone
 
 
 
-async def monitor_and_cleanup(telethon_client, AsyncSessionLocal, bot: Bot):
+async def monitor_and_cleanup(telethon_client: TelegramClient, AsyncSessionLocal, bot: Bot):
     while True:
         async with AsyncSessionLocal() as session:
             mappings = await get_all_message_mappings(session)
@@ -256,26 +257,25 @@ async def check_and_delete_duplicates(teleton_client: TelegramClient, channel_id
         await asyncio.sleep(60)
 
 
-async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id, bot: Bot):
-    """
-    src_chat_id — канал-источник, откуда берём айди
-    dst_chat_id — канал, где ищем зачёркнутый айди
-    """
-    
-    stop_pattern = re.compile(
-                    r'(🛑.*(?:СТОП|STOP).*🛑|\bстоп\b|\bstop\b)',
-                    re.IGNORECASE
-                )
-    
-    
-    message_list = []
-    while True:
-        async for msg in telethon_client.iter_messages(src_chat_id, limit=None):
-                if not msg.text:
-                    continue
-                
-                message_list.append(msg)
-                
+async def cleanup_by_striked_id(telethon_client: TelegramClient, src_chat_id, dst_chat_id, bot: Bot):
+        """
+        src_chat_id — канал-источник, откуда берём айди
+        dst_chat_id — канал, где ищем зачёркнутый айди
+        """
+        
+        stop_pattern = re.compile(
+                        r'(🛑.*(?:СТОП|STOP).*🛑|\bстоп\b|\bstop\b)',
+                        re.IGNORECASE
+                    )
+        
+        
+        
+        message_list = await collect_excluding_thread(telethon_client, src_chat_id, 1)
+        red_lab_mes_list = []
+        
+        async for msg in telethon_client.iter_messages(dst_chat_id, limit=None):
+            red_lab_mes_list.append(msg)
+                    
         for msg in message_list:
                 try:
                     
@@ -284,7 +284,7 @@ async def cleanup_by_striked_id(telethon_client, src_chat_id, dst_chat_id, bot: 
                     if not vacancy_id:
                         continue
                     
-                    async for dst_msg in telethon_client.iter_messages(dst_chat_id, limit=None):
+                    for dst_msg in red_lab_mes_list:
                         
                         if dst_msg.text and vacancy_id in dst_msg.text:
                             
@@ -365,3 +365,39 @@ async def check_old_messages_and_mark(teleton_client: TelegramClient, channel_id
                 await teleton_client.delete_messages(channel_id, message.id)
                 
         await asyncio.sleep(3600)
+        
+        
+        
+        
+        
+async def get_top_message_for_thread(client, chat_id: int, thread_id: int) -> int | None:
+    offset_topic = 0
+    while True:
+        r = await client(GetForumTopicsRequest(
+            channel=chat_id, offset_date=None, offset_id=0, offset_topic=offset_topic,
+            limit=100, q=''
+        ))
+        if not r.topics:
+            return None
+        for t in r.topics:
+            if t.id == thread_id:          # <-- это «маленький» номер темы, который ты знаешь
+                return t.top_message       # <-- вот это и нужно для фильтра
+        offset_topic = r.topics[-1].id + 1
+
+
+def get_reply_top_id(msg) -> int | None:
+    r = getattr(msg, 'reply_to', None)
+    return getattr(r, 'reply_to_top_id', None) or getattr(r, 'top_msg_id', None)
+
+
+
+async def collect_excluding_thread(client, chat_id: int, exclude_thread_id: int, min_id: int = 0):
+    exclude_top = await get_top_message_for_thread(client, chat_id, exclude_thread_id)
+    res = []
+    async for msg in client.iter_messages(chat_id, min_id=min_id):
+        if not msg or not msg.text:
+            continue
+        if exclude_top and get_reply_top_id(msg) == exclude_top:
+            continue  # пропускаем тему
+        res.append(msg)
+    return res

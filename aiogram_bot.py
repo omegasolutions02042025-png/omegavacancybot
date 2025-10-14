@@ -40,8 +40,8 @@ class ScanVacRekr(StatesGroup):
     waiting_for_vac = State()
 
 
-class GenerateMail(StatesGroup):
-    waiting_for_mail = State()
+class WaitForNewResume(StatesGroup):
+    waiting_for_new_resume = State()
 
 
 TOPIC_MAP = {
@@ -611,7 +611,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             
             
 
-    await state.set_state(GenerateMail.waiting_for_mail)
+    await state.set_state()
     
     shutil.rmtree(user_dir)
     
@@ -818,7 +818,15 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
            await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
     
     elif source == "e":
-        success = await send_email_gmail(contact, mail_text)
+        success = await send_email_gmail(
+            sender_email='omegasolutions02042025@gmail.com',
+            app_password='beoc taay ilbx vwvi', 
+            recipient_email=contact,
+            subject=mail_text,
+            body=mail_text,
+            html=False,
+            attachments=[]
+        )
         if success:
            await callback.message.edit_text("✅ Сообщение отправлено пользователю")
         else:
