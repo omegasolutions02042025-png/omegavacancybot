@@ -408,15 +408,32 @@ async def collect_excluding_thread(client, chat_id: int, exclude_thread_id: int,
 
 
 from telethon import TelegramClient, events
-async def on_edit(message):
-    # Твоя логика реакции на правку
-    print(f"✏️ Edited: chat={message.chat_id}, msg_id={message.id}")
+async def on_edit(message, bot: Bot, telethon_client: TelegramClient, src_chat_id: int):
+    
+    stop_pattern = re.compile(
+                        r'(🛑.*(?:СТОП|STOP).*🛑|\bстоп\b|\bstop\b)',
+                        re.IGNORECASE
+                    )
+    
+    
+    text = message.text
+    vacancy_id = extract_vacancy_id(text)
+    if not vacancy_id:
+        return
+    if has_strikethrough_id(message, vacancy_id):
+        await bot.send_message(ADMIN_ID, f"🗑 Найден зачеркнутый ID {vacancy_id} в {src_chat_id} → удаляем сообщение {message.id} из {src_chat_id}, функция cleanup_by_striked_id")
+        title = get_vacancy_title(message.text)
+        asyncio.create_task(mark_as_deleted(telethon_client, message.id, src_chat_id, vacancy_id, title, bot))
+    elif stop_pattern.search(message.text):
+        await bot.send_message(ADMIN_ID, f"🛑 Найдено слово 'стоп' в {vacancy_id} {src_chat_id} → удаляем сообщение {message.id} из {src_chat_id}, функция cleanup_by_striked_id")
+        title = get_vacancy_title(message.text)
+        asyncio.create_task(mark_as_deleted(telethon_client, message.id, src_chat_id, vacancy_id, title, bot))
     
 
-async def register_simple_edit_listener(client: TelegramClient, channel):
+async def register_simple_edit_listener(client: TelegramClient, channel, bot: Bot):
     @client.on(events.MessageEdited(chats=[channel]))
     async def _on_edit(event: events.MessageEdited.Event):
         m = event.message
         if not m:
             return
-        await on_edit(m)
+        await on_edit(m, bot, client, channel)
