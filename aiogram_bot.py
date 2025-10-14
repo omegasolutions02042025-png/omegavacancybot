@@ -797,10 +797,10 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
     
     if source == "t":
         print(contact)
-        #success = await send_message_by_username(contact, mail_text)
-        #if success:
-        #    await callback.message.edit_text("✅ Сообщение отправлено пользователю")
-        #else:
-        #    await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
+        success = await send_message_by_username(contact, mail_text)
+        if success:
+           await callback.message.edit_text("✅ Сообщение отправлено пользователю")
+        else:
+           await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
     
     
