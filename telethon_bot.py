@@ -340,6 +340,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                 return
             vac_id = text_gpt.get('vacancy_id')
             rate = text_gpt.get("rate")
+            print(f'rate: {rate} в {vac_id}')
             vacancy = text_gpt.get('vacancy_title')
             if vacancy is None or vacancy == 'None':
                 await bot.send_message(ADMIN_ID, f'❌ Нет вакансии в топике {src_topic_id} в чате {event.chat_id}')
@@ -365,7 +366,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                     rf_loc = True
                 elif loc == 'РБ':
                     rb_loc = True
-            
+            print(f'location: {location} в {vac_id}')
             # Исправляем логику обработки ставки
             if rate is None or rate == 'None' or int(rate) == 0:
                 text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}\n\n{message_date}"
