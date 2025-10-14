@@ -1,22 +1,14 @@
 
-import asyncio
 from datetime import datetime, timedelta, timezone
-import json
-import math
 import re
-import random
 from telethon import TelegramClient, events
-from telethon.tl.types import Channel, Chat, User
-from db import get_all_channels, add_message_mapping, remove_message_mapping, get_all_message_mappings, get_next_sequence_number
-from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
-from typing import Tuple, Optional
-from funcs import is_russia_only_citizenship, oplata_filter, check_project_duration, send_mess_to_group, get_message_datetime, extract_vacancy_id_and_text, remove_vacancy_id
-from telethon.errors import FloodWaitError
+from db import add_message_mapping
+from googlesheets import  search_and_extract_values
+from funcs import check_project_duration, send_mess_to_group, get_message_datetime, remove_vacancy_id
 from aiogram import Bot
-import teleton_client
+
 import os
 from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini
-from kb import scan_vac_kb
 from telethon_monitor import has_strikethrough
 
 VACANCY_ID_REGEX = re.compile(

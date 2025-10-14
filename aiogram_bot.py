@@ -7,7 +7,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart, Command
 from kb import *
 from telethon_bot import *
-from funcs import update_channels_and_restart_handler
 import os
 from send_email import send_email_gmail
 from dotenv import load_dotenv
