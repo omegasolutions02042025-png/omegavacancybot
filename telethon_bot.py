@@ -97,8 +97,12 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                     short_project = text_gpt.get("short_project")
                     long_payment = text_gpt.get("long_payment")
                     message_date = f'Дата публикации: {get_message_datetime(msg)}'
-                    rf_loc = text_gpt.get("rf_loc")
-                    rb_loc = text_gpt.get("rb_loc")
+                    location = text_gpt.get("location")
+                    for loc in location:
+                        if loc == 'РФ':
+                            rf_loc = True
+                        elif loc == 'РБ':
+                            rb_loc = True
                     
                     print(f'rate: {rate} в {vac_id}')
                     print(f'rf_loc: {rf_loc} в {vac_id}')
