@@ -219,4 +219,7 @@ def back_to_mail_kand_kb():
     builder.button(text='Назад', callback_data='back_to_mail_kand')
     return builder.as_markup()
 
-
+def viber_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Отправить вiber', callback_data='viber', url = 'viber://chat?number=%2B4957777777')
+    return builder.as_markup()

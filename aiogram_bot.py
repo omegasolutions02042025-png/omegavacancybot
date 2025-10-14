@@ -837,7 +837,13 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
         else:
            await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
     
-    
+    elif source == "p":
+        try:
+            await bot.send_contact(chat_id=callback.message.chat.id, phone_number=PHONE, first_name="Omega Solutions")
+            await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=create_contacts_kb(contacts, verdict))
+        except Exception as e:
+            await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
+            
 from aiogram.utils.markdown import hcode    
         
 PHONE = "+79990000000"      
@@ -851,5 +857,8 @@ async def send_phone(m: Message, bot: Bot):
         "или скопируйте из строки:\n"
         f"{hcode(PHONE)}"
     )
-    await m.answer(text, parse_mode="HTML")
+    await m.answer(text, parse_mode="HTML", reply_markup=viber_kb())
     await bot.send_contact(chat_id=m.chat.id, phone_number=PHONE, first_name="Omega Solutions")
+    
+    
+    
