@@ -230,7 +230,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                 rate_rf_ip = await search_and_extract_values(
                     'N', rate, ['B', 'L'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                 )
-
+                print(rate_rf_contract, rate_rf_ip)
             # --- варианты для РБ ---
             if rb_loc:
                 rate_rb_contract = await search_and_extract_values(
