@@ -257,54 +257,6 @@ async def check_and_delete_duplicates(teleton_client: TelegramClient, channel_id
         await asyncio.sleep(60)
 
 
-async def cleanup_by_striked_id(telethon_client: TelegramClient, src_chat_id, dst_chat_id, bot: Bot):
-        """
-        src_chat_id — канал-источник, откуда берём айди
-        dst_chat_id — канал, где ищем зачёркнутый айди
-        """
-        
-        stop_pattern = re.compile(
-                        r'(🛑.*(?:СТОП|STOP).*🛑|\bстоп\b|\bstop\b)',
-                        re.IGNORECASE
-                    )
-        
-        
-        
-        message_list = await collect_excluding_thread(telethon_client, src_chat_id, 1)
-        red_lab_mes_list = []
-        
-        async for msg in telethon_client.iter_messages(dst_chat_id, limit=None):
-            red_lab_mes_list.append(msg)
-                    
-        for msg in message_list:
-                try:
-                    
-                    text = msg.text
-                    vacancy_id = extract_vacancy_id(text)
-                    if not vacancy_id:
-                        continue
-                    
-                    for dst_msg in red_lab_mes_list:
-                        
-                        if dst_msg.text and vacancy_id in dst_msg.text:
-                            
-                            if has_strikethrough_id(dst_msg, vacancy_id):
-                                await bot.send_message(ADMIN_ID, f"🗑 Найден зачеркнутый ID {vacancy_id} в {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
-                                title = get_vacancy_title(dst_msg.text)
-                                asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
-                                break  # нашли и удалили → идём к следующему
-                            elif stop_pattern.search(dst_msg.text):
-                                await bot.send_message(ADMIN_ID, f"🛑 Найдено слово 'стоп' в {vacancy_id} {dst_chat_id} → удаляем сообщение {msg.id} из {src_chat_id}, функция cleanup_by_striked_id")
-                                title = get_vacancy_title(dst_msg.text)
-                                asyncio.create_task(mark_as_deleted(telethon_client, msg.id, src_chat_id, vacancy_id, title, bot))
-                                break  # нашли и удалили → идём к следующему
-                            
-                except Exception as e:
-                        await bot.send_message(ADMIN_ID, f"Ошибка обработки сообщения {vacancy_id} {msg.id}: {e}")
-                        continue
-           
-        await asyncio.sleep(30)
-
 
 async def mark_as_deleted(client, msg_id, chat_id, vacancy_id, name_vac, bot: Bot):
     try:
@@ -366,45 +318,6 @@ async def check_old_messages_and_mark(teleton_client: TelegramClient, channel_id
                 
         await asyncio.sleep(3600)
         
-        
-        
-        
-        
-async def get_top_message_for_thread(client, chat_id: int, thread_id: int) -> int | None:
-    offset_topic = 0
-    while True:
-        r = await client(GetForumTopicsRequest(
-            channel=chat_id, offset_date=None, offset_id=0, offset_topic=offset_topic,
-            limit=100, q=''
-        ))
-        if not r.topics:
-            return None
-        for t in r.topics:
-            if t.id == thread_id:          # <-- это «маленький» номер темы, который ты знаешь
-                return t.top_message       # <-- вот это и нужно для фильтра
-        offset_topic = r.topics[-1].id + 1
-
-
-def get_reply_top_id(msg) -> int | None:
-    r = getattr(msg, 'reply_to', None)
-    return getattr(r, 'reply_to_top_id', None) or getattr(r, 'top_msg_id', None)
-
-
-
-async def collect_excluding_thread(client, chat_id: int, exclude_thread_id: int, min_id: int = 0):
-    exclude_top = await get_top_message_for_thread(client, chat_id, exclude_thread_id)
-    res = []
-    async for msg in client.iter_messages(chat_id, min_id=min_id):
-        if not msg or not msg.text:
-            continue
-        if exclude_top and get_reply_top_id(msg) == exclude_top:
-            print(f"Пропускаем сообщение {msg.id} в {chat_id}, {exclude_top}")
-            continue
-        if 'вакансия неактивна' in msg.text:
-            print(f"Пропускаем сообщение {msg.id} в {chat_id}, {exclude_top}")
-            continue
-        res.append(msg)
-    return res
 
 
 from telethon import TelegramClient, events
