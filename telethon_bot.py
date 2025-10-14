@@ -100,6 +100,10 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                     rf_loc = text_gpt.get("rf_loc")
                     rb_loc = text_gpt.get("rb_loc")
                     
+                    print(f'rate: {rate} в {vac_id}')
+                    print(f'rf_loc: {rf_loc} в {vac_id}')
+                    print(f'rb_loc: {rb_loc} в {vac_id}')
+                    
                     if vacancy is None or vacancy == 'None':
                         await bot.send_message(ADMIN_ID, f'❌ Нет вакансии в GPT в сообщении {msg.id}')
                         continue
