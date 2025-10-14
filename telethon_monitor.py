@@ -220,7 +220,9 @@ async def check_and_delete_duplicates(teleton_client: TelegramClient, channel_id
     while True:
         try:
             for topic_id in target_topics:
-                
+                if topic_id == 1:
+                    print("topic_id == 1")
+                    continue
                 async for message in teleton_client.iter_messages(channel_id, reply_to=topic_id):
                     if not message.text:
                         continue
