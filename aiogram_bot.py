@@ -200,7 +200,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
             delay_payment_text = f"С отсрочкой платежа {delay_payment}после подписания акта:\n"
             no_rate_delay = f'Условия оплаты: {delay_payment}'
         else:
-            delay_payment_text = 'С отсрочкой платежа "Срок уточняется" после подписания акта:\n'
+            delay_payment_text = 'С отсрочкой платежа "35 рабочих дней" после подписания акта:\n'
             no_rate_delay = 'Условия оплаты: Срок уточняется'
         
         
@@ -275,13 +275,13 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                 if acts:
                     acts_text = "Актирование: поквартальное\n"
                     state_contract_text = (
-                        f"<s>Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
+                        f"<s>Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
                         f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)</s>"
                     )
                 else:
                     acts_text = "Актирование: ежемесячное\n"
                     state_contract_text = (
-                        f"Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
+                        f"Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
                         f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)"
                     )
 
@@ -290,9 +290,9 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                     state_contract_text = f"<s>{state_contract_text}</s>"
 
                 if only_fulltime:
-                    ip_text = f"<s>ИП/Самозанятый: {rate_ip} RUB</s>"
+                    ip_text = f"<s>Вариант 2. Выплата ИП/Самозанятый: {rate_ip} RUB</s>"
                 else:
-                    ip_text = f"ИП/Самозанятый: {rate_ip} RUB"
+                    ip_text = f"Вариант 2. Выплата ИП/Самозанятый: {rate_ip} RUB"
 
                 return (
                     f"{flag_text}"
@@ -772,6 +772,7 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
     source = callback.data.split(":")[1]
     contact = callback.data.split(":")[2]
     verdict = callback.data.split(":")[3]
+    data = None
     if verdict == "PP":
         data = await get_final_resume(callback.message.message_id)
     elif verdict == "CP":
