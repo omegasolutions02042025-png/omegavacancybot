@@ -417,6 +417,7 @@ async def on_edit(message, bot: Bot, telethon_client: TelegramClient, src_chat_i
     
     
     text = message.text
+    print(text[0:10])
     vacancy_id = extract_vacancy_id(text)
     print(vacancy_id)
     if not vacancy_id:
