@@ -399,6 +399,9 @@ async def collect_excluding_thread(client, chat_id: int, exclude_thread_id: int,
             continue
         if exclude_top and get_reply_top_id(msg) == exclude_top:
             print(f"Пропускаем сообщение {msg.id} в {chat_id}, {exclude_top}")
-            continue  # пропускаем тему
+            continue
+        if 'вакансия неактивна' in msg.text:
+            print(f"Пропускаем сообщение {msg.id} в {chat_id}, {exclude_top}")
+            continue
         res.append(msg)
     return res
