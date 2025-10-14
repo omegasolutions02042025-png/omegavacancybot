@@ -168,7 +168,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
 
                             if not contract_data or not ip_data:
                                 return (
-                                    f"{flag_text}\n💰 Месячная ставка для юр лица {region}: "
+                                    f"{flag_text}💰 Месячная ставка для юр лица {region}: "
                                     f"смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n"
                                 )
 
@@ -207,7 +207,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                                 ip_text = f"ИП/Самозанятый: {rate_ip} RUB"
 
                             return (
-                                f"{flag_text}\n"
+                                f"{flag_text}"
                                 f"💰 Месячная ставка для юр лица {region}:\n"
                                 f"{state_contract_text}\n"
                                 f"{delay_payment_text}{acts_text}{gross} RUB/час (Gross)\n"
@@ -419,7 +419,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
 
                     if not contract_data or not ip_data:
                         return (
-                            f"{flag_text}\n💰 Месячная ставка для юр лица {region}: "
+                            f"{flag_text}💰 Месячная ставка для юр лица {region}: "
                             f"смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n"
                         )
 
@@ -458,8 +458,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                         ip_text = f"ИП/Самозанятый: {rate_ip} RUB"
 
                     return (
-                        f"{flag_text}\n"
-                        f"💰 Месячная ставка для юр лица {region}:\n"
+                        f"{flag_text}💰 Месячная ставка для юр лица {region}:\n"
                         f"{state_contract_text}\n"
                         f"{delay_payment_text}{acts_text}{gross} RUB/час (Gross)\n"
                         f"{ip_text}\n"

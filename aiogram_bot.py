@@ -252,7 +252,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
 
                 if not contract_data or not ip_data:
                     return (
-                        f"{flag_text}\n💰 Месячная ставка для юр лица {region}: "
+                        f"{flag_text}💰 Месячная ставка для юр лица {region}: "
                         f"смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n"
                     )
 
@@ -291,7 +291,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                     ip_text = f"ИП/Самозанятый: {rate_ip} RUB"
 
                 return (
-                    f"{flag_text}\n"
+                    f"{flag_text}"
                     f"💰 Месячная ставка для юр лица {region}:\n"
                     f"{state_contract_text}\n"
                     f"{delay_payment_text}{acts_text}{gross} RUB/час (Gross)\n"
