@@ -6,6 +6,11 @@ import email
 from email import policy
 from typing import List, Dict, Optional
 
+from typing import Optional, List
+from email.message import EmailMessage
+import mimetypes
+import aiosmtplib
+
 async def send_email_gmail(
     sender_email: str,
     app_password: str,
@@ -14,7 +19,7 @@ async def send_email_gmail(
     body: str,
     html: bool = False,
     attachments: Optional[List[str]] = None
-):
+) -> bool:
     msg = EmailMessage()
     msg['From'] = sender_email
     msg['To'] = recipient_email
@@ -25,22 +30,23 @@ async def send_email_gmail(
     else:
         msg.set_content(body)
 
-    # Добавляем вложения
+    # вложения с корректным MIME
     if attachments:
         for file_path in attachments:
+            ctype, encoding = mimetypes.guess_type(file_path)
+            if ctype is None or encoding is not None:
+                ctype = 'application/octet-stream'
+            maintype, subtype = ctype.split('/', 1)
             with open(file_path, 'rb') as f:
-                file_data = f.read()
-                file_name = file_path.split('/')[-1]
                 msg.add_attachment(
-                    file_data,
-                    maintype='application',
-                    subtype='octet-stream',
-                    filename=file_name
+                    f.read(),
+                    maintype=maintype,
+                    subtype=subtype,
+                    filename=file_path.split('/')[-1],
                 )
 
-    # Отправка письма через Gmail
     try:
-        await aiosmtplib.send(
+        resp = await aiosmtplib.send(
             msg,
             hostname='smtp.gmail.com',
             port=465,
@@ -48,9 +54,11 @@ async def send_email_gmail(
             password=app_password,
             use_tls=True
         )
-        print(f"✅ Письмо отправлено на {recipient_email}")
-    except Exception as e:
-        print(f"❌ Ошибка при отправке письма: {e}")
+        code = getattr(resp, "code", None)
+        return isinstance(code, int) and 200 <= code < 300  # True при 2xx (обычно 250)
+    except Exception:
+        return False
+
 
 
 import asyncio

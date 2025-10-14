@@ -167,13 +167,8 @@ def send_mail_to_candidate_kb(verdict: str):
     builder.button(text='Отправить письмо кандидату', callback_data=f'send_mail_to_candidate:{callback}')
     return builder.as_markup()
 
-def send_mail_or_generate_client_mail_kb(verdict: str):
-    if verdict == 'Полностью подходит':
-        callback = 'PP'
-    elif verdict == 'Частично подходит (нужны уточнения)':
-        callback = 'CP'
-    elif verdict == 'Не подходит':
-        callback = 'NP'
+def send_mail_or_generate_client_mail_kb():
+    callback = 'PP'
     builder = InlineKeyboardBuilder()
     builder.button(text='Отправить письмо кандидату', callback_data=f'send_mail_to_candidate:{callback}')
     builder.button(text='Сгенерировать письмо для клиента', callback_data='generate_klient_mail')
@@ -216,3 +211,12 @@ def create_contacts_kb(contacts: dict,verdict : str):
 
     builder.adjust(2)
     return builder.as_markup()
+
+
+
+def back_to_mail_kand_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Назад', callback_data='back_to_mail_kand')
+    return builder.as_markup()
+
+

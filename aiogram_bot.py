@@ -9,6 +9,7 @@ from kb import *
 from telethon_bot import *
 from funcs import update_channels_and_restart_handler
 import os
+from send_email import send_email_gmail
 from dotenv import load_dotenv
 from funcs import *
 from gpt_gimini import generate_mail_for_candidate_utochnenie, process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist, generate_mail_for_candidate_otkaz, generate_cover_letter_for_client
@@ -669,7 +670,7 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     if verdict == "Полностью подходит":
         await bot.edit_message_text(text = f"📨 Создано письмо для кандидата {candidate_name} !", chat_id=callback.message.chat.id, message_id=message_id)
         await asyncio.sleep(3)
-        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text, reply_markup=send_mail_or_generate_client_mail_kb(verdict))
+        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text, reply_markup=send_mail_or_generate_client_mail_kb())
         await add_final_resume(message_id, mail_text, candidate)
         
         
@@ -684,33 +685,47 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     
 @bot_router.callback_query(F.data == "generate_klient_mail")
 async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    await callback.answer()
-    await callback.message.edit_text("📨 Создаю письмо для клиента...")
+    
 
     message_id = callback.message.message_id
     data = await get_final_resume(message_id)
     if not data:
-        await callback.message.answer("❌ Не удалось найти данные для генерации письма клиента.")
+        await callback.message.edit_text("❌ Не удалось найти данные для генерации письма клиента.")
         return
-
+    
     candidate = data.json_text
     if isinstance(candidate, str):
         candidate_json = json.loads(candidate)
     
     candidate_name = candidate_json.get("candidate").get("full_name")
-
+    await callback.answer()
+    await callback.message.edit_text(f"📨 Создаю письмо для клиента по кандидату {candidate_name}...")
     try:
         
         mail_text = await generate_cover_letter_for_client(candidate_json)
     except Exception as e:
-        await callback.message.answer(f"⚠️ Ошибка при генерации письма клиента: {e}")
+        await callback.message.edit_text(f"⚠️ Ошибка при генерации письма клиента: {e}")
         return
 
     await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=f"✅ Письмо для клиента по кандидату {candidate_name} создано и отправлено в группу!", reply_markup=None)
     await asyncio.sleep(3)
-    await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=f"Вот текст письма:\n{mail_text}", reply_markup=None)
+    await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=f"Вот текст письма:\n{mail_text}", reply_markup=back_to_mail_kand_kb())
     await bot.send_message(CLIENT_CHANNEL, mail_text)
 
+
+
+@bot_router.callback_query(F.data == "back_to_mail_kand")
+async def back_to_mail_kand_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await callback.answer()
+    message_id = callback.message.message_id
+    data = await get_final_resume(message_id)
+    if not data:
+        await callback.message.edit_text("❌ Не удалось найти данные для генерации письма клиента.")
+        return
+    
+    mail = data.message_text
+    
+    await callback.message.edit_text(mail, reply_markup=send_mail_to_candidate_kb('PP'))
 
 
 
@@ -751,7 +766,7 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
     elif verdict == "NP":
         data = await get_otkolenie_resume(message_id)
     if not data:
-        await callback.message.answer("❌ Нет данных для отправки письма кандидату.")
+        await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
         return
     candidate = data.json_text
     if isinstance(candidate, str):
@@ -779,7 +794,7 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
     elif verdict == "NP":
         data = await get_otkolenie_resume(callback.message.message_id)
     if not data:
-        await callback.message.answer("❌ Нет данных для отправки письма кандидату.")
+        await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
         return
     
     
@@ -792,7 +807,7 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
     if not contacts:
         await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
         return
-    await callback.message.edit_text(f"source: {source}\ncontact: {contact}\nverdict: {verdict}")
+    
     
     if source == "t":
         print(contact)
@@ -802,4 +817,10 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
         else:
            await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
     
-    
+    elif source == "e":
+        success = await send_email_gmail(contact, mail_text)
+        if success:
+           await callback.message.edit_text("✅ Сообщение отправлено пользователю")
+        else:
+           await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
+        
