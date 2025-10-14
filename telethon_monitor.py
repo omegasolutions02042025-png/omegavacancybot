@@ -405,3 +405,18 @@ async def collect_excluding_thread(client, chat_id: int, exclude_thread_id: int,
             continue
         res.append(msg)
     return res
+
+
+from telethon import TelegramClient, events
+async def on_edit(message):
+    # Твоя логика реакции на правку
+    print(f"✏️ Edited: chat={message.chat_id}, msg_id={message.id}")
+    print(message.text or "")
+
+async def register_simple_edit_listener(client: TelegramClient, channel):
+    @client.on(events.MessageEdited(chats=[channel]))
+    async def _on_edit(event: events.MessageEdited.Event):
+        m = event.message
+        if not m:
+            return
+        await on_edit(m)

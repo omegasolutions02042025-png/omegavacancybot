@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from telethon_monitor import cleanup_by_striked_id, check_and_delete_duplicates, monitor_and_cleanup, check_old_messages_and_mark
 from aiogram_bot import bot_router, TOPIC_MAP
 from googlesheets import update_currency_sheet
-
+from telethon_monitor import register_simple_edit_listener
 
 load_dotenv()
 
@@ -34,6 +34,7 @@ async def main():
     
     await telethon_client.start(phone=PHONE_NUMBER)
     await register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal, bot)
+    await register_simple_edit_listener(telethon_client, -1002658129391)
    
     asyncio.create_task(monitor_and_cleanup(telethon_client, AsyncSessionLocal, bot))
     asyncio.create_task(check_and_delete_duplicates(telethon_client, -1002658129391, bot, TOPIC_MAP))
