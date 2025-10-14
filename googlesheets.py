@@ -75,7 +75,7 @@ async def find_rate_in_sheet_gspread(search_value_usd: int) -> Optional[str]:
 # ======================
 async def search_and_extract_values(
     search_column: str,
-    search_value: float,
+    search_value: int,
     extract_columns: List[str],
     worksheet_name: str = "Resume_Database",
     sheet_url: str = SHEET_URL,
