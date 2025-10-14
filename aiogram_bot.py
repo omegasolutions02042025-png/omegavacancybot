@@ -276,13 +276,13 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                     acts_text = "Актирование: поквартальное\n"
                     state_contract_text = (
                         f"<s>Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
-                        f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)</s>"
+                        f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)</s>\n"
                     )
                 else:
                     acts_text = "Актирование: ежемесячное\n"
                     state_contract_text = (
                         f"Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
-                        f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)"
+                        f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)\n"
                     )
 
                 # зачёркивания по условиям
@@ -290,9 +290,9 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                     state_contract_text = f"<s>{state_contract_text}</s>"
 
                 if only_fulltime:
-                    ip_text = f"<s>Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 165 раб. часов): {rate_ip} RUB</s>"
+                    ip_text = f"<s>Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 165 раб. часов): {rate_ip} RUB(Gross)</s>"
                 else:
-                    ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 165 раб. часов): {rate_ip} RUB'
+                    ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 165 раб. часов): {rate_ip} RUB(Gross)'
 
                 return (
                     f"{flag_text}"
