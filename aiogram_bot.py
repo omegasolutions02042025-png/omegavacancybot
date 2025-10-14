@@ -836,9 +836,11 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
            await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=create_contacts_kb(contacts, verdict))
         else:
            await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
+    
+    
+from aiogram.utils.markdown import hcode    
         
-        
-        
+PHONE = "+79990000000"      
         
 def call_kb(phone: str) -> InlineKeyboardMarkup:
     # На мобильных клиентах откроет звонилку
