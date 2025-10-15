@@ -10,6 +10,26 @@ from typing import Optional, List
 from email.message import EmailMessage
 import mimetypes
 import aiosmtplib
+import re
+from typing import Optional
+
+def sanitize_header(value: Optional[str]) -> str:
+    """
+    Убирает из строки все запрещённые символы для SMTP-заголовков:
+    — переводы строк (\r, \n)
+    — управляющие символы
+    — двойные пробелы в начале/конце
+    Возвращает безопасную строку.
+    """
+    if not value:
+        return ""
+    # Удаляем переносы строк и любые непечатаемые символы
+    value = re.sub(r'[\r\n\t]+', ' ', value)
+    # Обрезаем и нормализуем пробелы
+    value = re.sub(r'\s{2,}', ' ', value).strip()
+    return value
+
+
 
 async def send_email_gmail(
     sender_email: str,
@@ -21,14 +41,14 @@ async def send_email_gmail(
     attachments: Optional[List[str]] = None
 ) -> bool:
     msg = EmailMessage()
-    msg['From'] = sender_email
-    msg['To'] = recipient_email
-    msg['Subject'] = subject
+    msg['From'] = sanitize_header(sender_email)
+    msg['To'] = sanitize_header(recipient_email)
+    msg['Subject'] = sanitize_header(subject)
 
     if html:
-        msg.add_alternative(body, subtype='html')
+        msg.add_alternative(body or "(пустое письмо)", subtype='html')
     else:
-        msg.set_content(body)
+        msg.set_content(body or "(пустое письмо)")
 
     # вложения с корректным MIME
     if attachments:
@@ -54,11 +74,20 @@ async def send_email_gmail(
             password=app_password,
             use_tls=True
         )
-        code = getattr(resp, "code", None)
-        return isinstance(code, int) and 200 <= code < 300  # True при 2xx (обычно 250)
-    except Exception:
-        return False
 
+        print("Ответ SMTP:", resp)
+
+        # Проверяем разные типы ответов (tuple или объект)
+        if isinstance(resp, tuple):
+            return "OK" in resp[1].upper()
+        elif hasattr(resp, "code"):
+            return 200 <= getattr(resp, "code", 0) < 300
+        else:
+            return False
+
+    except Exception as e:
+        print(f"Ошибка при отправке письма: {e}")
+        return False
 
 
 

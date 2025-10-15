@@ -223,3 +223,16 @@ def viber_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text='Отправить вiber', callback_data='viber', url = 'viber://chat?number=%2B4957777777')
     return builder.as_markup()
+
+def add_another_resume_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Добавить еще резюме', callback_data='add_another_resume')
+    return builder.as_markup()
+
+
+def service_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Gmail', callback_data='gmail')
+    builder.button(text='Telegram', callback_data='telegram')
+    builder.adjust(1)
+    return builder.as_markup()

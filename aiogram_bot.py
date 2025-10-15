@@ -17,8 +17,8 @@ from telethon_bot import telethon_client
 from db import AsyncSessionLocal, add_otkonechenie_resume, add_utochnenie_resume, add_final_resume, get_otkolenie_resume, get_final_resume, get_utochnenie_resume 
 from scan_documents import process_file_and_gpt, create_finalists_table, create_mails
 import shutil
-import markdown
 from dotenv import load_dotenv
+import asyncio
 load_dotenv()
 
 CLIENT_CHANNEL = os.getenv('CLIENT_CHANNEL')
@@ -72,7 +72,7 @@ def escape_md(text):
 @bot_router.message(CommandStart())
 async def cmd_start(message: types.Message, command : CommandStart, state: FSMContext):
     
-        
+        await state.clear()
         payload = command.args
         
         if not payload:
@@ -486,9 +486,6 @@ async def save_document(message: types.Message, state: FSMContext, bot):
 
 
 
-@bot_router.message(F.document)
-async def doc_without_state(message: Message):
-    await message.answer("📄 Чтобы загрузить резюме, сначала выберите вакансию в боте.")
 
 
     
@@ -539,7 +536,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     if not result:
         await callback.message.answer("❌ Нет результатов для финального списка")
         return
-    await state.clear()
+    
     finalist_list = []
     utochnit_list = []
     otkaz_list = []
@@ -609,8 +606,9 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             await add_otkonechenie_resume(messs.message_id, sverka_text, candidate_json)
             
     await callback.message.answer("✅ Резюме сканированы!\n\nДобавить еще резюме?", reply_markup=add_another_resume_kb())      
-
-    await state.set_state()
+    await state.clear()
+    await state.update_data(vacancy=vac_text, callback=callback)
+    
     
     shutil.rmtree(user_dir)
     
@@ -803,6 +801,7 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
         candidate_json = json.loads(candidate)
     
     contacts = candidate_json.get("candidate", {}).get("contacts", {})
+    candidate_name = candidate_json.get("candidate", {}).get("full_name", {})
     if not contacts:
         await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
         return
@@ -812,18 +811,18 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
         print(contact)
         success = await send_message_by_username(contact, mail_text)
         if success:
-           await callback.message.edit_text("✅ Сообщение отправлено пользователю")
+           await callback.message.edit_text(f"✅ Сообщение отправлено пользователю {candidate_name}")
            await asyncio.sleep(3)
            contacts.pop('telegram')
-           await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=create_contacts_kb(contacts, verdict))
+           await callback.message.edit_text(f"Выберете куда отправить сообщение {candidate_name}", reply_markup=create_contacts_kb(contacts, verdict))
         else:
-           await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
+           await callback.message.edit_text(f"❌ Не удалось отправить сообщение пользователю {candidate_name}",)
     
     elif source == "e":
         success = await send_email_gmail(
             sender_email='omegasolutions02042025@gmail.com',
             app_password='beoc taay ilbx vwvi', 
-            recipient_email=contact,
+            recipient_email='artursimoncik@gmail.com',
             subject=mail_text,
             body=mail_text,
             html=False,
@@ -835,7 +834,7 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
            contacts.pop('email')
            await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=create_contacts_kb(contacts, verdict))
         else:
-           await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
+           await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю", reply_markup=create_contacts_kb(contacts, verdict))
     
     elif source == "p":
         try:
@@ -861,4 +860,26 @@ async def send_phone(m: Message, bot: Bot):
     await bot.send_contact(chat_id=m.chat.id, phone_number=PHONE, first_name="Omega Solutions")
     
     
-    
+
+
+@bot_router.callback_query(F.data == "add_another_resume")
+async def add_another_resume_bot(callback: CallbackQuery, state: FSMContext, ):
+    await callback.message.edit_text("Добавьте еще резюме")
+    await state.set_state(WaitForNewResume.waiting_for_new_resume)
+
+
+@bot_router.message(F.document, WaitForNewResume.waiting_for_new_resume)
+async def new_resume_after_scan(message: Message, bot: Bot, state: FSMContext):
+    await save_document(message, state, bot)
+    await state.set_state(WaitForNewResume.waiting_for_new_resume)
+
+@bot_router.message(F.document)
+async def document_without_state(message: Message, bot: Bot, state: FSMContext):
+    await message.answer("📄 Чтобы загрузить резюме, сначала выберите вакансию в боте.")
+
+
+
+
+@bot_router.message(Command("add_account"))
+async def add_account(message: Message, bot: Bot):
+    await message.answer("Выберете сервис для привзяки к боту для отправки сообщений", reply_markup=service_kb())
