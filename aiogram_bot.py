@@ -667,9 +667,9 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     candidate_name = candidate_json.get("candidate").get("full_name")
     verdict = candidate_json.get("summary").get("verdict")
     user_name = (
-            f"@{callback.message.chat.username}"
-            if callback.message.chat.username
-            else (callback.message.chat.first_name or "Не указано")
+            f"@{callback.from_user.username}"
+            if callback.from_user.username
+            else (callback.from_user.first_name or "Не указано")
         )
     mail = await create_mails(candidate_json, user_name)
     if mail:
@@ -821,14 +821,15 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
     
     if source == "t":
         print(contact)
-        user_name = callback.message.from_user.username
+        user_name = callback.from_user.username
         if not user_name:
             await callback.message.edit_text("Для продолжения создайте имя пользователя в Telegram и отправте еще раз код подтверждения")
             return
 
-
-        client = f'session/{user_name}'
+        print(user_name)
+        client = f'sessions/{user_name}'
         user = await get_tg_user(user_name)
+        
         api_id = user.api_id
         api_hash = user.api_hash
         client = TelegramClient(client, api_id, api_hash)  
@@ -847,7 +848,7 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
            await callback.message.edit_text(f"❌ Не удалось отправить сообщение пользователю {candidate_name}",reply_markup=create_contacts_kb(contacts, verdict))
     
     elif source == "e":
-        email_and_pass = await get_user_with_privyazka(callback.message.from_user.username)
+        email_and_pass = await get_user_with_privyazka(callback.from_user.username)
         if not email_and_pass:
             await callback.message.edit_text("❌ Не удалось найти данные для отправки письма кандидату.")
             return

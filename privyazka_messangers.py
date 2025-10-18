@@ -19,7 +19,7 @@ from telethon.errors.rpcerrorlist import (
     PhoneNumberUnoccupiedError,
     PhoneNumberInvalidError,
 )
-
+from aiogram.types import FSInputFile
 
 pr_router = Router()
 os.makedirs("sessions", exist_ok=True)
@@ -200,6 +200,8 @@ async def add_api_hash(message: Message, bot: Bot, state: FSMContext):
         return
     await client.send_code_request(number)
     await message.answer("Отправьте скриншот кода подтверждения")
+    photo = FSInputFile("image.png")
+    await message.answer_photo(photo=photo, caption='Вот пример фото')
     await state.update_data(client=client, api_hash = api_hash)
     await state.set_state(PrivyazkaTelegram.waiting_for_code)
 
