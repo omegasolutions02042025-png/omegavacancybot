@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from db import get_tg_user, get_email_user
 
 async def main_kb():
     builder = InlineKeyboardBuilder()
@@ -230,9 +231,39 @@ def add_another_resume_kb():
     return builder.as_markup()
 
 
-def service_kb():
+async def service_kb(user_name_tg):
     builder = InlineKeyboardBuilder()
-    builder.button(text='Gmail', callback_data='gmail')
-    builder.button(text='Telegram', callback_data='telegram')
+    tg_privyazka = await get_tg_user(user_name_tg)
+    email_privyazka = await get_email_user(user_name_tg)
+    if tg_privyazka:
+        builder.button(text='Удалить привязку Telegram', callback_data='remove_tg')
+    else:
+        builder.button(text='Привязать Telegram', callback_data='telegram')
+    if email_privyazka:
+        builder.button(text='Удалить привязку Gmail', callback_data='remove_email')
+    else:
+        builder.button(text='Привязать Gmail', callback_data='gmail')
     builder.adjust(1)
+    return builder.as_markup()
+
+def next_email_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Далее', callback_data='next_email')
+    return builder.as_markup()
+
+
+def next_telegram_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Далее', callback_data='next_telegram')
+    return builder.as_markup()
+
+def accept_delete_tg_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Подтвердить', callback_data='accept_delete_tg')
+    return builder.as_markup()
+
+
+def accept_delete_email_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Подтвердить', callback_data='accept_delete_email')
     return builder.as_markup()

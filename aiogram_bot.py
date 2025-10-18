@@ -11,10 +11,10 @@ import os
 from send_email import send_email_gmail
 from dotenv import load_dotenv
 from funcs import *
-from gpt_gimini import generate_mail_for_candidate_utochnenie, process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist, generate_mail_for_candidate_otkaz, generate_cover_letter_for_client
-from googlesheets import find_rate_in_sheet_gspread, search_and_extract_values
+from gpt_gimini import  process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist, generate_mail_for_candidate_otkaz, generate_cover_letter_for_client
+from googlesheets import search_and_extract_values
 from telethon_bot import telethon_client
-from db import AsyncSessionLocal, add_otkonechenie_resume, add_utochnenie_resume, add_final_resume, get_otkolenie_resume, get_final_resume, get_utochnenie_resume 
+from db import AsyncSessionLocal, add_otkonechenie_resume, add_utochnenie_resume, add_final_resume, get_otkolenie_resume, get_final_resume, get_utochnenie_resume , remove_save_resume, get_user_with_privyazka, get_tg_user
 from scan_documents import process_file_and_gpt, create_finalists_table, create_mails
 import shutil
 from dotenv import load_dotenv
@@ -41,6 +41,8 @@ class ScanVacRekr(StatesGroup):
 
 class WaitForNewResume(StatesGroup):
     waiting_for_new_resume = State()
+
+
 
 
 TOPIC_MAP = {
@@ -74,10 +76,18 @@ async def cmd_start(message: types.Message, command : CommandStart, state: FSMCo
     
         await state.clear()
         payload = command.args
-        
+        user_name = message.from_user.username
+        if not user_name:
+            await message.answer("Для работы с ботом необходимо создать имя пользователя")
+            return
+        user = await get_user_with_privyazka(user_name)
+        if  not user:
+            if message.from_user.id  not in [6264939461,429765805]:
+                await message.answer("Для продолжения необходимо привязать почту или телеграм к боту", reply_markup = await service_kb(user_name))
+                return
         if not payload:
-            if message.from_user.id not in [6264939461,429765805]:
-                await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе")
+            if message.from_user.id  not in [6264939461,429765805]:
+                await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе", reply_markup = await service_kb(user_name))
                 return
             await message.answer(text="Основное меню", reply_markup = await main_kb())
             return
@@ -583,11 +593,12 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
             sverka_text = finalist.get('sverka_text')
             candidate_json = finalist.get('candidate_json')
             salary = candidate_json.get('summary', {}).get('salary_expectations', 'не указано')
-
+            
             kandidate_verdict = f"ФИО: {candidate}\nЗарплатные ожидания: {salary}"
             
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
             await add_utochnenie_resume(messs.message_id, sverka_text, candidate_json)
+            await remove_save_resume(candidate)
             
 
     # 3️⃣ Отказы
@@ -604,6 +615,7 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb(verdict))
             await add_otkonechenie_resume(messs.message_id, sverka_text, candidate_json)
+            await remove_save_resume(candidate)
             
     await callback.message.answer("✅ Резюме сканированы!\n\nДобавить еще резюме?", reply_markup=add_another_resume_kb())      
     await state.clear()
@@ -809,20 +821,40 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
     
     if source == "t":
         print(contact)
-        success = await send_message_by_username(contact, mail_text)
+        user_name = callback.message.from_user.username
+        if not user_name:
+            await callback.message.edit_text("Для продолжения создайте имя пользователя в Telegram и отправте еще раз код подтверждения")
+            return
+
+
+        client = f'session/{user_name}'
+        user = await get_tg_user(user_name)
+        api_id = user.api_id
+        api_hash = user.api_hash
+        client = TelegramClient(client, api_id, api_hash)  
+        await client.connect()
+        if not await client.is_user_authorized():
+            await callback.message.edit_text("❌ Не удалось авторизоваться в Telegram",reply_markup=create_contacts_kb(contacts, verdict))
+            return
+        success = await send_message_by_username(contact, mail_text, client)
         if success:
            await callback.message.edit_text(f"✅ Сообщение отправлено пользователю {candidate_name}")
            await asyncio.sleep(3)
            contacts.pop('telegram')
+           await client.disconnect()
            await callback.message.edit_text(f"Выберете куда отправить сообщение {candidate_name}", reply_markup=create_contacts_kb(contacts, verdict))
         else:
-           await callback.message.edit_text(f"❌ Не удалось отправить сообщение пользователю {candidate_name}",)
+           await callback.message.edit_text(f"❌ Не удалось отправить сообщение пользователю {candidate_name}",reply_markup=create_contacts_kb(contacts, verdict))
     
     elif source == "e":
+        email_and_pass = await get_user_with_privyazka(callback.message.from_user.username)
+        if not email_and_pass:
+            await callback.message.edit_text("❌ Не удалось найти данные для отправки письма кандидату.")
+            return
         success = await send_email_gmail(
-            sender_email='omegasolutions02042025@gmail.com',
-            app_password='beoc taay ilbx vwvi', 
-            recipient_email='artursimoncik@gmail.com',
+            sender_email=email_and_pass.user_email,
+            app_password=email_and_pass.email_password, 
+            recipient_email=contact,
             subject=mail_text,
             body=mail_text,
             html=False,
@@ -838,10 +870,10 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
     
     elif source == "p":
         try:
-            await bot.send_contact(chat_id=callback.message.chat.id, phone_number=PHONE, first_name="Omega Solutions")
+            await bot.send_contact(chat_id=callback.message.chat.id, phone_number=contact, first_name=candidate_name)
             await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=create_contacts_kb(contacts, verdict))
         except Exception as e:
-            await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю")
+            await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю", reply_markup=create_contacts_kb(contacts, verdict))
             
 from aiogram.utils.markdown import hcode    
         
@@ -880,6 +912,3 @@ async def document_without_state(message: Message, bot: Bot, state: FSMContext):
 
 
 
-@bot_router.message(Command("add_account"))
-async def add_account(message: Message, bot: Bot):
-    await message.answer("Выберете сервис для привзяки к боту для отправки сообщений", reply_markup=service_kb())

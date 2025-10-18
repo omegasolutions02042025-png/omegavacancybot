@@ -402,4 +402,3 @@ text = '''
 
 Контакт для вопросов: Дмитрий @Dimitryver!!!!
 '''    
-print(extract_vacancy_id(text))

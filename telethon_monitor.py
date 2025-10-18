@@ -297,7 +297,7 @@ async def check_old_messages_and_mark(teleton_client: TelegramClient, channel_id
     """
     while True:
         now = datetime.now(timezone.utc)
-        max_age = timedelta(days=21)
+        max_age = timedelta(days=14)
 
         async for message in teleton_client.iter_messages(channel_id):
             if not message.text:  # игнорируем медиа/системные

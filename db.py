@@ -1,7 +1,7 @@
 import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Integer, String, select, Column, BigInteger
+from sqlalchemy import Integer, String, select, Column, BigInteger, update 
 from datetime import datetime, timedelta
 import asyncio
 from sqlalchemy import JSON
@@ -91,6 +91,33 @@ class LastSequenceNumber(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     last_number = Column(Integer, nullable=False)
+
+
+class PrivyazanieEmail(Base):
+    __tablename__ = "privyazanie_email"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_name_tg = Column(String, nullable=False)
+    user_email = Column(String, nullable=True)
+    email_password = Column(String, nullable=True)
+    
+class PrivyazanieTelegram(Base):
+    __tablename__ = "privyazanie_telegram"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_name_tg = Column(String, nullable=False)
+    api_id = Column(String, nullable=False)
+    api_hash = Column(String, nullable=False)
+    
+
+
+class SaveResumes(Base):
+    __tablename__ = "save_resumes"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    canditdate_name = Column(String, nullable=False)
+    resume_text = Column(String, nullable=False)
+    
 
 async def init_db():
     print("🧱 Инициализация базы данных...")
@@ -504,3 +531,192 @@ async def get_utochnenie_resume(message_id: int):
             select(UtochnenieResume).where(UtochnenieResume.message_id == message_id)
         )
         return result.scalar_one_or_none()    
+
+
+
+
+# ===============================================================
+#  SAVE RESUMES (СОХРАНЯЮТСЯ)
+# ===============================================================
+
+
+async def add_save_resume(canditdate_name: str, resume_text: str):
+    async with AsyncSessionLocal() as session:
+        try:
+            resume = SaveResumes(
+                canditdate_name=canditdate_name,
+                resume_text=resume_text,
+            )
+            session.add(resume)
+            await session.commit()
+            await session.refresh(resume)
+            
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при добавлении SaveResumes: {e}")
+
+
+async def get_save_resume(canditdate_name: str):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(SaveResumes).where(SaveResumes.canditdate_name == canditdate_name)
+        )
+        return result.scalar_one_or_none()
+
+
+async def remove_save_resume(canditdate_name: str):
+    async with AsyncSessionLocal() as session:
+        try:
+            result = await session.execute(
+                select(SaveResumes).where(SaveResumes.canditdate_name == canditdate_name)
+            )
+            record = result.scalar_one_or_none()
+            if record:
+                await session.delete(record)
+                await session.commit()
+                print(f"🧹 Удалено резюме {canditdate_name} из таблицы save_resumes.")
+            else:
+                print(f"❌ Резюме {canditdate_name} не найдено в таблице save_resumes.")
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при удалении SaveResumes: {e}")
+
+#=====================================  
+#Привязка к мессенджерам
+#=====================================
+
+async def get_user_with_privyazka(user_name_tg: str):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(PrivyazanieEmail).where(PrivyazanieEmail.user_name_tg == user_name_tg)
+        )
+        res = result.scalar_one_or_none()
+        if res:
+            return res
+        result = await session.execute(
+            select(PrivyazanieTelegram).where(PrivyazanieTelegram.user_name_tg == user_name_tg)
+        )
+        res = result.scalar_one_or_none()
+        return res
+
+
+async def add_email(user_name_tg: str, user_email: str, password: str):
+    async with AsyncSessionLocal() as session:
+        try:
+            # Проверяем, есть ли уже запись
+            res = await session.execute(
+                select(PrivyazanieEmail).where(
+                    PrivyazanieEmail.user_name_tg == user_name_tg
+                )
+            )
+            record = res.scalar_one_or_none()
+
+            if record:
+                # Обновляем существующую запись
+                await session.execute(
+                    update(PrivyazanieEmail)
+                    .where(PrivyazanieEmail.user_name_tg == user_name_tg)
+                    .values(user_email=user_email, email_password=password)
+                )
+                print(f"♻️ Обновлена запись PrivyazanieEmail для {user_name_tg}")
+            else:
+                # Создаём новую запись
+                new_email = PrivyazanieEmail(
+                    user_name_tg=user_name_tg,
+                    user_email=user_email,
+                    email_password=password,
+                )
+                session.add(new_email)
+                print(f"✅ Добавлена новая запись PrivyazanieEmail для {user_name_tg}")
+
+            await session.commit()
+
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при добавлении Email: {e}")
+
+
+async def add_session_tg(user_name_tg: str, api_id: str, api_hash: str):
+    async with AsyncSessionLocal() as session:
+        try:
+            # 1️⃣ Проверяем, есть ли запись
+            res = await session.execute(
+                select(PrivyazanieTelegram).where(PrivyazanieTelegram.user_name_tg == user_name_tg)
+            )
+            record = res.scalar_one_or_none()
+
+            if record:
+                # 2️⃣ Обновляем существующую запись
+                await session.execute(
+                    update(PrivyazanieTelegram)
+                    .where(PrivyazanieTelegram.user_name_tg == user_name_tg)
+                    .values(api_id=api_id, api_hash=api_hash)
+                )
+                print(f"♻️ Обновлена запись PrivyazanieTelegram для {user_name_tg}")
+
+            else:
+                # 3️⃣ Создаём новую запись
+                new_record = PrivyazanieTelegram(
+                    user_name_tg=user_name_tg,
+                    api_id=api_id,
+                    api_hash=api_hash,
+                )
+                session.add(new_record)
+                print(f"✅ Добавлена новая запись PrivyazanieTelegram для {user_name_tg}")
+
+            # 4️⃣ Коммитим изменения
+            await session.commit()
+
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при добавлении Telegram: {e}")
+
+async def get_tg_user(user_name_tg: str):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(PrivyazanieTelegram).where(PrivyazanieTelegram.user_name_tg == user_name_tg)
+        )
+        return result.scalar_one_or_none()
+
+async def get_email_user(user_name_tg: str):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(PrivyazanieEmail).where(PrivyazanieEmail.user_name_tg == user_name_tg)
+        )
+        return result.scalar_one_or_none()
+
+
+
+async def remove_session_tg(user_name_tg: str):
+    async with AsyncSessionLocal() as session:
+        try:
+            result = await session.execute(
+                select(PrivyazanieTelegram).where(PrivyazanieTelegram.user_name_tg == user_name_tg)
+            )
+            record = result.scalar_one_or_none()
+            if record:
+                await session.delete(record)
+                await session.commit()
+                print(f"🧹 Удалена запись PrivyazanieTelegram для {user_name_tg}")
+            else:
+                print(f"❌ Запись PrivyazanieTelegram для {user_name_tg} не найдена")
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при удалении Telegram: {e}")
+
+async def remove_session_email(user_name_tg: str):
+    async with AsyncSessionLocal() as session:
+        try:
+            result = await session.execute(
+                select(PrivyazanieEmail).where(PrivyazanieEmail.user_name_tg == user_name_tg)
+            )
+            record = result.scalar_one_or_none()
+            if record:
+                await session.delete(record)
+                await session.commit()
+                print(f"🧹 Удалена запись PrivyazanieEmail для {user_name_tg}")
+            else:
+                print(f"❌ Запись PrivyazanieEmail для {user_name_tg} не найдена")
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при удалении Email: {e}")

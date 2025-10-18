@@ -11,6 +11,7 @@ from db import add_otkonechenie_resume, add_final_resume, add_utochnenie_resume
 from kb import utochnit_prichinu_kb
 from dotenv import load_dotenv
 import textract
+from db import add_save_resume
 load_dotenv()
 
 
@@ -111,6 +112,8 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
             return
         
         text_gpt = await background_sverka(resume_text=text, vacancy_text=vac_text, bot=bot, user_id=user_id, file_name=file_name)
+        candidate_name = text_gpt.get("candidate")
+        await add_save_resume(candidate_name, text)
         
         os.remove(path)
     except Exception as e:

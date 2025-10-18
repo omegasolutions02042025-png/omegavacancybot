@@ -90,6 +90,8 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                     long_payment = text_gpt.get("long_payment")
                     message_date = f'Дата публикации: {get_message_datetime(msg)}'
                     location = text_gpt.get("location")
+                    rf_loc = False
+                    rb_loc = False
                     for loc in location:
                         if loc == 'РФ':
                             rf_loc = True
@@ -538,14 +540,14 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
             await bot.send_message(ADMIN_ID, f'✅ Вакансия добавлена в канал в топике {src_topic_id} в чате {event.chat_id}')
 
 
-async def send_message_by_username(username: str, text: str):
+async def send_message_by_username(username: str, text: str, client: TelegramClient):
         try:
             # username можно писать без "@"
             if username.startswith("@"):
                 username = username[1:]
             
-            entity = await telethon_client.get_entity(username)
-            await telethon_client.send_message(entity, text)
+            entity = await client.get_entity(username)
+            await client.send_message(entity, text)
             print(f"✅ Сообщение отправлено пользователю @{username}")
             return True
         except Exception as e:

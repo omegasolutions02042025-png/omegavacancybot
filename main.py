@@ -10,6 +10,7 @@ from telethon_monitor import check_and_delete_duplicates, monitor_and_cleanup, c
 from aiogram_bot import bot_router, TOPIC_MAP
 from googlesheets import update_currency_sheet
 from telethon_monitor import register_simple_edit_listener
+from privyazka_messangers import pr_router
 
 load_dotenv()
 
@@ -21,6 +22,7 @@ ADMIN_ID = os.getenv("ADMIN_ID")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 dp.include_router(bot_router)
+dp.include_router(pr_router)
 
 def handle_sigint(signum, frame):
     print("\n🛑 Получен Ctrl+C, завершаем...")
