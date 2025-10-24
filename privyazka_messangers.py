@@ -18,6 +18,7 @@ from telethon.errors.rpcerrorlist import (
     FloodWaitError,
     PhoneNumberUnoccupiedError,
     PhoneNumberInvalidError,
+    ApiIdInvalidError,
 )
 from aiogram.types import FSInputFile
 
@@ -160,13 +161,19 @@ App api_hash: abcdef1234567890abcdef1234567890""", reply_markup=next_telegram_kb
 
 @pr_router.callback_query(F.data == "next_telegram")
 async def next_telegram(callback: CallbackQuery, bot: Bot, state: FSMContext):
-    await callback.message.answer("Введите номер телефона")
+    await callback.message.answer("Введите номер телефона в формате +7XXXXXXXXXX:")
     await state.set_state(PrivyazkaTelegram.waiting_for_number)
 
 
 @pr_router.message(PrivyazkaTelegram.waiting_for_number)
 async def add_number(message: Message, bot: Bot, state: FSMContext):
-    number = message.text
+    number = message.text.strip()
+    
+    # Базовая валидация номера телефона
+    if not number.startswith('+') and not number.startswith('7') and not number.startswith('8'):
+        await message.answer("❌ Введите номер телефона в формате +7XXXXXXXXXX или 8XXXXXXXXXX")
+        return
+    
     await state.update_data(number=number)
     await message.answer("Введите API ID")
     await state.set_state(PrivyazkaTelegram.waiting_for_api_id)
@@ -174,15 +181,26 @@ async def add_number(message: Message, bot: Bot, state: FSMContext):
 
 @pr_router.message(PrivyazkaTelegram.waiting_for_api_id)
 async def add_api_id(message: Message, bot: Bot, state: FSMContext):
-    api_id = message.text
-    await state.update_data(api_id=api_id)
+    api_id = message.text.strip()
+    
+    # Проверяем, что API ID - это число
+    if not api_id.isdigit():
+        await message.answer("❌ API ID должен быть числом. Введите корректный API ID:")
+        return
+    
+    await state.update_data(api_id=int(api_id))
     await message.answer("Введите API Hash")
     await state.set_state(PrivyazkaTelegram.waiting_for_api_hash)
 
 
 @pr_router.message(PrivyazkaTelegram.waiting_for_api_hash)
 async def add_api_hash(message: Message, bot: Bot, state: FSMContext):
-    api_hash = message.text
+    api_hash = message.text.strip()
+    
+    # Базовая валидация API Hash - должен быть строкой из 32 символов
+    if len(api_hash) != 32:
+        await message.answer("❌ API Hash должен содержать 32 символа. Введите корректный API Hash:")
+        return
     data = await state.get_data()
     api_id = data.get("api_id")
     number = data.get("number")
@@ -190,20 +208,27 @@ async def add_api_hash(message: Message, bot: Bot, state: FSMContext):
     if not user_name:
         await message.answer("Для продолжения создайте имя пользователя в Telegram и отправте еще раз API Hash")
         return
-    client = TelegramClient(f"sessions/{user_name}", api_id, api_hash)
-    await client.connect()
-    if await client.is_user_authorized():
-        me = await client.get_me()
-        await message.answer(f"✅ Уже авторизован как @{me.username or me.id}")
-        await client.disconnect()
-        await state.clear()
-        return
-    await client.send_code_request(number)
-    await message.answer("Отправьте скриншот кода подтверждения")
-    photo = FSInputFile("image.png")
-    await message.answer_photo(photo=photo, caption='Вот пример фото')
-    await state.update_data(client=client, api_hash = api_hash)
-    await state.set_state(PrivyazkaTelegram.waiting_for_code)
+    try:
+        client = TelegramClient(f"sessions/{user_name}", api_id, api_hash)
+        await client.connect()
+        if await client.is_user_authorized():
+            me = await client.get_me()
+            await message.answer(f"✅ Уже авторизован как @{me.username or me.id}")
+            await client.disconnect()
+            await state.clear()
+            return
+        await client.send_code_request(number)
+        await message.answer("Отправьте скриншот кода подтверждения")
+        photo = FSInputFile("image.png")
+        await message.answer_photo(photo=photo, caption='Вот пример фото')
+        await state.update_data(client=client, api_hash = api_hash)
+        await state.set_state(PrivyazkaTelegram.waiting_for_code)
+    except ApiIdInvalidError:
+        await message.answer("❌ Неверный API ID или API Hash. Проверьте данные и попробуйте еще раз.\n\nВведите API ID:")
+        await state.set_state(PrivyazkaTelegram.waiting_for_api_id)
+    except Exception as e:
+        await message.answer(f"❌ Ошибка подключения: {str(e)}\n\nВведите API ID:")
+        await state.set_state(PrivyazkaTelegram.waiting_for_api_id)
 
 
 @pr_router.message(PrivyazkaTelegram.waiting_for_code)

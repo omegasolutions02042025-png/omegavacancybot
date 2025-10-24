@@ -1,0 +1,172 @@
+Original error: Expecting property name enclosed in double quotes: line 169 column 8 (char 7243)
+Error position: 7243
+Problematic JSON:
+{
+  "config": {
+    "output_format": "docx",
+    "font_family": "Times New Roman",
+    "font_size_main": 12,
+    "font_size_headings": 14,
+    "color_headings": "#1F4E79",
+    "language": "ru",
+    "sections": [
+      "ФИО",
+      "Желаемая должность и грейд",
+      "Краткое описание профиля",
+      "Ключевые навыки",
+      "Опыт работы",
+      "Образование",
+      "Дополнительная информация",
+      "Проекты"
+    ],
+    "white_label": true,
+    "exclude_contacts": true,
+    "exclude_email": true
+  },
+  "content": {
+    "fio": {
+      "full_name": "Сергей Цуприков",
+      "location": "Москва, Россия",
+      "birth_date": ""
+    },
+    "position_grade": "Разработчик EDW (Enterprise Data Warehouse), Senior+",
+    "summary": "ИТ-архитектор и руководитель проектов с более чем 12-летним опытом в области проектирования корпоративного ПО, Big Data и Data Science. Обладает 7-летним опытом управления проектами стоимостью до 15 млн долларов и глубокой экспертизой в банковской и финансовой сферах. Специализируется на проектировании хранилищ данных (DWH), Data Lake, миграции и интеграции данных в сложных кросс-платформенных средах. Имеет практический опыт работы с Hadoop, Greenplum, Oracle, PostgreSQL и инструментами ETL/ELT. Успешно руководил разработкой и внедрением высоконагруженных систем для ведущих телекоммуникационных и финансовых организаций.",
+    "skills": {
+      "Языки программирования": "Python, VBA, DHTML, PGSQL, PL/SQL",
+      "СУБД": "Oracle Database, PostgreSQL, MS SQL Server, MS Access, Greenplum, Cassandra, Redis, Memcached, Oracle MySQL, IBM DB2",
+      "Технологии и Инструменты": "Hadoop, Apache Spark, Apache Kafka, RabbitMQ, ActiveMQ, Kubernetes (K8s), Docker, OpenShift, ELK Stack, Prometheus, VMware, Citrix, IBM WebSphere ESB, SAP PI/PO, Informatica PWC, Sparx EA, Jira, Confluence, SVN, GitLab",
+      "Области экспертизы": "System Architecture, Telecommunications Billing, Big Data, Data Science, Data Lake, DWH, BI, Data Management, Data Quality, FinTech",
+      "Методологии": "Agile SCRUM, PMBOK, PRINCE2, ITIL, ITSM, TOGAF, RUP, BPMN, SADT (IDEF), Lean, Six Sigma, TDD, COBIT",
+      "ОС": "Linux (CentOS), IBM AIX, MS Windows Server, MacOS",
+      "АБС (Автоматизированные банковские системы)": "Oracle FLEXCUBE, Misys MIDAS, Misys Equation, FIS Sanchez Profile, DiasoftBank"
+    },
+    "experience": [
+      {
+        "company": "Nexign",
+        "position": "Архитектор решений",
+        "period": "Март 2025 - Май 2025 (3 месяца)",
+        "responsibilities": [
+          "Проектирование интеграции биллинговых систем (OSS/BSS) с банковскими и платежными решениями для Мегафон (#2 телеком-оператор в РФ и СНГ: 78 млн клиентов, 36 тыс. сотрудников)."
+        ],
+        "technologies": [
+          "Sparx EA",
+          "Oracle database",
+          "PostgreSQL",
+          "RabbitMQ",
+          "Linux",
+          "K8s"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "Innotech",
+        "position": "Архитектор платформенных решений / Ведущий архитектор",
+        "period": "Сентябрь 2022 - Март 2025 (2 года 7 месяцев)",
+        "responsibilities": [
+          "Проектирование с нуля платежного движка для партнеров.",
+          "Проектирование решения по корпоративным кредитам для миграции со старых АБС CFT на новую систему.",
+          "Модернизация модуля корпоративных залогов с интеграцией для внешних организаций (Pricestat, M2, Федеральная нотариальная палата и др.).",
+          "Проектирование решения по управлению рисками (расчет RWA) на базе Data Lake на Hadoop с движком Spark и DWH на GreenPlum MPP для банка ВТБ.",
+          "Все решения основаны на микросервисной архитектуре с потоковой передачей данных в Hadoop."
+        ],
+        "technologies": [
+          "Oracle database",
+          "PostgreSQL",
+          "Apache Airflow",
+          "Apache Spark",
+          "Greenplum",
+          "Linux",
+          "K8s",
+          "Hadoop",
+          "OpenShift"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "Промсвязьбанк",
+        "position": "Системный архитектор",
+        "period": "Май 2021 - Сентябрь 2022 (1 год 5 месяцев)",
+        "responsibilities": [
+          "Проектирование более 20 продуктивных и тестовых сред, в основном для АБС, ERP, карточного процессинга.",
+          "Обзор и тестирование более 10 инструментов для 'Architecture as a Code'.",
+          "Проведение аудита ИТ-архитектуры нескольких крупных банков в процессе M&A."
+        ],
+        "technologies": [
+          "Oracle database",
+          "PostgreSQL",
+          "Kafka",
+          "SAP PI",
+          "SAP PO",
+          "Informatica PWC",
+          "IBM WAS",
+          "K8s",
+          "ELK",
+          "Hadoop",
+          "VMware",
+          "Linux",
+          "RabbitMQ"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "МТС Групп",
+        "position": "Старший архитектор решений",
+        "period": "Декабрь 2020 - Май 2021 (6 месяцев)",
+        "responsibilities": [
+          "Проектирование KION — высоконагруженного онлайн-кинотеатра для телеком-оператора №1 в России (88+ млн клиентов)."
+        ],
+        "technologies": [
+          "Java (Spring Boot)",
+          "PostgreSQL",
+          "Python",
+          "Apache Kafka",
+          "Redis",
+          "Memcached",
+          "Kubernetes (K8s)",
+          "Docker",
+          "ELK",
+          "Hadoop",
+          "Prometheus",
+          "GitLab"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "Федеральное казначейство Российской Федерации",
+        "position": "Заместитель начальника отдела системной архитектуры",
+        "period": "Декабрь 2018 - Ноябрь 2020 (2 года)",
+        "responsibilities": [
+          "Проектирование крупных центров обработки данных и распределенных высоконагруженных ИТ-решений с обеспечением катастрофоустойчивости (24x7x365), включая Big Data (85 регионов РФ, 11 часовых поясов, 2+ млн пользователей).",
+          "Трансформация Oracle e-Business Suite (OEBS) в ПО собственной разработки с аналогичным функционалом (бюджет 10+ млн USD).",
+          "Проектирование эскизного проекта большого Data Lake на базе Hadoop с несколькими инструментами ETL/ELT."
+        ],
+        "technologies": [
+          "Oracle (DB, RAC, OEBS, GG)",
+          "Java (Spring Boot)",
+          "Python",
+          "Hadoop",
+          "PostgreSQL",
+          "Docker",
+          "Kubernetes (K8s)",
+          "Apache Kafka",
+          "Cassandra",
+          "Ignite",
+          "Camel",
+          "ActiveMQ",
+          "ELK"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "NTR Lab (Software Development)",
+        "position": "Руководитель группы аналитиков",
+        "period": "Июль 2018 - Октябрь 2018 (4 месяца)",
+        "responsibilities": [
+          "Завершил более 10 предпродажных проектов для ИТ-решений: AI (нейронные сети, машинное обучение, компьютерное зрение), Big Data, IoT, блокчейн.",
+          "Разработал модель данных и другие элементы для инновационного блокчейн-решения на основе направленного ациклического графа (DAG).",
+          "Руководил командой из 6 аналитиков."
+        ],
+        "technologies": [],
+        "achievements": []
+      },
+      {

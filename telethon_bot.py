@@ -1,7 +1,7 @@
 
 from datetime import datetime, timedelta, timezone
 import re
-from telethon import TelegramClient, events
+from telethon import TelegramClient, events, types
 from db import add_message_mapping
 from googlesheets import  search_and_extract_values
 from funcs import check_project_duration, send_mess_to_group, get_message_datetime, remove_vacancy_id
@@ -124,7 +124,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
         
         
         # Блок для обработки ставки
-                    if rate is None or int(rate) == 0:
+                    if rate is None or rate =='0' or type(rate) != dict:
         # если ставки нет — общий текст
                         text_cleaned = (
                             f"🆔{vac_id}\n\n"
@@ -134,28 +134,30 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                             f"{text}"
                                             )
                     else:
-                        rate = int(rate)
-                        rate_rf_contract = None
-                        rate_rf_ip = None
-                        rate_rb_contract = None
-                        rate_rb_ip = None
+                        rate_rb = rate.get("РБ")
+                        rate_rf = rate.get("РФ")
+                        print(rate_rf, rate_rb)
+                        if rate_rb:
+                            rate_rb = int(rate_rb)
+                        if rate_rf:
+                            rate_rf = int(rate_rf)
 
                         # --- варианты для РФ ---
                         if rf_loc:
                             rate_rf_contract = await search_and_extract_values(
-                                'K', rate, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
+                                'K', rate_rf, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                             )
                             rate_rf_ip = await search_and_extract_values(
-                                'K', rate, ['B', 'J'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
+                                'K', rate_rf, ['B', 'J'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                             )
 
                         # --- варианты для РБ ---
                         if rb_loc:
                             rate_rb_contract = await search_and_extract_values(
-                                'M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ'
+                                'M', rate_rb, ['B'], 'Расчет ставки (штат/контракт) СНГ'
                             )
                             rate_rb_ip = await search_and_extract_values(
-                                'N', rate, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ'
+                                'N', rate_rb, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ'
                             )
 
                         # --- объединённая логика оформления ---
@@ -262,18 +264,15 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         continue
                     await send_mess_to_group(GROUP_ID, formatted_text, vac_id, bot)
                     
-                                
-                    async with AsyncSessionLocal() as session:
-                        await add_message_mapping(
-                            session,
-                            src_chat_id=src_chat,
-                            src_msg_id=msg.id,
-                            dst_chat_id=dst_chat,
-                            dst_msg_id=forwarded_msg.message_id,
-                            deadline_date=deadline_date,
-                            deadline_time=deadline_time
-                        )
-                                
+                
+                    await add_message_mapping(
+                        src_chat_id=src_chat,
+                        src_msg_id=msg.id,
+                        dst_chat_id=dst_chat,
+                        dst_msg_id=forwarded_msg.message_id,
+                        deadline_date=deadline_date,
+                        deadline_time=deadline_time
+                    )
                 
                 except Exception as e:
                     await bot.send_message(ADMIN_ID, f'❌ Ошибка при обработке и отправке в сообщении {msg.id}: {e}')
@@ -379,7 +378,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                 delay_payment_text = 'С отсрочкой платежа "35 рабочих дней" после подписания акта:\n'
                 no_rate_delay = 'Условия оплаты: Срок уточняется'
             
-            if rate is None or int(rate) == 0:
+            if rate is None or rate =='0' or type(rate) != dict:
         # если ставки нет — общий текст
                 text_cleaned = (
                     f"🆔{vac_id}\n\n"
@@ -389,28 +388,30 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                     f"{text}"
                                     )
             else:
-                rate = int(rate)
-                rate_rf_contract = None
-                rate_rf_ip = None
-                rate_rb_contract = None
-                rate_rb_ip = None
+                rate_rb = rate.get("РБ")
+                rate_rf = rate.get("РФ")
+                print(rate_rf, rate_rb)
+                if rate_rb:
+                    rate_rb = int(rate_rb)
+                if rate_rf:
+                    rate_rf = int(rate_rf)
 
                 # --- варианты для РФ ---
                 if rf_loc:
                     rate_rf_contract = await search_and_extract_values(
-                        'K', rate, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
+                        'K', rate_rf, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                     )
                     rate_rf_ip = await search_and_extract_values(
-                        'K', rate, ['B', 'J'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
+                        'K', rate_rf, ['B', 'J'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                     )
 
                 # --- варианты для РБ ---
                 if rb_loc:
                     rate_rb_contract = await search_and_extract_values(
-                        'M', rate, ['B'], 'Расчет ставки (штат/контракт) СНГ'
+                        'M', rate_rb, ['B'], 'Расчет ставки (штат/контракт) СНГ'
                     )
                     rate_rb_ip = await search_and_extract_values(
-                        'N', rate, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ'
+                        'N', rate_rb, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ'
                     )
 
                 # --- объединённая логика оформления ---
@@ -527,17 +528,15 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
             return
 
         # Сохраняем сопоставление сообщений
-        async with AsyncSessionLocal() as session:
-            await add_message_mapping(
-                session,
-                src_chat_id=event.chat_id,
-                src_msg_id=event.message.id,
-                dst_chat_id=dst_chat_id,
-                dst_msg_id=forwarded_msg.message_id,
-                deadline_date=deadline_date,
-                deadline_time=deadline_time
-            )
-            await bot.send_message(ADMIN_ID, f'✅ Вакансия добавлена в канал в топике {src_topic_id} в чате {event.chat_id}')
+        await add_message_mapping(
+            src_chat_id=event.chat_id,
+            src_msg_id=event.message.id,
+            dst_chat_id=dst_chat_id,
+            dst_msg_id=forwarded_msg.message_id,
+            deadline_date=deadline_date,
+            deadline_time=deadline_time
+        )
+        await bot.send_message(ADMIN_ID, f'✅ Вакансия добавлена в канал в топике {src_topic_id} в чате {event.chat_id}')
 
 
 async def send_message_by_username(username: str, text: str, client: TelegramClient):
@@ -554,3 +553,174 @@ async def send_message_by_username(username: str, text: str, client: TelegramCli
             print(f"❌ Ошибка при отправке @{username}: {e}")
             return False
         
+
+
+from telethon import functions, types
+
+async def create_recruiter_forum(recruiter_id: int, recruiter_username: str, bot_username: str, client: TelegramClient, vac_id: str, message_text: str, bot: Bot):
+    title = f"Omega Recruiter — {recruiter_username}"
+    about = f"Приватная форум-группа для рекрутера {recruiter_username}"
+    group_id = -1002658129391  # ID твоей группы
+    group = await client.get_entity(group_id)
+    dialogs = await client.get_dialogs()
+    entity = None
+    for dialog in dialogs:
+        if dialog.entity.id == recruiter_id:
+            entity = await client.get_input_entity(dialog.entity)
+            break
+
+
+    # 2️⃣ Или если он есть в группе
+    participants = await client.get_participants(group)
+    for p in participants:
+        if p.id == recruiter_id:
+            entity = await client.get_input_entity(p)
+            break
+    if not entity:
+        print("❌ Не удалось найти пользователя в группе")
+        return
+
+    # 1️⃣ Создаём мегагруппу
+    result = await client(functions.channels.CreateChannelRequest(
+        title=title,
+        about=about,
+        megagroup=True  # обязательно, чтобы включить форум
+    ))
+
+    group = result.chats[0]
+    group_id = group.id
+    print(f"[+] Создана группа: {title} ({group_id})")
+
+    # 2️⃣ Включаем режим форума (topics)
+    await client(functions.channels.ToggleForumRequest(
+        channel=group,
+        enabled=True,
+        tabs = False
+    ))
+    print("[+] Форум включён")
+    
+
+    # 3️⃣ Добавляем туда рекрутера и бота
+    await client(functions.channels.InviteToChannelRequest(
+        channel=group,
+        users=[entity, f"@{bot_username}"]
+    ))
+    print(f"[+] Добавлены @{bot_username} и рекрутер {recruiter_username}")
+    
+    # 3.5️⃣ Даем боту права администратора
+    try:
+        await client(functions.channels.EditAdminRequest(
+            channel=group,
+            user_id=f"@{bot_username}",
+            admin_rights=types.ChatAdminRights(
+                change_info=False,
+                post_messages=True,
+                edit_messages=True,
+                delete_messages=True,
+                ban_users=False,
+                invite_users=False,
+                pin_messages=True,
+                add_admins=False,
+                anonymous=False,
+                manage_call=False,
+                other=False,
+                manage_topics=True
+            ),
+            rank="Bot Assistant"
+        ))
+        print(f"[+] Боту @{bot_username} предоставлены права администратора")
+    except Exception as e:
+        print(f"❌ Ошибка при предоставлении прав боту: {e}")
+    
+    # 3.6️⃣ Даем рекрутеру права администратора
+    try:
+        await client(functions.channels.EditAdminRequest(
+            channel=group,
+            user_id=recruiter_id,
+            admin_rights=types.ChatAdminRights(
+                change_info=True,
+                post_messages=True,
+                edit_messages=True,
+                delete_messages=True,
+                ban_users=True,
+                invite_users=True,
+                pin_messages=True,
+                add_admins=False,
+                anonymous=False,
+                manage_call=True,
+                other=True,
+                manage_topics=True
+            ),
+            rank="Recruiter"
+        ))
+        print(f"[+] Рекрутеру {recruiter_username} предоставлены права администратора")
+    except Exception as e:
+        print(f"❌ Ошибка при предоставлении прав рекрутеру: {e}")
+
+    # 4️⃣ Создаём тестовую тему (пример вакансии)
+    topic_result = await client(functions.channels.CreateForumTopicRequest(
+        channel=group,
+        title=f"{vac_id}",
+        icon_color=7322096 
+    ))
+
+    # Получаем topic_id из updates
+    topic_id = None
+    
+    for update in topic_result.updates:
+        # Ищем UpdateNewChannelMessage с MessageActionTopicCreate
+        if hasattr(update, 'message') and hasattr(update.message, 'action'):
+            if 'TopicCreate' in str(type(update.message.action)):
+                topic_id = update.message.id
+                break
+    
+    if not topic_id:
+        print("❌ Не удалось получить topic_id")
+        return group_id
+        
+    print(f"[+] Создана тема: {topic_id}")
+    group_id = f'-100{group_id}'
+
+    await bot.send_message(chat_id = group_id, message_thread_id = topic_id, text = message_text, parse_mode='HTML')
+
+    return group_id, topic_id
+        
+    
+
+
+async def create_vacancy_thread(group_id: int, mes_text: str, client: TelegramClient, vac_id: str, bot):
+    """
+    Создаёт новый тред (forum topic) в указанной форум-группе.
+    Возвращает словарь с данными темы.
+    """
+
+    # 1️⃣ Создаём тему в форуме
+    result = await client(functions.channels.CreateForumTopicRequest(
+        channel=group_id,
+        title=f"{vac_id}",
+        icon_color=7322096  # красивый синий (HEX #6FB1FC)
+    ))
+
+    # Получаем topic_id из updates
+    topic_id = None
+    
+    for update in result.updates:
+        # Ищем UpdateNewChannelMessage с MessageActionTopicCreate
+        if hasattr(update, 'message') and hasattr(update.message, 'action'):
+            if 'TopicCreate' in str(type(update.message.action)):
+                topic_id = update.message.id
+                break
+    
+    if not topic_id:
+        print(f"❌ Не удалось получить topic_id для группы {group_id}")
+        return
+
+    print(f"[+] Создан новый тред в группе {group_id}: {vac_id} (topic_id={topic_id})")
+
+    try:
+        await bot.send_message(chat_id = group_id, message_thread_id = topic_id, text = mes_text, parse_mode='HTML')
+        print(f"[+] Отправлено описание вакансии в тред {topic_id}")
+    except Exception as e:
+        print(f"❌ Ошибка при отправке в тред {topic_id}: {e}")
+        
+    return topic_id

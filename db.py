@@ -7,9 +7,16 @@ import asyncio
 from sqlalchemy import JSON
 import json
 
+DATABASE_URL = "postgresql+asyncpg://postgres:123546@localhost:5432/omega_db"
 
-DATABASE_URL = "sqlite+aiosqlite:///channels.db"
-async_engine = create_async_engine(DATABASE_URL, echo=False)
+async_engine = create_async_engine(
+    DATABASE_URL, 
+    echo=False,
+    pool_size=5,
+    max_overflow=10,
+    pool_pre_ping=True,
+    pool_recycle=3600
+)
 
 AsyncSessionLocal = sessionmaker(
     bind=async_engine,
@@ -118,6 +125,14 @@ class SaveResumes(Base):
     canditdate_name = Column(String, nullable=False)
     resume_text = Column(String, nullable=False)
     
+class RecruterGroup(Base):
+    __tablename__ = "recruter_group"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    recruter_user_name = Column(String, nullable=False)
+    group_id = Column(String, nullable=False)
+    
+    
 
 async def init_db():
     print("🧱 Инициализация базы данных...")
@@ -138,7 +153,6 @@ async def add_channel(channel_name: str, channel_id: int):
                 channel = Channel(channel_name=channel_name, channel_id=channel_id)
                 session.add(channel)
                 await session.commit()
-                await session.refresh(channel)
                 
             except:
                 return "Канал не получилось добавить"
@@ -175,7 +189,6 @@ async def add_filter(filter_text):
             filter = Filter(filter_text=filter_text)
             session.add(filter)
             await session.commit()
-            await session.refresh(filter)
 
 async def get_all_filters():
     async with AsyncSessionLocal() as session:
@@ -208,7 +221,6 @@ async def add_slovo(filter_text):
             filter = Slova(filter_text=filter_text)
             session.add(filter)
             await session.commit()
-            await session.refresh(filter)
 
 
 async def get_all_slova():
@@ -236,7 +248,6 @@ async def remove_slovo(id):
 
 
 async def add_message_mapping(
-    session: AsyncSession,
     src_chat_id: int,
     src_msg_id: int,
     dst_chat_id: int,
@@ -244,32 +255,35 @@ async def add_message_mapping(
     deadline_date: str | None = None,
     deadline_time: str | None = None
 ):
-    mapping = MessageMapping(
-        src_chat_id=src_chat_id,
-        src_msg_id=src_msg_id,
-        dst_chat_id=dst_chat_id,
-        dst_msg_id=dst_msg_id,
-        deadline_date=deadline_date,
-        deadline_time=deadline_time
-    )
-    session.add(mapping)
-    await session.commit()
-
-
-async def get_all_message_mappings(session: AsyncSession):
-    result = await session.execute(select(MessageMapping))
-    return result.scalars().all()
-
-async def remove_message_mapping(session: AsyncSession, src_chat_id: int, src_msg_id: int):
-    result = await session.execute(
-        select(MessageMapping).where(
-            (MessageMapping.src_chat_id == src_chat_id) & (MessageMapping.src_msg_id == src_msg_id)
+    async with AsyncSessionLocal() as session:
+        mapping = MessageMapping(
+            src_chat_id=src_chat_id,
+            src_msg_id=src_msg_id,
+            dst_chat_id=dst_chat_id,
+            dst_msg_id=dst_msg_id,
+            deadline_date=deadline_date,
+            deadline_time=deadline_time
         )
-    )
-    mapping = result.scalars().first()
-    if mapping:
-        await session.delete(mapping)
+        session.add(mapping)
         await session.commit()
+
+
+async def get_all_message_mappings():
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(MessageMapping))
+        return result.scalars().all()
+
+async def remove_message_mapping(src_chat_id: int, src_msg_id: int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(MessageMapping).where(
+                (MessageMapping.src_chat_id == src_chat_id) & (MessageMapping.src_msg_id == src_msg_id)
+            )
+        )
+        mapping = result.scalars().first()
+        if mapping:
+            await session.delete(mapping)
+            await session.commit()
 
 
 async def get_next_sequence_number() -> int:
@@ -287,14 +301,13 @@ async def get_next_sequence_number() -> int:
     
     
     
-    
 async def add_otkonechenie_resume(message_id: int, message_text: str, json_text: dict):
     """
     Добавляет или обновляет запись OtkonechenieResume.
     Если message_id уже существует — обновляет текст и JSON.
     """
     if isinstance(json_text, dict):
-        json_text = json.dumps(json_text)
+        json_text = json.dumps(json_text , ensure_ascii=False, indent=2)
 
     async with AsyncSessionLocal() as session:
         try:
@@ -317,8 +330,8 @@ async def add_otkonechenie_resume(message_id: int, message_text: str, json_text:
                 )
                 session.add(new_record)
                 print(f"✅ Добавлена новая запись OtkonechenieResume с message_id={message_id}")
-
             await session.commit()
+            
 
         except Exception as e:
             await session.rollback()
@@ -351,8 +364,8 @@ async def remove_old_otkonechenie_resumes(hours: int = 12):
                 except ValueError:
                     # если формат даты битый — пропускаем
                     continue
-
             await session.commit()
+            
 
             print(f"🧹 Удалено {deleted_count} записей старше {hours} часов.")
 
@@ -364,12 +377,14 @@ async def remove_old_otkonechenie_resumes(hours: int = 12):
 async def periodic_cleanup_task():
     while True:
         try:
+            # Выполняем операции последовательно, чтобы избежать конфликтов соединений
             await remove_old_otkonechenie_resumes(hours=12)
             await remove_old_utochnenie_resumes(hours=12)
             await remove_old_final_resumes(hours=12)
         except Exception as e:
             print(f"❌ Ошибка при автоочистке: {e}")
-        await asyncio.sleep(60 * 60) 
+        await asyncio.sleep(60 * 60 * 12) 
+        
         
         
 async def get_otkolenie_resume(message_id: int):
@@ -387,7 +402,7 @@ async def add_final_resume(message_id: int, message_text: str, json_text: dict):
     Если message_id уже существует — обновляет текст и JSON.
     """
     if isinstance(json_text, dict):
-        json_text = json.dumps(json_text)
+        json_text = json.dumps(json_text, ensure_ascii=False, indent=2)
         
         
     async with AsyncSessionLocal() as session:
@@ -412,10 +427,11 @@ async def add_final_resume(message_id: int, message_text: str, json_text: dict):
                     json_text=json_text,
                     message_time=datetime.now().strftime("%d.%m.%Y %H:%M:%S")
                 )
+
                 session.add(new_record)
                 print(f"✅ Добавлена новая запись FinalResume с message_id={message_id}")
-
             await session.commit()
+            
 
         except Exception as e:
             await session.rollback()
@@ -442,6 +458,7 @@ async def remove_old_final_resumes(hours: int = 12):
                     continue
 
             await session.commit()
+            
             print(f"🧹 Удалено {deleted_count} финальных резюме старше {hours} часов.")
 
         except Exception as e:
@@ -468,7 +485,7 @@ async def add_utochnenie_resume(message_id: int, message_text: str, json_text: d
     Если message_id уже существует — обновляет текст и JSON.
     """
     if isinstance(json_text, dict):
-        json_text = json.dumps(json_text)
+        json_text = json.dumps(json_text, ensure_ascii=False, indent=2)
 
     async with AsyncSessionLocal() as session:
         try:
@@ -491,8 +508,8 @@ async def add_utochnenie_resume(message_id: int, message_text: str, json_text: d
                 )
                 session.add(new_record)
                 print(f"✅ Добавлена новая запись UtochnenieResume с message_id={message_id}")
-
             await session.commit()
+            
 
         except Exception as e:
             await session.rollback()
@@ -517,7 +534,10 @@ async def remove_old_utochnenie_resumes(hours: int = 12):
                 except ValueError:
                     continue
 
+            
             await session.commit()
+            
+            
             print(f"🧹 Удалено {deleted_count} уточняющих резюме старше {hours} часов.")
 
         except Exception as e:
@@ -549,7 +569,6 @@ async def add_save_resume(canditdate_name: str, resume_text: str):
             )
             session.add(resume)
             await session.commit()
-            await session.refresh(resume)
             
         except Exception as e:
             await session.rollback()
@@ -558,28 +577,77 @@ async def add_save_resume(canditdate_name: str, resume_text: str):
 
 async def get_save_resume(canditdate_name: str):
     async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(SaveResumes).where(SaveResumes.canditdate_name == canditdate_name)
-        )
-        return result.scalar_one_or_none()
+        try:
+            result = await session.execute(
+                select(SaveResumes).where(SaveResumes.canditdate_name == canditdate_name)
+            )
+            # Возвращаем первую найденную запись, если есть дубликаты
+            records = result.scalars().all()
+            if records:
+                if len(records) > 1:
+                    print(f"⚠️ Найдено {len(records)} записей для {canditdate_name}, возвращаем первую")
+                return records[0]
+            return None
+        except Exception as e:
+            print(f"❌ Ошибка при получении SaveResumes: {e}")
+            return None
 
 
 async def remove_save_resume(canditdate_name: str):
     async with AsyncSessionLocal() as session:
         try:
+            # Получаем все записи с таким именем
             result = await session.execute(
                 select(SaveResumes).where(SaveResumes.canditdate_name == canditdate_name)
             )
-            record = result.scalar_one_or_none()
-            if record:
-                await session.delete(record)
+            records = result.scalars().all()
+            
+            if records:
+                # Удаляем все найденные записи
+                for record in records:
+                    await session.delete(record)
                 await session.commit()
-                print(f"🧹 Удалено резюме {canditdate_name} из таблицы save_resumes.")
+                print(f"🧹 Удалено {len(records)} резюме {canditdate_name} из таблицы save_resumes.")
             else:
                 print(f"❌ Резюме {canditdate_name} не найдено в таблице save_resumes.")
         except Exception as e:
             await session.rollback()
             print(f"❌ Ошибка при удалении SaveResumes: {e}")
+
+
+async def clean_duplicate_save_resumes():
+    """Удаляет дубликаты из таблицы SaveResumes, оставляя только последнюю запись для каждого кандидата"""
+    async with AsyncSessionLocal() as session:
+        try:
+            # Получаем все записи, сгруппированные по имени кандидата
+            result = await session.execute(
+                select(SaveResumes).order_by(SaveResumes.canditdate_name, SaveResumes.id.desc())
+            )
+            all_records = result.scalars().all()
+            
+            seen_names = set()
+            to_delete = []
+            
+            for record in all_records:
+                if record.canditdate_name in seen_names:
+                    # Это дубликат - помечаем на удаление
+                    to_delete.append(record)
+                else:
+                    # Первая (самая новая) запись для этого имени
+                    seen_names.add(record.canditdate_name)
+            
+            if to_delete:
+                for record in to_delete:
+                    await session.delete(record)
+                await session.commit()
+                print(f"🧹 Удалено {len(to_delete)} дубликатов из таблицы SaveResumes")
+            else:
+                print("✅ Дубликатов в таблице SaveResumes не найдено")
+                
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при очистке дубликатов SaveResumes: {e}")
+
 
 #=====================================  
 #Привязка к мессенджерам
@@ -713,10 +781,35 @@ async def remove_session_email(user_name_tg: str):
             record = result.scalar_one_or_none()
             if record:
                 await session.delete(record)
+                
                 await session.commit()
+                
                 print(f"🧹 Удалена запись PrivyazanieEmail для {user_name_tg}")
             else:
                 print(f"❌ Запись PrivyazanieEmail для {user_name_tg} не найдена")
         except Exception as e:
             await session.rollback()
             print(f"❌ Ошибка при удалении Email: {e}")
+
+
+#===========================================
+#Работа с таблицей recruter_group
+#===========================================
+
+async def add_recruter_group(recruter_user_name: str, group_id: int):
+    async with AsyncSessionLocal() as session:
+        try:
+            new_record = RecruterGroup(recruter_user_name=recruter_user_name, group_id=group_id)
+            session.add(new_record)
+            await session.commit()
+            print(f"✅ Добавлена новая запись RecruterGroup для {recruter_user_name}")
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при добавлении RecruterGroup: {e}")
+
+async def get_recruter_group(recruter_user_name: str):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(RecruterGroup).where(RecruterGroup.recruter_user_name == recruter_user_name)
+        )
+        return result.scalar_one_or_none()

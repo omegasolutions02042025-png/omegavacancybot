@@ -12,6 +12,7 @@ from kb import utochnit_prichinu_kb
 from dotenv import load_dotenv
 import textract
 from db import add_save_resume
+from telethon_bot import ADMIN_ID
 load_dotenv()
 
 
@@ -40,11 +41,82 @@ def process_doc(path: str) -> str:
 
 # PDF → текст
 def process_pdf(path: str) -> str:
-    reader = PdfReader(path)
-    text = []
-    for page in reader.pages:
-        text.append(page.extract_text() or "")
-    return "\n".join(text)
+    """
+    Надёжное извлечение текста из PDF:
+    1) pdfminer.six
+    2) PyPDF2/pypdf (с попыткой strict=False, если доступно)
+    3) Ремонт PDF через pikepdf и повторная попытка (pdfminer/textract)
+    Возвращает очищенный текст без пустых строк.
+    """
+    def _clean(txt: str) -> str:
+        return "\n".join([ln.strip() for ln in (txt or "").splitlines() if ln.strip()]).strip()
+
+    # --- 1) pdfminer.six ---
+    try:
+        from pdfminer.high_level import extract_text as pdfminer_extract_text
+        txt = _clean(pdfminer_extract_text(path) or "")
+        # если текста достаточно — этого хватает
+        if len(txt) > 200:
+            return txt
+        # иначе не выходим — попробуем другие способы (может быть скан или «кривой» PDF)
+    except Exception as e:
+        print(f"⚠️ pdfminer.six не справился: {e}")
+
+    # --- 2) PyPDF2 / pypdf ---
+    try:
+        from PyPDF2 import PdfReader
+        try:
+            # pypdf 3.x: параметр strict отсутствует
+            reader = PdfReader(path)
+        except TypeError:
+            # PyPDF2 1.x/2.x: можно ослабить строгость
+            reader = PdfReader(path, strict=False)
+        pages_text = []
+        for p in reader.pages:
+            t = p.extract_text() or ""
+            if t.strip():
+                pages_text.append(t)
+        txt = _clean("\n".join(pages_text))
+        if txt:
+            return txt
+    except Exception as e:
+        # именно ваш кейс
+        if "Odd-length string" in str(e):
+            print("⚠️ PyPDF2: Odd-length string — попробую отремонтировать PDF через pikepdf…")
+        else:
+            print(f"⚠️ PyPDF2/pypdf упал: {e}")
+
+    # --- 3) Ремонт через pikepdf и повтор ---
+    try:
+        import tempfile, pikepdf
+        with pikepdf.open(path) as pdf:
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                pdf.save(tmp.name)
+                repaired_path = tmp.name
+
+        # снова попробуем pdfminer
+        try:
+            from pdfminer.high_level import extract_text as pdfminer_extract_text
+            txt = _clean(pdfminer_extract_text(repaired_path) or "")
+            if txt:
+                return txt
+        except Exception as e:
+            print(f"⚠️ pdfminer после ремонта не справился: {e}")
+
+        # финальный фоллбэк: textract (может дернуть tesseract, если установлен)
+        try:
+            import textract
+            raw = textract.process(repaired_path).decode("utf-8", errors="ignore")
+            txt = _clean(raw)
+            return txt
+        except Exception as e:
+            print(f"❌ textract тоже не смог: {e}")
+
+    except Exception as e:
+        print(f"❌ Ремонт PDF через pikepdf не удался: {e}")
+
+    return ""
+
 
 # DOCX → текст
 def process_docx(path: str) -> str:
@@ -133,9 +205,9 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             
             return {'candidate': candidate, 'verdict': verdict, 'sverka_text': result, 'candidate_json': result_gpt}
         else:
-            await bot.send_message(user_id, "❌ Ошибка при сверке вакансии")
+            await bot.send_message(ADMIN_ID, "❌ Ошибка при сверке вакансии")
     except Exception as e:
-        await bot.send_message(user_id, f"🔥 Ошибка при сверке: {e}")
+        await bot.send_message(ADMIN_ID, f"🔥 Ошибка при сверке: {e}")
         return None
     
     
@@ -200,18 +272,22 @@ def display_analysis(json_data):
     if must_haves:
         for req in must_haves:
             icon = status_map.get(req.get('status'), '▫️')
-            output_lines.append(f"    {icon} {req.get('requirement')}")
-    else:
-        output_lines.append("    Требования не указаны.")
+            if req.get('status') == "Нет (требуется уточнение)" or req.get('status') == "Нет (точно нет)":
+                output_lines.append(f"    {icon} {req.get('requirement')}")
+                output_lines.append(f"({req.get('comment').replace('⚠️', '').replace('❌', '')})\n")
+            else:
+                output_lines.append(f"    {icon} {req.get('requirement')}\n")
 
 
     nice_to_haves = compliance.get('nice_to_have')
     if nice_to_haves:
         for req in nice_to_haves:
             icon = status_map.get(req.get('status'), '▫️')
-            output_lines.append(f"    {icon} {req.get('requirement')}")
-    else:
-        output_lines.append("    Требования не указаны.")
+            if req.get('status') == "Нет (требуется уточнение)" or req.get('status') == "Нет (точно нет)":
+                output_lines.append(f"    {icon} {req.get('requirement')}")
+                output_lines.append(f"({req.get('comment').replace('⚠️', '').replace('❌', '')})\n")
+            else:
+                output_lines.append(f"    {icon} {req.get('requirement')}\n")   
 
     # --- ИТОГ ---
     output_lines.append("\n" + "="*17 + " 🏁 ИТОГ " + "="*17)
@@ -260,7 +336,7 @@ def create_finalists_table(finalists: list[dict]):
 
     
     
-async def create_mails(finalist: dict, user_name: str):
+async def create_mails(finalist: dict, user_name: str, vacancy: str):
     try:
     
       if isinstance(finalist, str):
@@ -272,7 +348,7 @@ async def create_mails(finalist: dict, user_name: str):
         res = await generate_mail_for_candidate_finalist(finalist, user_name)
         return res
       elif verdict == "Частично подходит (нужны уточнения)":
-        res = await generate_mail_for_candidate_utochnenie(finalist, user_name)
+        res = await generate_mail_for_candidate_utochnenie(finalist, user_name, vacancy)
         return res
       elif verdict == "Не подходит":
         res = await generate_mail_for_candidate_otkaz(finalist, user_name)

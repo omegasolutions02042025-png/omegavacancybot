@@ -79,29 +79,33 @@ from datetime import datetime, timezone
 
 async def monitor_and_cleanup(telethon_client: TelegramClient, AsyncSessionLocal, bot: Bot):
     while True:
-        async with AsyncSessionLocal() as session:
-            mappings = await get_all_message_mappings(session)
+        try:
+            if not await ensure_connected(telethon_client):
+                await asyncio.sleep(60)
+                continue
+                
+            mappings = await get_all_message_mappings()
 
             for mapping in mappings:
                 try:
                     msg = await telethon_client.get_messages(mapping.src_chat_id, ids=mapping.src_msg_id)
                     
-                    
-                   
                     vacancy_id = None
                     if not msg:
                         #print(f"❌ Сообщение {mapping.src_msg_id} не найдено — пропускаем функция monitor_and_cleanup")
                         continue
                     if msg.message:
                         vacancy_id = extract_vacancy_id(msg.message)
+                    
                     # Если сообщение удалено или зачёркнуто
                     if has_strikethrough(msg):
                         await bot.send_message(ADMIN_ID, f"❌ Сообщение {mapping.src_msg_id} содержит зачёркнутый текст — удаляем функция monitor_and_cleanup")
                         asyncio.create_task(mark_inactive_and_schedule_delete(
                             telethon_client, mapping, vacancy_id, bot
                         ))
-                        await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
+                        await remove_message_mapping(mapping.src_chat_id, mapping.src_msg_id)
                         continue
+                    
                     stop_pattern = re.compile(
                         r'(🛑.*(?:СТОП|STOP).*🛑|\bстоп\b|\bstop\b)',
                         re.IGNORECASE
@@ -112,7 +116,7 @@ async def monitor_and_cleanup(telethon_client: TelegramClient, AsyncSessionLocal
                         asyncio.create_task(mark_inactive_and_schedule_delete(
                             telethon_client, mapping, vacancy_id,  bot
                         ))
-                        await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
+                        await remove_message_mapping(mapping.src_chat_id, mapping.src_msg_id)
                         continue
 
                     # Проверка дедлайна
@@ -139,7 +143,7 @@ async def monitor_and_cleanup(telethon_client: TelegramClient, AsyncSessionLocal
                                 asyncio.create_task(mark_inactive_and_schedule_delete(
                                     telethon_client, mapping, vacancy_id,  bot
                                 ))
-                                await remove_message_mapping(session, mapping.src_chat_id, mapping.src_msg_id)
+                                await remove_message_mapping(mapping.src_chat_id, mapping.src_msg_id)
                                 continue
 
                         except Exception as e:
@@ -149,6 +153,9 @@ async def monitor_and_cleanup(telethon_client: TelegramClient, AsyncSessionLocal
                 except Exception as e:
                     await bot.send_message(ADMIN_ID, f"Ошибка проверки {mapping.src_msg_id} в {mapping.src_chat_id}: {e} функция monitor_and_cleanup")
 
+        except Exception as e:
+            print(f"❌ Ошибка в monitor_and_cleanup: {e}")
+        
         await asyncio.sleep(60)
 
 
@@ -259,9 +266,14 @@ async def check_and_delete_duplicates(teleton_client: TelegramClient, channel_id
 
 
 
-async def mark_as_deleted(client, msg_id, chat_id, vacancy_id, name_vac, bot: Bot):
+async def mark_as_deleted(client: TelegramClient,  chat_id: int, vacancy_id: str, name_vac: str, bot: Bot):
     try:
-        
+        async for message in client.iter_messages(chat_id):
+            if vacancy_id in message.text:
+                msg_id = message.id
+                break
+            if not message.text:
+                continue
         if vacancy_id and name_vac:
         
             new_text = f"🆔{vacancy_id} — вакансия неактивна\n{name_vac}"
@@ -323,7 +335,7 @@ async def check_old_messages_and_mark(teleton_client: TelegramClient, channel_id
 
 from telethon import TelegramClient, events
 async def on_edit(message, bot: Bot, telethon_client: TelegramClient, src_chat_id: int):
-    
+    chat_id = -1002658129391
     stop_pattern = re.compile(
                         r'(🛑.*(?:СТОП|STOP).*🛑|\bстоп\b|\bstop\b)',
                         re.IGNORECASE
@@ -339,11 +351,11 @@ async def on_edit(message, bot: Bot, telethon_client: TelegramClient, src_chat_i
     if has_strikethrough_id(message, vacancy_id):
         await bot.send_message(ADMIN_ID, f"🗑 Найден зачеркнутый ID {vacancy_id} в {src_chat_id} → удаляем сообщение {message.id} из {src_chat_id}, функция cleanup_by_striked_id")
         title = get_vacancy_title(message.text)
-        asyncio.create_task(mark_as_deleted(telethon_client, message.id, src_chat_id, vacancy_id, title, bot))
+        asyncio.create_task(mark_as_deleted(telethon_client, chat_id, vacancy_id, title, bot))
     elif stop_pattern.search(message.text):
         await bot.send_message(ADMIN_ID, f"🛑 Найдено слово 'стоп' в {vacancy_id} {src_chat_id} → удаляем сообщение {message.id} из {src_chat_id}, функция cleanup_by_striked_id")
         title = get_vacancy_title(message.text)
-        asyncio.create_task(mark_as_deleted(telethon_client, message.id, src_chat_id, vacancy_id, title, bot))
+        asyncio.create_task(mark_as_deleted(telethon_client, chat_id, vacancy_id, title, bot))
     
 
 async def register_simple_edit_listener(client: TelegramClient, channel, bot: Bot):
@@ -353,3 +365,13 @@ async def register_simple_edit_listener(client: TelegramClient, channel, bot: Bo
         if not m:
             return
         await on_edit(m, bot, client, channel)
+
+
+async def ensure_connected(client):
+    if not client.is_connected():
+        try:
+            await client.connect()
+        except Exception as e:
+            print(f"[!] Ошибка подключения Telethon: {e}")
+            return False
+    return True

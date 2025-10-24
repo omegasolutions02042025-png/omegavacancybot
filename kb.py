@@ -209,7 +209,8 @@ def create_contacts_kb(contacts: dict,verdict : str):
     phone = contacts.get("phone")
     if phone and phone.lower() not in ["нет", "нет (требуется уточнение)"]:
         builder.button(text="📞 Телефон", callback_data=f"con:p:{phone}:{verdict}")
-
+    if not phone and not telegram and not linkedin and not email:
+        builder.button(text="❌ Нет данных", callback_data="no_data")
     builder.adjust(2)
     return builder.as_markup()
 
@@ -266,4 +267,9 @@ def accept_delete_tg_kb():
 def accept_delete_email_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text='Подтвердить', callback_data='accept_delete_email')
+    return builder.as_markup()
+
+def link_to_thread_kb(link):
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Перейти к треду', callback_data='link_to_thread', url=link)
     return builder.as_markup()
