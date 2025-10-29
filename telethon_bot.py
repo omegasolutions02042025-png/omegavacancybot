@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta, timezone
 import re
 from telethon import TelegramClient, events, types
-from db import add_message_mapping
+from db import add_message_mapping, add_vacancy_thread
 from googlesheets import  search_and_extract_values
 from funcs import check_project_duration, send_mess_to_group, get_message_datetime, remove_vacancy_id
 from aiogram import Bot
@@ -210,9 +210,9 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                                 state_contract_text = f"<s>{state_contract_text}</s>"
 
                             if only_fulltime:
-                                ip_text = f"<s>Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 165 раб. часов): {rate_ip} RUB(Gross)</s>"
+                                ip_text = f"<s>Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)</s>"
                             else:
-                                ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 165 раб. часов): {rate_ip} RUB(Gross)'
+                                ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)'
 
                             return (
                                 f"{flag_text}"
@@ -368,9 +368,7 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                 elif loc == 'РБ':
                     rb_loc = True
             print(f'location: {location} в {vac_id}')
-            # Исправляем логику обработки ставки
-            if rate is None or rate == 'None' or int(rate) == 0:
-                text_cleaned = f"🆔{vac_id}\n\n{message_date}\n\n{vacancy}\n\nМесячная ставка(на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n{text}\n\n{message_date}"
+            
             if delay_payment:
                 delay_payment_text = f"С отсрочкой платежа {delay_payment}после подписания акта:\n"
                 no_rate_delay = f'Условия оплаты: {delay_payment}'
@@ -379,7 +377,6 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                 no_rate_delay = 'Условия оплаты: Срок уточняется'
             
             if rate is None or rate =='0' or type(rate) != dict:
-        # если ставки нет — общий текст
                 text_cleaned = (
                     f"🆔{vac_id}\n\n"
                     f"{vacancy}\n\n"
@@ -464,9 +461,9 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                         state_contract_text = f"<s>{state_contract_text}</s>"
 
                     if only_fulltime:
-                        ip_text = f"<s>Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 165 раб. часов): {rate_ip} RUB(Gross)</s>"
+                        ip_text = f"<s>Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)</s>"
                     else:
-                        ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 165 раб. часов): {rate_ip} RUB(Gross)'
+                        ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)'
 
                     return (
                         f"{flag_text}"
@@ -546,7 +543,7 @@ async def send_message_by_username(username: str, text: str, client: TelegramCli
                 username = username[1:]
             
             entity = await client.get_entity(username)
-            await client.send_message(entity, text)
+            await client.send_message(entity, text, parse_mode='html')
             print(f"✅ Сообщение отправлено пользователю @{username}")
             return True
         except Exception as e:
@@ -682,6 +679,7 @@ async def create_recruiter_forum(recruiter_id: int, recruiter_username: str, bot
     group_id = f'-100{group_id}'
 
     await bot.send_message(chat_id = group_id, message_thread_id = topic_id, text = message_text, parse_mode='HTML')
+    await add_vacancy_thread(thread_id = topic_id, vacancy_text = message_text, vacancy_id = vac_id)
 
     return group_id, topic_id
         
@@ -693,6 +691,15 @@ async def create_vacancy_thread(group_id: int, mes_text: str, client: TelegramCl
     Создаёт новый тред (forum topic) в указанной форум-группе.
     Возвращает словарь с данными темы.
     """
+    tread_create = False
+    resp = await client(functions.channels.GetForumTopicsRequest(channel=group_id,offset_date=None, offset_id=0, offset_topic=0, limit=100, q=vac_id))
+    
+    
+    if resp.topics != []:
+        tread_id = resp.topics[0].id
+        tread_create = True
+        print(f"[+] Тема {vac_id} уже существует")
+        return tread_id, tread_create
 
     # 1️⃣ Создаём тему в форуме
     result = await client(functions.channels.CreateForumTopicRequest(
@@ -719,8 +726,9 @@ async def create_vacancy_thread(group_id: int, mes_text: str, client: TelegramCl
 
     try:
         await bot.send_message(chat_id = group_id, message_thread_id = topic_id, text = mes_text, parse_mode='HTML')
+        await add_vacancy_thread(thread_id = topic_id, vacancy_text = mes_text, vacancy_id = vac_id)
         print(f"[+] Отправлено описание вакансии в тред {topic_id}")
     except Exception as e:
         print(f"❌ Ошибка при отправке в тред {topic_id}: {e}")
         
-    return topic_id
+    return topic_id, tread_create

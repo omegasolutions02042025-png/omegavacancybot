@@ -164,7 +164,49 @@ def _post_fix_inline_dicts(doc: Document):
             br = p.add_run(); br.add_break(WD_BREAK.LINE)
             p.add_run(it)
 
-def render_resume_docx(payload: dict, vacancy_text: str = "") -> str:
+# --- Новое: форматирование даты/времени по-русски и вставка раздела «Примечание» ---
+
+_MONTHS_RU_GEN = {
+    1: "января", 2: "февраля", 3: "марта", 4: "апреля",
+    5: "мая", 6: "июня", 7: "июля", 8: "августа",
+    9: "сентября", 10: "октября", 11: "ноября", 12: "декабря"
+}
+
+def _format_dt_ru(dt: datetime) -> str:
+    """16 августа 2025 в 11:31"""
+    return f"{dt.day} {_MONTHS_RU_GEN[dt.month]} {dt.year} в {dt.strftime('%H:%M')}"
+
+def _render_primichanie(doc: Document, color_hex: str, font_size_headings: int, utochnenie):
+    """Добавляет раздел «Примечание», если utochnenie не пусто.
+       Первая строка: «Резюме обновлено: <дата> (данные из оригинала).»
+       Далее: по одному «Добавлено: <элемент>» для каждого пункта из utochnenie.
+    """
+    # Нормализуем utochnenie к списку строк
+    items = []
+    if isinstance(utochnenie, str):
+        s = utochnenie.strip()
+        if s:
+            # Разрешим разделение по точке с запятой/переводам строк/запятым — но без выкидывания смысла
+            candidates = re.split(r"[;\n]+", s)
+            for c in candidates:
+                cc = c.strip().strip("-–•").strip()
+                if cc:
+                    items.append(cc)
+    elif isinstance(utochnenie, (list, tuple, set)):
+        for x in utochnenie:
+            xx = (str(x) if not isinstance(x, str) else x).strip().strip("-–•").strip()
+            if xx:
+                items.append(xx)
+
+    if not items:
+        return
+
+    _add_section_title(doc, "Примечание", color_hex, font_size_headings)
+    _add_text(doc, f"Резюме обновлено: {_format_dt_ru(datetime.now())} (данные из оригинала).")
+    for it in items:
+        _add_text(doc, f"Добавлено: {it}")
+
+def render_resume_docx(payload: dict, vacancy_text: str = "", utochnenie=None) -> str:
     cfg = payload.get("config", {})
     cnt = payload.get("content", {})
     doc = Document()
@@ -212,7 +254,10 @@ def render_resume_docx(payload: dict, vacancy_text: str = "") -> str:
     if vacancy_text:
         technologies = _extract_technologies_from_vacancy(vacancy_text)
         _highlight_technologies_in_text(doc, technologies)
-    
+
+    # --- Новое: раздел «Примечание», если есть utochnenie ---
+    _render_primichanie(doc, color, hsize, utochnenie)
+
     name_for_file = (cnt.get("fio") or {}).get("full_name") or "Name"
     date_str = datetime.now().strftime("%Y-%m-%d")
     # Use current directory instead of Linux path
@@ -320,8 +365,6 @@ def _extract_technologies_from_vacancy(vacancy_text: str) -> list:
     ]
     
     technologies = set()
-    text_upper = vacancy_text.upper()
-    
     for pattern in tech_patterns:
         matches = re.findall(pattern, vacancy_text, re.IGNORECASE)
         technologies.update(matches)
@@ -440,7 +483,6 @@ def generate_payload_once(api_key: str,
         generation_config=genai.types.GenerationConfig(
             temperature=0.1,
             max_output_tokens=12288,  # Increased from 6144 to handle larger resumes
-            response_mime_type="application/json",
         )
     )
     raw = _extract_text_from_gemini_response(resp)
@@ -464,9 +506,10 @@ def generate_payload_once(api_key: str,
 
 def create_white_label_resume_once(api_key: str,
                                    candidate_text: str,
-                                   vacancy_text: str):
+                                   vacancy_text: str,
+                                   utochnenie=None):
     payload = generate_payload_once(api_key, candidate_text, vacancy_text)
-    filename = render_resume_docx(payload, vacancy_text)
+    filename = render_resume_docx(payload, vacancy_text, utochnenie=utochnenie)
     return filename
 
 #===== Пример использования (раскомментируй, подставь API ключ и тексты) =====
@@ -554,356 +597,18 @@ My mobile phone: 7-916-685-9607 (9:00-22:00 GMT+3, Moscow),
  Certified Professional 4 (#63533), EMCTAe, Six Sigma Black Belt
  Professional, MCP, etc. 
  Page 1 of 9
-  
-3rd prize winner of 1st Innotech All
-Russia hackathon for VTB banking
- group (Top2 in Russia)
- Honorable Mention of O'Reilly
- worldwide IT architecture contest
- (Architectural Katas 2021)
- 3rd prize winner of annual student
- judo championship of Belarusian
- State University
- Top 25 influencer of Russian IT
- market
- Publications
- Fluctuational transitions in an
- optically bistable element
- 30+ my (w/o coauthor) articles
- Set of 570+ my own (w/o co-authors)
- publications in printed magazines
- Fluctuational transitions and related
- phenomena in a passive all-optical
- bistable system
- Stochastic resonance in an all
-optical passive bistable system
- Hardware: PC, Mac, HP/IBM/Dell servers, HP/IBM/EMC/NetApp/Dell
- NAS/SAN, LAN/WAN. 
-OS: IBM AIX, Linux CentOS, MS Windows 10, Windows Server
- 2016, MacOS.
- Programming languages: Python, VBA, DHTML, PGSQL, PL/SQL.
- Methodologies: ASAP, AIM, PJM, PMBOK, BABOK, PRINCE2,
- RUP, BPMN, MSF, MOF, SADT (IDEF), Agile SCRUM, ITIL, ITSM,
- TQM, COBIT, Lean, Six Sigma, TDD, TOGAF, QFD, COSO, ISO.
- DBMS: MS SQL Server, Oracle Database, PostgreSQL, MS Access.
- Application software: MS Project Server, Jira, SAP BO, MS Office,
- MS Visio, ARIS ToolSet, Atlassian Jira, Confluence, SPSS, Matlab,
- VMware, Citrix, HP Service Manager, SVN, Orbus iServer.
- Core banking systems: Misys MIDAS, Misys Equation, Oracle
- FLEXCUBE, FIS Sanchez Profile, DiasoftBank.
- I have visited 400+ IT events worldwide (in 10+ countries) and
- was a speaker at various events. 5+years was a staff writer of
- Computerworld-Russia, after was a frequent contributor to several
- IT major magazines, included PCWEEK, BYTE, Macworld, Network
- World. Was included in the records book of Russia due to the
- number of printed publications (570+) in mass media without co
-authors.
- Countries I visited during a business trips (times in bracket): USA
- (2), Germany (5), France (2), Switzerland (1), UK (2), Ireland (2),
- Singapore (1), South Korea (1), Cyprus (2), Poland (1), Czech (1).
- And 10+ (mostly, Europe) in vacations.
- Experience
- Nexign
- Solutions Architect
- March 2025 - May 2025 (3 months)
- Moscow, Moscow City, Russia
- Design of the billing systems (OSS/BSS) integration with banking and payment
- solutions for Megafon (#2 telco operator in RF and CIS: 78M customers, 36K
- staff).
- Stack: Sparx EA, Oracle database, PostgreSQL, RabbitMQ, Linux, K8s.
- Innotech
- Page 2 of 9
-  
-2 years 7 months
- Platform Solutions Architect
- June 2023 - March 2025 (1 year 10 months)
- Moscow, Moscow City, Russia
- The largest IT company (www.inno.tech) in Russia with 16K+ staff focused
- to custom software development for banks. All my projects below dedicated
- to VTB banking group, one of the largest financial institutions in Europe (20M
- retail clients, 1М corporate clients). All solutions below based on MSA and with
- streaming data to Hadoop:- Designed from scratch a payments engine for partners.- Designed a corporate loans solution for migration from old CFT core banking
- systems to new.- Upgraded a corporate pledges module with integration for external
- organizations (Pricestat, M2, Federal Notarial Chamber, etc).
- Lead Architect
- September 2022 - May 2023 (9 months)
- Moscow, Moscow City, Russia
- Designed a Risk Management solution (RWA calculation) based on Hadoop
- Data Lake with Spark engine and DWH based on GreenPlum MPP for VTB
- bank. 
-Stack: Oracle database, PostgreSQL, Apache Airflow, Apache Spark,
- Greenplum, Linux, K8s, Hadoop, OpenShift.
- Promsvyazbank
- System Architect
- May 2021 - September 2022 (1 year 5 months)
- Moscow, Moscow City, Russia
- Universal bank (www.psbank.ru) in Top5 Russia, with offices also in China,
- Kazakhstan, Cyprus.- Designed of 20+ production & testing environments, mostly for CBS, ERP,
- card processing. - Reviewed and tested of 10+ tools for Architecture as a Code.- Performed an IT architecture audit for several large banks during M&A
- processes.
- Stack:: Oracle database, PostgreSQL, Kafka, SAP PI, SAP PO, Informatica
- PWC, IBM WAS, K8s, ELK, Hadoop, VMware, Linux, RabbitMQ.
- MTS Group
- Senior Solutions Architect
- Page 3 of 9
-  
-December 2020 - May 2021 (6 months)
- Moscow, Moscow City, Russia
- #1 telco operator (www.mts.ru) in Russia with offices also in Belarus, Armenia:
- 88M+ customers, 15K+ staff. Designed a KION - the top high-load on-line
- cinema. Stack: Java (+Spring Boot), PostgreSQL, Python, Apache Kafka,
- Redis, Memcached, Kubernetes (K8s), Docker, ELK, Hadoop, Prometheus,
- GitLab.
- Federal Treasury of Russian Federation  
-Deputy Head of system architecture department
- December 2018 - November 2020 (2 years)
- Moscow,  Russian Federation
- www.roskazna.gov.ru - the one of the largest daughter at Ministry of Finance.
- 130M+ customers.- Designed a huge Data Centers and distributed DR high load IT solutions for
- 24x7x365, including Big Data: 85 regions of RF in 11 time zones, 2M+ users. - Transformed Oracle e-Business Suite (OEBS) to custom-developed SW with
- the same features  (10M+ USD budget). - Designed a draft of a large Data Lake based on Hadoop with several ETL/
- ELT tools. 
-Stack: 20+ Oracle SW solutions (DB, RAC, OEBS, GG, etc), Java (+Spring
- Boot), Python, Hadoop, PostgreSQL, Docker, Kubernetes (K8s), Apache
- Kafka, Cassandra, Ignite, Camel, ActiveMQ, ELK.
- NTR Lab (Software Development)
- Analyst Team Lead
- July 2018 - October 2018 (4 months)
- Moscow, Russian Federation
- Completed 10+ presale projects for IT solutions: AI (artificial neural networks,
- Machine Learning, Computer Vision), Big Data, IoT, blockchain. Developed a
- data model and other elements for an innovative blockchain solution based on
- the directed acyclic graph (DAG). Managed a team of 6 analysts.
- Premium IT Solution
- Lead Analyst
- February 2018 - April 2018 (3 months)
- Moscow, Russian Federation
- Renovated features of cash centers chain for Sberbank of Russia (Top1).
- SCANEX R&D Center
- Lead Engineer
- Page 4 of 9
-  
-July 2014 - December 2017 (3 years 6 months)
- Moscow, Russian Federation
- Only one manufacturer (www.scanex.ru) in Russia of own designed space
- stations for Earth remote censoring.
- Designed: cloud portal (SaaS) based on OpenStack & OpenShift for maritime
- navigation (1M+ USD budget), Earth remote censoring center for Emergency
- Ministry of Kazakhstan, Defense Ministry of RF; optimized satellites data
- receiving business processes. Trained 20+ persons (PMI PMBOK, PRINCE2,
- ITIL, IBM). Stack: Centos Linux, Python, VMware vSphere, Oracle MySQL, MS
- SQL Server, PostgreSQL, Docker, K8s, AWS, MS Azure.
- ANT-Inform
- Project manager
- November 2013 - February 2014 (4 months)
- Moscow, Russian Federation
- Implemented of own designed ERP/MES system for several Gazprom
- branches.
- Compulink Group
- IT Architect
- October 2012 - October 2013 (1 year 1 month)
- Moscow, Russian Federation
- System integrator (www.compulink.ru) in Top10 of Russia. 200+ staff.
- Designed a DC for the largest Moscow Energy company (VMware SRM,
- Linux HA Cluster for SAP R/3); DC for the largest oil transport company
- (EMC VMAX, IBM Power); DC for a large oil company (NetApp FAS3220
- MetroCluster).
- KPBS (Krikunov & Partners Business Systems)
- Senior Expert
- July 2011 - June 2012 (1 year)
- Moscow, Russian Federation
- Completed cross-platform data migration for Societe Generale Bank from Delta
- Informatic core banking systems (CBS) based on Oracle to Misys Equation
- CBS based on IBM DB2, developed a logistic module (based on OpenBravo
- source code) for Leroy Merlin hypermarkets chain. 
-Written recommendations: Petr Chekunaev, Head of the development
- department at Krikunov & Partners Business Systems
- Page 5 of 9
-  
-Quorum Ltd.
- Key accounts manager
- October 2010 - February 2011 (5 months)
- Moscow, Russian Federation
- The member of Compulink Group dedicated to CBS and other software
- package development for banks. Completed 10+ bids (CBS, electronic
- documents archive solutions). Conducted presentation&demo of electronic
- documents archive solution of Quorum Ltd. for 20+ banks on-site.
- CPS (Center of Professional Software).
- Division head/Project manager
- November 2009 - September 2010 (11 months)
- Managed several sales and sales support projects of IT solutions: VMware,
- Veeam, Citrix, Symantec, IBM, HP. Have signed partner contracts with ~10
- new IT vendors, mostly Western.
- Written recommendations: Sergey Kondrashov, Head of marketing and
- development department at CPS
- Jet Infosystems
- Information Technology Analyst
- November 2006 - April 2009 (2 years 6 months)
- Moscow
- Implemented Oracle FLEXCUBE (#1 CBS) at Unicreditbank. Completed data
- cleansing and migration from MIDAS CBS to FLEXCUBE: developed strategy
- and project plan, mapped data, created reports, PL/SQL scripts, carried out
- UAT, another testing. 
-Written recommendations: Dmitry Chernov, Head of FLEXCUBE department at
- Jet Infosystems
- Bank Renaissance Credit
- Project manager
- June 2006 - October 2006 (5 months)
- Implemented of FIS Sanchez Profile (Western CBS), integrated FIS Sanchez
- Profile, DiasoftBank, other systems (OpenWay W4, Capstone, etc) by using
- IBM WebSphere ESB.
- CSBI Group
- Principal consultant
- Page 6 of 9
-  
-September 2004 - May 2006 (1 year 9 months)
- Moscow, Russian Federation
- Completed 10+ bids for complex IT solutions: CBS, Enterprise documents
- management solutions (EDMS), credit scoring solutions, card management
- systems, ERP, CRM, etc. 
-Written recommendations: Dmitry Chernov, General manager deputy at
- ComputerLand CIS
- US Russia Marketing Group
- Project manager
- August 2002 - May 2004 (1 year 10 months)
- Completed 10+ market researches in the area of high-end electronics and
- industrial equipment, carried out business development, sales & marketing.
- Written recommendations: Iliya Gorbatov, head at URMG representation office
- in Moscow, RF
- Interface Ltd.
- CEO deputy of international operations
- March 2002 - August 2002 (6 months)
- Moscow, Russian Federation
- Sales and marketing business software solutions (ERP, CRM, EDMS, etc) for
- foreign clients. Created several business plans and offers for investors.
- NBZ Computers
- Head Of Marketing Department
- January 2001 - March 2002 (1 year 3 months)
- Moscow, Russian Federation
- Carried out of the promotion campaigns for IT solutions: Apple, Tally, OKI,
- Minolta-QMS.
- Diamond Communications
- Head Of Marketing Department
- March 2000 - December 2000 (10 months)
- Moscow, Russian Federation
- Carried out of the promotion campaigns for IT solutions: Cisco, Lucent, RAD,
- Digi, etc. Managed 5 subordinates.
- Cabletron Systems
- Marketing manager
- Page 7 of 9
-  
-September 1999 - March 2000 (7 months)
- Moscow, Russian Federation
- Managed of the promotion campaigns for Cabletron network products. Created
- a Russian version of a corporate website (cabletron.ru).
- Written recommendations: Denis Symington, Country manager at Cabletron
- CIS
- Sybase Software
- Marketing Manager
- August 1998 - May 1999 (10 months)
- Moscow, Russian Federation
- Carried out of the promotion campaigns of Sybase Software products: DBMS,
- DWH, SW dev tools.
- LANIT
- Sales and Marketing Manager
- May 1997 - June 1998 (1 year 2 months)
- Moscow, Russian Federation
- Carried out of the promotion campaigns of major LANIT software products:
- LanHello, LanVisit, LanDocs, etc.
- Written recommendations: Leonid Manihas, General manager deputy at
- LANIT.
- Infoart Ltd.
- Senior Staff Writer
- October 1996 - May 1997 (8 months)
- Published more than 50 own (i.e. w/o co-authors) articles in IT and business
- area at the ComputerWeek-Moscow weekly.
- Compulink Group
- Marketing Manager
- October 1995 - October 1996 (1 year 1 month)
- Moscow, Russian Federation
- Increased sales revenue of Unisys PCs and servers in 3+ times.
- Infoart Ltd.
- Senior Sraff Writer
- October 1992 - October 1995 (3 years 1 month)
- Moscow, Moscow City, Russia
- Page 8 of 9
-  
-Printed 500+ own articles about IT business w/o co-authors, mostly in
- ComputerWorld-Russia weekly. Visited 10+ countries (mostly Western Europe
- as well as US and Singapore) during business trips.
- Education
- Corporate Finance Institute® (CFI)
- Some finance analysis courses, close to Business Intelligence & Data Analyst
- (BIDA) certification · (February 2023 - December 2024)
- IBM Big Data University
- Some university courses, Big Data · (January 2019 - September 2022)
- Deep Learning School at Moscow Institute of Physics and
- Technology
- Some university courses, Advanced stream: Python, NumPy, Deep Learning,
- Neural Networks, Neural Machine Translation.  · (2019 - 2020)
- Charles Sturt University
- Some university courses, Computer Science · (2017 - 2020)
- IBM Partners Academy
- Diploma, IT: software & hardware, services, tech support, ITSM · (2012 - 2018)
- Page 9 of 9'''
+  ...
+'''
     vacancy = '''
     BD-10128 (https://t.me/omega_vacancy_bot?start=3093_BD-10128)
 📅 Дата публикации: 08.10.2025 12:13
-
-🥇 Разработчик EDW (Middle / Middle+)
-
-🇧🇾💰 Месячная ставка для юр лица РБ:
-Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: 141 000 RUB (с выплатой зарплаты 11 числа месяца следующего за отчетным)
-
-Вариант 2. Выплата ИП/Самозанятый
-С отсрочкой платежа 50 рабочих дней после подписания акта:
-(Актирование: ежемесячное):
-1346 RUB/час (Gross)
-Справочно в месяц (при 165 раб. часов): 222 000 RUB(Gross)
-
-🇷🇺💰 Месячная ставка для юр лица РФ:
-Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: 135 000 RUB (с выплатой зарплаты 11 числа месяца следующего за отчетным)
-
-Вариант 2. Выплата ИП/Самозанятый
-С отсрочкой платежа 50 рабочих дней после подписания акта:
-(Актирование: ежемесячное):
-1403 RUB/час (Gross)
-Справочно в месяц (при 165 раб. часов): 231 000 RUB(Gross)
-
-📍 Локация/Гражданство: Любая / Любое
-🏠 Формат работы: Удалённо (фулл-тайм, тайм-зона МСК)
-🎓 Грейд: Middle / Middle+
-
-📎 Задачи:
-— Разработка программного кода новых и доработка существующих компонентов аналитического хранилища данных;
-— Разработка правил и практик работы с кодом, описание их в базе знаний;
-— Разработка и описание механизмов публикации кода и релизов;
-— Оптимизация запросов и структур баз данных;
-— Оперативное реагирование на информацию о проблемах в зоне ответственности, выполнение задач в установленный срок;
-— Проведение код-ревью.
-
-💻 Требования:
-— Общий опыт работы не менее 3 лет;
-— Опыт работы с ELT-процессами;
-— Опыт работы с системами контроля версий (git, Gitlab, Bitbucket);
-— Опыт работы с распределёнными базами данных - Hadoop, Greenplum;
-— Знание SQL (ANSI, PL/SQL), опыт оптимизации запросов;
-— Опыт использования системами ведения документации.
-
-⚠️ Особые условия:
-— Резюме должно содержать: образование, город, ключевые компетенции, название проектов, роль в проекте, описание самих проектов, обязанности специалиста, достижения (если есть), основные используемые технологии специалистом на проекте, состав команды.
-— Все требования из запроса должны быть отражены в проектах в резюме.
-
-❗️ Обязательные данные по кандидату при подаче:
-● ФИО
-● Страна + Город
-● Дата рождения (не возраст, а дата)
-● Электронная почта
-● Образование (ВУЗ, год окончания, специальность)
-● Грейд
-● Ставка
-● Чек-лист соответствия требованиям (ДА/НЕТ)
-
-Контакт для вопросов: @sazanovich_ma (не забудьте указать 🆔 запроса)'''
-    fn, payload = create_white_label_resume_once(GEMINI_API_KEY, candidate, vacancy)
-    print("Готово:", fn)
+... (укорочено для примера) ...
+'''
+    # # Пример уточнений:
+    # utochnenie = [
+    #     "владение французским языком (уровень не указан)",
+    #     "опыт с Greenplum (подтвердить стек)",
+    #     "сертификация AWS (подтвердить год)"
+    # ]
+    # fn = create_white_label_resume_once(GEMINI_API_KEY, candidate, vacancy, utochnenie=utochnenie)
+    # print("Готово:", fn)

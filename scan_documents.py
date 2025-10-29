@@ -1,17 +1,14 @@
 from docx import Document
 from PyPDF2 import PdfReader
-import pypandoc
 from aiogram import Bot
 import os
 from gpt_gimini import sverka_vac_and_resume_json, generate_mail_for_candidate_finalist, generate_mail_for_candidate_utochnenie, generate_mail_for_candidate_otkaz, generate_cover_letter_for_client
 import asyncio
-from funcs import format_candidate_json_str
+
 from striprtf.striprtf import rtf_to_text
-from db import add_otkonechenie_resume, add_final_resume, add_utochnenie_resume
-from kb import utochnit_prichinu_kb
 from dotenv import load_dotenv
 import textract
-from db import add_save_resume
+
 from telethon_bot import ADMIN_ID
 load_dotenv()
 
@@ -183,15 +180,13 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
             await bot.send_message(user_id, f"⚠️ Формат {ext} не поддерживается: {path}")
             return
         
-        text_gpt = await background_sverka(resume_text=text, vacancy_text=vac_text, bot=bot, user_id=user_id, file_name=file_name)
-        candidate_name = text_gpt.get("candidate")
-        await add_save_resume(candidate_name, text)
+        data  = await background_sverka(resume_text=text, vacancy_text=vac_text, bot=bot, user_id=user_id, file_name=file_name)
         
         os.remove(path)
     except Exception as e:
         await bot.send_message(user_id, f"❌ Ошибка в {path}: {e}")
     finally:
-        return text_gpt or None
+        return data or None
         
 async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_id: int|str, file_name: str):
     try:
@@ -203,7 +198,8 @@ async def background_sverka(resume_text: str, vacancy_text: str, bot: Bot, user_
             verdict = result_gpt.get("summary").get("verdict")
             candidate = result_gpt.get("candidate").get("full_name")
             
-            return {'candidate': candidate, 'verdict': verdict, 'sverka_text': result, 'candidate_json': result_gpt}
+            
+            return {'candidate': candidate, 'verdict': verdict, 'sverka_text': result, 'candidate_json': result_gpt, 'resume_text': resume_text}
         else:
             await bot.send_message(ADMIN_ID, "❌ Ошибка при сверке вакансии")
     except Exception as e:
@@ -252,14 +248,28 @@ def display_analysis(json_data):
     def format_field(key, value):
         val_str = value if value else "❌"
         return f"{key}: {val_str}"
-
+    location = data.get("candidate", {}).get('location')
+    city = location.get('city', None)
+    country = location.get('country', None)
+    if city == 'Нет (требуется уточнение)':
+        city = None
+    if country == 'Нет (требуется уточнение)':
+        country = None
+    if city and country:
+        location = f"{city}, {country}"
+    elif city:
+        location = city
+    elif country:
+        location = country
+    else:
+        location = "не указано"
     # --- КАНДИДАТ (только ФИО) ---
     output_lines.append("="*15 + " 👤 КАНДИДАТ " + "="*15)
     candidate = data.get("candidate", {})
     output_lines.append(format_field("ФИО", candidate.get('full_name')))
     output_lines.append(format_field("—Дата рождения", candidate.get('birth_date').get('date')))
     output_lines.append(format_field("—Зарплатные ожидания", data.get('summary').get('salary_expectations')))
-    output_lines.append(format_field("—Локация", candidate.get('location').get('city')))
+    output_lines.append(format_field("—Локация", location))
     output_lines.append(format_field("—Стек технологий", ", ".join(candidate.get('tech_stack'))) )
 
 
@@ -336,21 +346,21 @@ def create_finalists_table(finalists: list[dict]):
 
     
     
-async def create_mails(finalist: dict, user_name: str, vacancy: str):
+async def create_mails(finalist: dict, user_name: str,vacancy: str, group_id: int, thread_id: int, verdict: str):
     try:
     
       if isinstance(finalist, str):
         print("❌ Неверный формат данных финалиста")
         return None
-      summary = finalist.get("summary", {})
-      verdict = summary.get("verdict", "")
-      if verdict == "Полностью подходит":
-        res = await generate_mail_for_candidate_finalist(finalist, user_name)
+      
+      print(verdict)
+      if verdict == "PP":
+        res = await generate_mail_for_candidate_finalist(finalist, user_name, group_id, thread_id)
         return res
-      elif verdict == "Частично подходит (нужны уточнения)":
-        res = await generate_mail_for_candidate_utochnenie(finalist, user_name, vacancy)
+      elif verdict == "CP":
+        res = await generate_mail_for_candidate_utochnenie(finalist, user_name, vacancy, group_id, thread_id)
         return res
-      elif verdict == "Не подходит":
+      elif verdict == "NP":
         res = await generate_mail_for_candidate_otkaz(finalist, user_name)
         return res
     except Exception as e:

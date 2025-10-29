@@ -1,35 +1,43 @@
-import aiosmtplib
-from email.message import EmailMessage
-from typing import List, Optional
-import imaplib
-import email
-from email import policy
-from typing import List, Dict, Optional
-
+import re
+import mimetypes
 from typing import Optional, List
 from email.message import EmailMessage
-import mimetypes
 import aiosmtplib
-import re
-from typing import Optional
+import html as _html
+
+def _looks_like_html(s: str) -> bool:
+    return bool(re.search(r'</?[a-z][\s\S]*?>', s or '', re.I))
+
+def _plain_to_html_preserve_breaks(text: str) -> str:
+    """Преобразует обычный текст в HTML, сохранив переносы строк."""
+    if text is None:
+        text = ""
+    # Экраним HTML-символы и превращаем \n в <br>
+    esc = _html.escape(text).replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>\n")
+    return f"<!doctype html><html><body>{esc}</body></html>"
+
+def _html_to_plain_fallback(html: str) -> str:
+    """Делаем читаемый plain из HTML, сохраняя переносы."""
+    if not html:
+        return "(пустое письмо)"
+    text = re.sub(r'(?i)</(p|div|h[1-6]|li|br)\s*>', '\n', html)
+    text = re.sub(r'(?i)<li\s*>', '• ', text)
+    text = re.sub(r'(?is)<a[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
+                  lambda m: f"{m.group(2)} ({m.group(1)})", text)
+    text = re.sub(r'(?is)<(script|style).*?>.*?</\1>', '', text)
+    text = re.sub(r'(?is)<[^>]+>', '', text)
+    text = _html.unescape(text)
+    # ВАЖНО: не схлопывать одиночные \n
+    text = re.sub(r'[ \t]+', ' ', text)
+    text = re.sub(r'\n{4,}', '\n\n\n', text).strip()
+    return text or "(пустое письмо)"
 
 def sanitize_header(value: Optional[str]) -> str:
-    """
-    Убирает из строки все запрещённые символы для SMTP-заголовков:
-    — переводы строк (\r, \n)
-    — управляющие символы
-    — двойные пробелы в начале/конце
-    Возвращает безопасную строку.
-    """
     if not value:
         return ""
-    # Удаляем переносы строк и любые непечатаемые символы
     value = re.sub(r'[\r\n\t]+', ' ', value)
-    # Обрезаем и нормализуем пробелы
     value = re.sub(r'\s{2,}', ' ', value).strip()
     return value
-
-
 
 async def send_email_gmail(
     sender_email: str,
@@ -45,12 +53,23 @@ async def send_email_gmail(
     msg['To'] = sanitize_header(recipient_email)
     msg['Subject'] = sanitize_header(subject)
 
-    if html:
-        msg.add_alternative(body or "(пустое письмо)", subtype='html')
-    else:
-        msg.set_content(body or "(пустое письмо)")
+    is_html = _looks_like_html(body)
+    use_html = html or is_html
 
-    # вложения с корректным MIME
+    if use_html:
+        # Plain-часть: если тело изначально HTML — делаем читабельный фоллбэк,
+        # если тело было plain — кладём его как есть (переносы сохранятся).
+        plain_part = _html_to_plain_fallback(body) if is_html else (body or "(пустое письмо)")
+        msg.set_content(plain_part, charset='utf-8')
+
+        # HTML-часть: если body был plain — конвертируем \n в <br>, иначе берём как есть
+        html_part = body if is_html else _plain_to_html_preserve_breaks(body or "")
+        msg.add_alternative(html_part or "(пустое письмо)", subtype='html', charset='utf-8')
+    else:
+        # Обычное текстовое письмо — переносы сохранятся
+        msg.set_content(body or "(пустое письмо)", charset='utf-8')
+
+    # Вложения
     if attachments:
         for file_path in attachments:
             ctype, encoding = mimetypes.guess_type(file_path)
@@ -74,78 +93,41 @@ async def send_email_gmail(
             password=app_password,
             use_tls=True
         )
-
         print("Ответ SMTP:", resp)
 
-        # Проверяем разные типы ответов (tuple или объект)
+        # Устойчивая проверка успеха
         if isinstance(resp, tuple):
-            return "OK" in resp[1].upper()
-        elif hasattr(resp, "code"):
-            return 200 <= getattr(resp, "code", 0) < 300
-        else:
-            return False
+            code_part = resp[0] if len(resp) > 0 else None
+            msg_part = resp[1] if len(resp) > 1 else None
+
+            code = None
+            if isinstance(code_part, int):
+                code = code_part
+            elif isinstance(code_part, (bytes, str)):
+                s = code_part.decode() if isinstance(code_part, bytes) else code_part
+                m = re.search(r'\b(\d{3})\b', s)
+                if m: code = int(m.group(1))
+            if code is None and isinstance(msg_part, (bytes, str)):
+                s = msg_part.decode() if isinstance(msg_part, bytes) else msg_part
+                m = re.search(r'\b(\d{3})\b', s)
+                if m: code = int(m.group(1))
+
+            if code is not None:
+                return 200 <= code < 300
+
+            s = '' if msg_part is None else (msg_part.decode() if isinstance(msg_part, bytes) else str(msg_part))
+            u = s.upper()
+            return u.startswith('2') or ' 2.0.0 ' in u or ' OK ' in u or u.startswith('OK')
+
+        code_attr = getattr(resp, 'code', None)
+        if code_attr is not None:
+            try:
+                return 200 <= int(code_attr) < 300
+            except Exception:
+                pass
+
+        return True
 
     except Exception as e:
         print(f"Ошибка при отправке письма: {e}")
         return False
-
-
-
-
-import imaplib
-import email
-from email import policy
-from typing import List, Dict
-
-def fetch_last_emails(
-    imap_user: str, 
-    imap_pass: str, 
-    mailbox: str = 'inbox', 
-    limit: int = 10
-) -> List[Dict[str, str]]:
-    """
-    Получает последние 'limit' писем из Gmail через IMAP.
-
-    Возвращает список словарей: {'subject': str, 'from': str, 'body': str}
-    """
-    imap_host = 'imap.gmail.com'
-    mail = imaplib.IMAP4_SSL(imap_host)
-    mail.login(imap_user, imap_pass)
-    mail.select(mailbox)
-
-    status, data = mail.search(None, 'ALL')
-    if status != 'OK':
-        raise Exception("Ошибка поиска писем")
-
-    mail_ids = data[0].split()
-    emails = []
-
-    for mail_id in mail_ids[-limit:]:
-        status, data = mail.fetch(mail_id, '(RFC822)')
-        if status != 'OK':
-            continue
-
-        msg = email.message_from_bytes(data[0][1], policy=policy.default)
-        subject = msg['subject']
-        from_ = msg['from']
-
-        # Получаем текст письма
-        body = ""
-        if msg.is_multipart():
-            for part in msg.walk():
-                if part.get_content_type() == 'text/plain':
-                    body = part.get_content()
-                    break
-        else:
-            body = msg.get_content()
-
-        emails.append({
-            'subject': subject,
-            'from': from_,
-            'body': body
-        })
-
-    mail.logout()
-    return emails
-
-

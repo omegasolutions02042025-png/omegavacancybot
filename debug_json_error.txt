@@ -1,5 +1,5 @@
-Original error: Expecting property name enclosed in double quotes: line 169 column 8 (char 7243)
-Error position: 7243
+Original error: Unterminated string starting at: line 830 column 9 (char 28368)
+Error position: 28368
 Problematic JSON:
 {
   "config": {
@@ -11,7 +11,7 @@ Problematic JSON:
     "language": "ru",
     "sections": [
       "ФИО",
-      "Желаемая должность и грейд",
+      "РЕЗЮМЕ",
       "Краткое описание профиля",
       "Ключевые навыки",
       "Опыт работы",
@@ -25,82 +25,174 @@ Problematic JSON:
   },
   "content": {
     "fio": {
-      "full_name": "Сергей Цуприков",
+      "full_name": "Цуприков Сергей",
       "location": "Москва, Россия",
+      "citizenship": "РФ",
       "birth_date": ""
     },
-    "position_grade": "Разработчик EDW (Enterprise Data Warehouse), Senior+",
-    "summary": "ИТ-архитектор и руководитель проектов с более чем 12-летним опытом в области проектирования корпоративного ПО, Big Data и Data Science. Обладает 7-летним опытом управления проектами стоимостью до 15 млн долларов и глубокой экспертизой в банковской и финансовой сферах. Специализируется на проектировании хранилищ данных (DWH), Data Lake, миграции и интеграции данных в сложных кросс-платформенных средах. Имеет практический опыт работы с Hadoop, Greenplum, Oracle, PostgreSQL и инструментами ETL/ELT. Успешно руководил разработкой и внедрением высоконагруженных систем для ведущих телекоммуникационных и финансовых организаций.",
+    "position_grade": "Java разработчик",
+    "grade": "Senior",
+    "summary": "Опытный IT-архитектор с более чем 30-летним стажем в сфере информационных технологий. Специализируется на проектировании сложных, высоконагруженных и распределенных систем в финтехе, телекоммуникациях и государственном секторе. Обладает глубокими знаниями в области микросервисной архитектуры, Big Data, облачных решений и интеграции корпоративного ПО. Работал над ключевыми проектами для таких компаний, как ВТБ, Промсвязьбанк, МТС и Мегафон, используя стек технологий, включающий Java, Spring, Kubernetes, Kafka и Hadoop.",
     "skills": {
-      "Языки программирования": "Python, VBA, DHTML, PGSQL, PL/SQL",
-      "СУБД": "Oracle Database, PostgreSQL, MS SQL Server, MS Access, Greenplum, Cassandra, Redis, Memcached, Oracle MySQL, IBM DB2",
-      "Технологии и Инструменты": "Hadoop, Apache Spark, Apache Kafka, RabbitMQ, ActiveMQ, Kubernetes (K8s), Docker, OpenShift, ELK Stack, Prometheus, VMware, Citrix, IBM WebSphere ESB, SAP PI/PO, Informatica PWC, Sparx EA, Jira, Confluence, SVN, GitLab",
-      "Области экспертизы": "System Architecture, Telecommunications Billing, Big Data, Data Science, Data Lake, DWH, BI, Data Management, Data Quality, FinTech",
-      "Методологии": "Agile SCRUM, PMBOK, PRINCE2, ITIL, ITSM, TOGAF, RUP, BPMN, SADT (IDEF), Lean, Six Sigma, TDD, COBIT",
-      "ОС": "Linux (CentOS), IBM AIX, MS Windows Server, MacOS",
-      "АБС (Автоматизированные банковские системы)": "Oracle FLEXCUBE, Misys MIDAS, Misys Equation, FIS Sanchez Profile, DiasoftBank"
+      "Языки программирования": [
+        "Java",
+        "Python",
+        "PL/SQL",
+        "VBA",
+        "DHTML"
+      ],
+      "Фреймворки и библиотеки": [
+        "Spring Boot",
+        "Camel"
+      ],
+      "Базы данных": [
+        "PostgreSQL",
+        "SQL Server",
+        "Oracle Database",
+        "MS Access",
+        "IBM DB2",
+        "Sybase DBMS",
+        "MySQL",
+        "Greenplum",
+        "Cassandra",
+        "Redis",
+        "Memcached"
+      ],
+      "Инструменты и технологии": [
+        "Docker",
+        "Kubernetes",
+        "OpenShift",
+        "Kafka",
+        "RabbitMQ",
+        "ActiveMQ",
+        "Ignite",
+        "Hadoop",
+        "Apache Spark",
+        "Apache Airflow",
+        "Elasticsearch Logstash Kibana (ELK Stack)",
+        "Prometheus",
+        "GitLab",
+        "SVN",
+        "Jira",
+        "Confluence",
+        "Sparx EA",
+        "ARIS ToolSet",
+        "SAP PI",
+        "SAP PO",
+        "Informatica PWC",
+        "IBM WAS",
+        "IBM WebSphere ESB",
+        "Oracle FLEXCUBE"
+      ],
+      "Облачные технологии и виртуализация": [
+        "VMware",
+        "Citrix",
+        "OpenStack",
+        "Amazon Web Services",
+        "Microsoft Azure"
+      ],
+      "Операционные системы": [
+        "Linux",
+        "Windows",
+        "MacOS",
+        "IBM AIX"
+      ],
+      "Методологии": [
+        "Agile SCRUM",
+        "RUP",
+        "TDD",
+        "BPMN",
+        "SADT (IDEF)",
+        "ITIL",
+        "ITSM",
+        "TOGAF",
+        "PMBOK",
+        "BABOK",
+        "PRINCE2",
+        "Lean",
+        "Six Sigma",
+        "COBIT"
+      ]
     },
     "experience": [
       {
         "company": "Nexign",
-        "position": "Архитектор решений",
+        "position": "Solutions Architect",
         "period": "Март 2025 - Май 2025 (3 месяца)",
         "responsibilities": [
-          "Проектирование интеграции биллинговых систем (OSS/BSS) с банковскими и платежными решениями для Мегафон (#2 телеком-оператор в РФ и СНГ: 78 млн клиентов, 36 тыс. сотрудников)."
+          "Проектирование интеграции биллинговых систем (OSS/BSS) с банковскими и платежными решениями для Мегафон."
         ],
         "technologies": [
           "Sparx EA",
-          "Oracle database",
+          "Oracle Database",
           "PostgreSQL",
           "RabbitMQ",
           "Linux",
-          "K8s"
+          "Kubernetes"
         ],
         "achievements": []
       },
       {
         "company": "Innotech",
-        "position": "Архитектор платформенных решений / Ведущий архитектор",
-        "period": "Сентябрь 2022 - Март 2025 (2 года 7 месяцев)",
+        "position": "Platform Solutions Architect",
+        "period": "Июнь 2023 - Март 2025 (1 год 10 месяцев)",
         "responsibilities": [
-          "Проектирование с нуля платежного движка для партнеров.",
-          "Проектирование решения по корпоративным кредитам для миграции со старых АБС CFT на новую систему.",
-          "Модернизация модуля корпоративных залогов с интеграцией для внешних организаций (Pricestat, M2, Федеральная нотариальная палата и др.).",
-          "Проектирование решения по управлению рисками (расчет RWA) на базе Data Lake на Hadoop с движком Spark и DWH на GreenPlum MPP для банка ВТБ.",
-          "Все решения основаны на микросервисной архитектуре с потоковой передачей данных в Hadoop."
+          "Разработка кастомного ПО для банковской группы ВТБ. Все решения основаны на MSA и потоковой передаче данных в Hadoop.",
+          "Проектирование платежного движка для партнеров с нуля.",
+          "Проектирование решения для корпоративных кредитов для миграции со старых систем CFT на новые.",
+          "Обновление модуля корпоративных залогов с интеграцией для внешних организаций."
         ],
         "technologies": [
-          "Oracle database",
+          "Oracle Database",
           "PostgreSQL",
           "Apache Airflow",
           "Apache Spark",
           "Greenplum",
           "Linux",
-          "K8s",
+          "Kubernetes",
           "Hadoop",
           "OpenShift"
         ],
         "achievements": []
       },
       {
-        "company": "Промсвязьбанк",
-        "position": "Системный архитектор",
-        "period": "Май 2021 - Сентябрь 2022 (1 год 5 месяцев)",
+        "company": "Innotech",
+        "position": "Lead Architect",
+        "period": "Сентябрь 2022 - Май 2023 (9 месяцев)",
         "responsibilities": [
-          "Проектирование более 20 продуктивных и тестовых сред, в основном для АБС, ERP, карточного процессинга.",
-          "Обзор и тестирование более 10 инструментов для 'Architecture as a Code'.",
-          "Проведение аудита ИТ-архитектуры нескольких крупных банков в процессе M&A."
+          "Проектирование решения для управления рисками (расчет RWA) на базе Hadoop Data Lake с движком Spark и DWH на базе GreenPlum MPP для банка ВТБ."
         ],
         "technologies": [
-          "Oracle database",
+          "Oracle Database",
+          "PostgreSQL",
+          "Apache Airflow",
+          "Apache Spark",
+          "Greenplum",
+          "Linux",
+          "Kubernetes",
+          "Hadoop",
+          "OpenShift"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "Promsvyazbank",
+        "position": "System Architect",
+        "period": "Май 2021 - Сентябрь 2022 (1 год 5 месяцев)",
+        "responsibilities": [
+          "Проектирование 20+ производственных и тестовых сред.",
+          "Аудит IT-архитектуры для нескольких крупных банков."
+        ],
+        "technologies": [
+          "Oracle Database",
           "PostgreSQL",
           "Kafka",
           "SAP PI",
           "SAP PO",
           "Informatica PWC",
           "IBM WAS",
-          "K8s",
-          "ELK",
+          "Kubernetes",
+          "Elasticsearch Logstash Kibana",
           "Hadoop",
           "VMware",
           "Linux",
@@ -109,22 +201,23 @@ Problematic JSON:
         "achievements": []
       },
       {
-        "company": "МТС Групп",
-        "position": "Старший архитектор решений",
+        "company": "MTS Group",
+        "position": "Senior Solutions Architect",
         "period": "Декабрь 2020 - Май 2021 (6 месяцев)",
         "responsibilities": [
-          "Проектирование KION — высоконагруженного онлайн-кинотеатра для телеком-оператора №1 в России (88+ млн клиентов)."
+          "Проектирование KION - высоконагруженного онлайн-кинотеатра."
         ],
         "technologies": [
-          "Java (Spring Boot)",
+          "Java",
+          "Spring Boot",
           "PostgreSQL",
           "Python",
           "Apache Kafka",
           "Redis",
           "Memcached",
-          "Kubernetes (K8s)",
+          "Kubernetes",
           "Docker",
-          "ELK",
+          "Elasticsearch Logstash Kibana",
           "Hadoop",
           "Prometheus",
           "GitLab"
@@ -132,41 +225,609 @@ Problematic JSON:
         "achievements": []
       },
       {
-        "company": "Федеральное казначейство Российской Федерации",
-        "position": "Заместитель начальника отдела системной архитектуры",
+        "company": "Federal Treasury of Russian Federation",
+        "position": "Deputy Head of system architecture department",
         "period": "Декабрь 2018 - Ноябрь 2020 (2 года)",
         "responsibilities": [
-          "Проектирование крупных центров обработки данных и распределенных высоконагруженных ИТ-решений с обеспечением катастрофоустойчивости (24x7x365), включая Big Data (85 регионов РФ, 11 часовых поясов, 2+ млн пользователей).",
-          "Трансформация Oracle e-Business Suite (OEBS) в ПО собственной разработки с аналогичным функционалом (бюджет 10+ млн USD).",
-          "Проектирование эскизного проекта большого Data Lake на базе Hadoop с несколькими инструментами ETL/ELT."
+          "Проектирование крупных центров обработки данных и распределенных высоконагруженных IT-решений для 24x7x365, включая Big Data.",
+          "Трансформация Oracle e-Business Suite (OEBS) в кастомное ПО.",
+          "Проектирование Data Lake на базе Hadoop."
         ],
         "technologies": [
-          "Oracle (DB, RAC, OEBS, GG)",
-          "Java (Spring Boot)",
+          "Oracle Database",
+          "Java",
+          "Spring Boot",
           "Python",
           "Hadoop",
           "PostgreSQL",
           "Docker",
-          "Kubernetes (K8s)",
+          "Kubernetes",
           "Apache Kafka",
           "Cassandra",
           "Ignite",
           "Camel",
           "ActiveMQ",
-          "ELK"
+          "Elasticsearch Logstash Kibana"
         ],
         "achievements": []
       },
       {
         "company": "NTR Lab (Software Development)",
-        "position": "Руководитель группы аналитиков",
+        "position": "Analyst Team Lead",
         "period": "Июль 2018 - Октябрь 2018 (4 месяца)",
         "responsibilities": [
-          "Завершил более 10 предпродажных проектов для ИТ-решений: AI (нейронные сети, машинное обучение, компьютерное зрение), Big Data, IoT, блокчейн.",
-          "Разработал модель данных и другие элементы для инновационного блокчейн-решения на основе направленного ациклического графа (DAG).",
-          "Руководил командой из 6 аналитиков."
+          "Выполнение 10+ предпродажных проектов для IT-решений: AI, Big Data, IoT, блокчейн.",
+          "Разработка модели данных для инновационного блокчейн-решения."
         ],
         "technologies": [],
         "achievements": []
       },
       {
+        "company": "Premium IT Solution",
+        "position": "Lead Analyst",
+        "period": "Февраль 2018 - Апрель 2018 (3 месяца)",
+        "responsibilities": [
+          "Обновление функционала сети кассовых центров для Сбербанка России."
+        ],
+        "technologies": [],
+        "achievements": []
+      },
+      {
+        "company": "SCANEX R&D Center",
+        "position": "Lead Engineer",
+        "period": "Июль 2014 - Декабрь 2017 (3 года 6 месяцев)",
+        "responsibilities": [
+          "Проектирование облачного портала (SaaS) на базе OpenStack & OpenShift для морской навигации, центра дистанционного зондирования Земли.",
+          "Оптимизация бизнес-процессов приема спутниковых данных."
+        ],
+        "technologies": [
+          "Centos Linux",
+          "Python",
+          "VMware vSphere",
+          "Oracle MySQL",
+          "MS SQL Server",
+          "PostgreSQL",
+          "Docker",
+          "Kubernetes",
+          "Amazon Web Services",
+          "Microsoft Azure",
+          "OpenStack",
+          "OpenShift"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "ANT-Inform",
+        "position": "Project manager",
+        "period": "Ноябрь 2013 - Февраль 2014 (4 месяца)",
+        "responsibilities": [
+          "Внедрение собственной ERP/MES системы для нескольких филиалов Газпрома."
+        ],
+        "technologies": [],
+        "achievements": []
+      },
+      {
+        "company": "Compulink Group",
+        "position": "IT Architect",
+        "period": "Октябрь 2012 - Октябрь 2013 (1 год 1 месяц)",
+        "responsibilities": [
+          "Проектирование ЦОД для крупной Московской энергетической компании, крупнейшей нефтегазовой транспортной компании, крупной нефтяной компании."
+        ],
+        "technologies": [
+          "VMware SRM",
+          "Linux HA Cluster",
+          "SAP R/3",
+          "EMC VMAX",
+          "IBM Power",
+          "NetApp FAS3220 MetroCluster"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "KPBS (Krikunov & Partners Business Systems)",
+        "position": "Senior Expert",
+        "period": "Июль 2011 - Июнь 2012 (1 год)",
+        "responsibilities": [
+          "Выполнение кросс-платформенной миграции данных для Societe Generale Bank.",
+          "Разработка логистического модуля для гипермаркетов Leroy Merlin."
+        ],
+        "technologies": [
+          "Oracle Database",
+          "IBM DB2",
+          "OpenBravo"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "Quorum Ltd.",
+        "position": "Key accounts manager",
+        "period": "Октябрь 2010 - Февраль 2011 (5 месяцев)",
+        "responsibilities": [
+          "Участие в 10+ тендерах (CBS, решения для электронных архивов документов).",
+          "Проведение презентаций и демонстраций решений для 20+ банков."
+        ],
+        "technologies": [],
+        "achievements": []
+      },
+      {
+        "company": "CPS (Center of Professional Software).",
+        "position": "Division head/Project manager",
+        "period": "Ноябрь 2009 - Сентябрь 2010 (11 месяцев)",
+        "responsibilities": [
+          "Управление несколькими проектами по продажам и поддержке продаж IT-решений.",
+          "Подписание партнерских контрактов."
+        ],
+        "technologies": [
+          "VMware",
+          "Veeam",
+          "Citrix",
+          "Symantec",
+          "IBM",
+          "HP"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "Jet Infosystems",
+        "position": "Information Technology Analyst",
+        "period": "Ноябрь 2006 - Апрель 2009 (2 года 6 месяцев)",
+        "responsibilities": [
+          "Внедрение Oracle FLEXCUBE в Unicreditbank.",
+          "Очистка и миграция данных из MIDAS CBS в FLEXCUBE.",
+          "Разработка стратегии и плана проекта.",
+          "Создание отчетов и PL/SQL скриптов.",
+          "Проведение UAT и других тестов."
+        ],
+        "technologies": [
+          "Oracle FLEXCUBE",
+          "PL/SQL"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "Bank Renaissance Credit",
+        "position": "Project manager",
+        "period": "Июнь 2006 - Октябрь 2006 (5 месяцев)",
+        "responsibilities": [
+          "Внедрение FIS Sanchez Profile, интеграция FIS Sanchez Profile, DiasoftBank и других систем с использованием IBM WebSphere ESB."
+        ],
+        "technologies": [
+          "FIS Sanchez Profile",
+          "DiasoftBank",
+          "OpenWay W4",
+          "Capstone",
+          "IBM WebSphere ESB"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "CSBI Group",
+        "position": "Principal consultant",
+        "period": "Сентябрь 2004 - Май 2006 (1 год 9 месяцев)",
+        "responsibilities": [
+          "Выполнение 10+ тендеров для комплексных IT-решений: CBS, EDMS, системы кредитного скоринга, системы управления картами, ERP, CRM."
+        ],
+        "technologies": [],
+        "achievements": []
+      },
+      {
+        "company": "US Russia Marketing Group",
+        "position": "Project manager",
+        "period": "Август 2002 - Май 2004 (1 год 10 месяцев)",
+        "responsibilities": [
+          "Выполнение 10+ маркетинговых исследований в области высокотехнологичной электроники и промышленного оборудования.",
+          "Развитие бизнеса, продажи и маркетинг."
+        ],
+        "technologies": [],
+        "achievements": []
+      },
+      {
+        "company": "Interface Ltd.",
+        "position": "CEO deputy of international operations",
+        "period": "Март 2002 - Август 2002 (6 месяцев)",
+        "responsibilities": [
+          "Продажи и маркетинг бизнес-программных решений (ERP, CRM, EDMS) для иностранных клиентов.",
+          "Создание бизнес-планов и предложений для инвесторов."
+        ],
+        "technologies": [],
+        "achievements": []
+      },
+      {
+        "company": "NBZ Computers",
+        "position": "Head Of Marketing Department",
+        "period": "Январь 2001 - Март 2002 (1 год 3 месяца)",
+        "responsibilities": [
+          "Проведение рекламных кампаний для IT-решений: Apple, Tally, OKI, Minolta-QMS."
+        ],
+        "technologies": [],
+        "achievements": []
+      },
+      {
+        "company": "Diamond Communications",
+        "position": "Head Of Marketing Department",
+        "period": "Март 2000 - Декабрь 2000 (10 месяцев)",
+        "responsibilities": [
+          "Проведение рекламных кампаний для IT-решений: Cisco, Lucent, RAD, Digi.",
+          "Управление подчиненными."
+        ],
+        "technologies": [
+          "Cisco",
+          "Lucent",
+          "RAD",
+          "Digi"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "Cabletron Systems",
+        "position": "Marketing manager",
+        "period": "Сентябрь 1999 - Март 2000 (7 месяцев)",
+        "responsibilities": [
+          "Управление рекламными кампаниями для сетевых продуктов Cabletron.",
+          "Создание русской версии корпоративного веб-сайта."
+        ],
+        "technologies": [],
+        "achievements": []
+      },
+      {
+        "company": "Sybase Software",
+        "position": "Marketing Manager",
+        "period": "Август 1998 - Май 1999 (10 месяцев)",
+        "responsibilities": [
+          "Проведение рекламных кампаний продуктов Sybase Software: СУБД, DWH, инструменты разработки ПО."
+        ],
+        "technologies": [
+          "Sybase DBMS",
+          "DWH"
+        ],
+        "achievements": []
+      },
+      {
+        "company": "LANIT",
+        "position": "Sales and Marketing Manager",
+        "period": "Май 1997 - Июнь 1998 (1 год 2 месяца)",
+        "responsibilities": [
+          "Проведение рекламных кампаний основных программных продуктов ЛАНИТ: LanHello, LanVisit, LanDocs."
+        ],
+        "technologies": [],
+        "achievements": []
+      },
+      {
+        "company": "Infoart Ltd.",
+        "position": "Senior Staff Writer",
+        "period": "Октябрь 1996 - Май 1997 (8 месяцев)",
+        "responsibilities": [
+          "Публикация более 50 собственных статей в области IT и бизнеса в еженедельнике ComputerWeek-Moscow."
+        ],
+        "technologies": [],
+        "achievements": []
+      },
+      {
+        "company": "Compulink Group",
+        "position": "Marketing Manager",
+        "period": "Октябрь 1995 - Октябрь 1996 (1 год 1 месяц)",
+        "responsibilities": [
+          "Увеличение выручки от продаж ПК и серверов Unisys более чем в 3 раза."
+        ],
+        "technologies": [],
+        "achievements": []
+      },
+      {
+        "company": "Infoart Ltd.",
+        "position": "Senior Sraff Writer",
+        "period": "Октябрь 1992 - Октябрь 1995 (3 года 1 месяц)",
+        "responsibilities": [
+          "Публикация более 500 собственных статей об IT-бизнесе, в основном в еженедельнике ComputerWorld-Russia."
+        ],
+        "technologies": [],
+        "achievements": []
+      }
+    ],
+    "education": [],
+    "extra": [
+      "Английский – C1 (Full Professional)",
+      "Русский – C2 (Native or Bilingual)",
+      "Белорусский – C2 (Full Professional)",
+      "Польский – Limited Working",
+      "Болгарский – Elementary",
+      "Немецкий – Elementary",
+      "Украинский – Elementary"
+    ],
+    "projects": [
+      {
+        "title": "Интеграция биллинговых систем для Мегафон",
+        "role": "Solutions Architect",
+        "period": "Март 2025 - Май 2025 (3 месяца)",
+        "description": "Проектирование интеграции биллинговых систем (OSS/BSS) с банковскими и платежными решениями для Мегафон.",
+        "technologies": [
+          "Sparx EA",
+          "Oracle Database",
+          "PostgreSQL",
+          "RabbitMQ",
+          "Linux",
+          "Kubernetes"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Разработка кастомного ПО для ВТБ",
+        "role": "Platform Solutions Architect",
+        "period": "Июнь 2023 - Март 2025 (1 год 10 месяцев)",
+        "description": "Разработка кастомного ПО для банковской группы ВТБ на основе MSA и потоковой передачи данных в Hadoop. Проектирование платежного движка для партнеров с нуля, решения для корпоративных кредитов для миграции со старых систем CFT на новые, обновление модуля корпоративных залогов.",
+        "technologies": [
+          "Oracle Database",
+          "PostgreSQL",
+          "Apache Airflow",
+          "Apache Spark",
+          "Greenplum",
+          "Linux",
+          "Kubernetes",
+          "Hadoop",
+          "OpenShift"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Решение для управления рисками (RWA) для ВТБ",
+        "role": "Lead Architect",
+        "period": "Сентябрь 2022 - Май 2023 (9 месяцев)",
+        "description": "Проектирование решения для управления рисками (расчет RWA) на базе Hadoop Data Lake с движком Spark и DWH на базе GreenPlum MPP для банка ВТБ.",
+        "technologies": [
+          "Oracle Database",
+          "PostgreSQL",
+          "Apache Airflow",
+          "Apache Spark",
+          "Greenplum",
+          "Linux",
+          "Kubernetes",
+          "Hadoop",
+          "OpenShift"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Проектирование и аудит IT-архитектуры для банков",
+        "role": "System Architect",
+        "period": "Май 2021 - Сентябрь 2022 (1 год 5 месяцев)",
+        "description": "Проектирование более 20 производственных и тестовых сред, аудит IT-архитектуры для нескольких крупных банков.",
+        "technologies": [
+          "Oracle Database",
+          "PostgreSQL",
+          "Kafka",
+          "SAP PI",
+          "SAP PO",
+          "Informatica PWC",
+          "IBM WAS",
+          "Kubernetes",
+          "Elasticsearch Logstash Kibana",
+          "Hadoop",
+          "VMware",
+          "Linux",
+          "RabbitMQ"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Проектирование онлайн-кинотеатра KION",
+        "role": "Senior Solutions Architect",
+        "period": "Декабрь 2020 - Май 2021 (6 месяцев)",
+        "description": "Проектирование KION - высоконагруженного онлайн-кинотеатра.",
+        "technologies": [
+          "Java",
+          "Spring Boot",
+          "PostgreSQL",
+          "Python",
+          "Apache Kafka",
+          "Redis",
+          "Memcached",
+          "Kubernetes",
+          "Docker",
+          "Elasticsearch Logstash Kibana",
+          "Hadoop",
+          "Prometheus",
+          "GitLab"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Проектирование IT-решений для Федерального казначейства РФ",
+        "role": "Deputy Head of system architecture department",
+        "period": "Декабрь 2018 - Ноябрь 2020 (2 года)",
+        "description": "Проектирование крупных центров обработки данных и распределенных высоконагруженных IT-решений для 24x7x365, включая Big Data. Трансформация Oracle e-Business Suite (OEBS) в кастомное ПО. Проектирование Data Lake на базе Hadoop.",
+        "technologies": [
+          "Oracle Database",
+          "Java",
+          "Spring Boot",
+          "Python",
+          "Hadoop",
+          "PostgreSQL",
+          "Docker",
+          "Kubernetes",
+          "Apache Kafka",
+          "Cassandra",
+          "Ignite",
+          "Camel",
+          "ActiveMQ",
+          "Elasticsearch Logstash Kibana"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Предпродажные проекты (AI, Big Data, IoT, Blockchain)",
+        "role": "Analyst Team Lead",
+        "period": "Июль 2018 - Октябрь 2018 (4 месяца)",
+        "description": "Выполнение более 10 предпродажных проектов для IT-решений в областях AI, Big Data, IoT, блокчейн. Разработка модели данных для инновационного блокчейн-решения.",
+        "technologies": [],
+        "results": ""
+      },
+      {
+        "title": "Обновление функционала кассовых центров Сбербанка",
+        "role": "Lead Analyst",
+        "period": "Февраль 2018 - Апрель 2018 (3 месяца)",
+        "description": "Обновление функционала сети кассовых центров для Сбербанка России.",
+        "technologies": [],
+        "results": ""
+      },
+      {
+        "title": "Проектирование облачного портала и центра ДЗЗ",
+        "role": "Lead Engineer",
+        "period": "Июль 2014 - Декабрь 2017 (3 года 6 месяцев)",
+        "description": "Проектирование облачного портала (SaaS) на базе OpenStack & OpenShift для морской навигации, центра дистанционного зондирования Земли. Оптимизация бизнес-процессов приема спутниковых данных.",
+        "technologies": [
+          "Centos Linux",
+          "Python",
+          "VMware vSphere",
+          "Oracle MySQL",
+          "MS SQL Server",
+          "PostgreSQL",
+          "Docker",
+          "Kubernetes",
+          "Amazon Web Services",
+          "Microsoft Azure",
+          "OpenStack",
+          "OpenShift"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Внедрение ERP/MES системы для Газпрома",
+        "role": "Project manager",
+        "period": "Ноябрь 2013 - Февраль 2014 (4 месяца)",
+        "description": "Внедрение собственной ERP/MES системы для нескольких филиалов Газпрома.",
+        "technologies": [],
+        "results": ""
+      },
+      {
+        "title": "Проектирование ЦОД для энергетических и нефтегазовых компаний",
+        "role": "IT Architect",
+        "period": "Октябрь 2012 - Октябрь 2013 (1 год 1 месяц)",
+        "description": "Проектирование ЦОД для крупной Московской энергетической компании, крупнейшей нефтегазовой транспортной компании, крупной нефтяной компании.",
+        "technologies": [
+          "VMware SRM",
+          "Linux HA Cluster",
+          "SAP R/3",
+          "EMC VMAX",
+          "IBM Power",
+          "NetApp FAS3220 MetroCluster"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Миграция данных и разработка логистического модуля",
+        "role": "Senior Expert",
+        "period": "Июль 2011 - Июнь 2012 (1 год)",
+        "description": "Выполнение кросс-платформенной миграции данных для Societe Generale Bank. Разработка логистического модуля для гипермаркетов Leroy Merlin.",
+        "technologies": [
+          "Oracle Database",
+          "IBM DB2",
+          "OpenBravo"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Управление ключевыми клиентами в банковской сфере",
+        "role": "Key accounts manager",
+        "period": "Октябрь 2010 - Февраль 2011 (5 месяцев)",
+        "description": "Участие в более чем 10 тендерах (CBS, решения для электронных архивов документов). Проведение презентаций и демонстраций решений для более чем 20 банков.",
+        "technologies": [],
+        "results": ""
+      },
+      {
+        "title": "Управление проектами продаж IT-решений",
+        "role": "Division head/Project manager",
+        "period": "Ноябрь 2009 - Сентябрь 2010 (11 месяцев)",
+        "description": "Управление несколькими проектами по продажам и поддержке продаж IT-решений.",
+        "technologies": [
+          "VMware",
+          "Veeam",
+          "Citrix",
+          "Symantec",
+          "IBM",
+          "HP"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Внедрение Oracle FLEXCUBE в Unicreditbank",
+        "role": "Information Technology Analyst",
+        "period": "Ноябрь 2006 - Апрель 2009 (2 года 6 месяцев)",
+        "description": "Внедрение Oracle FLEXCUBE в Unicreditbank. Очистка и миграция данных из MIDAS CBS в FLEXCUBE. Разработка стратегии и плана проекта, создание отчетов и PL/SQL скриптов, проведение UAT и других тестов.",
+        "technologies": [
+          "Oracle FLEXCUBE",
+          "PL/SQL"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Внедрение и интеграция банковских систем",
+        "role": "Project manager",
+        "period": "Июнь 2006 - Октябрь 2006 (5 месяцев)",
+        "description": "Внедрение FIS Sanchez Profile, интеграция FIS Sanchez Profile, DiasoftBank и других систем с использованием IBM WebSphere ESB.",
+        "technologies": [
+          "FIS Sanchez Profile",
+          "DiasoftBank",
+          "OpenWay W4",
+          "Capstone",
+          "IBM WebSphere ESB"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Участие в тендерах на комплексные IT-решения",
+        "role": "Principal consultant",
+        "period": "Сентябрь 2004 - Май 2006 (1 год 9 месяцев)",
+        "description": "Выполнение более 10 тендеров для комплексных IT-решений: CBS, EDMS, системы кредитного скоринга, системы управления картами, ERP, CRM.",
+        "technologies": [],
+        "results": ""
+      },
+      {
+        "title": "Маркетинговые исследования и развитие бизнеса",
+        "role": "Project manager",
+        "period": "Август 2002 - Май 2004 (1 год 10 месяцев)",
+        "description": "Выполнение более 10 маркетинговых исследований в области высокотехнологичной электроники и промышленного оборудования. Развитие бизнеса, продажи и маркетинг.",
+        "technologies": [],
+        "results": ""
+      },
+      {
+        "title": "Продажи и маркетинг ПО для иностранных клиентов",
+        "role": "CEO deputy of international operations",
+        "period": "Март 2002 - Август 2002 (6 месяцев)",
+        "description": "Продажи и маркетинг бизнес-программных решений (ERP, CRM, EDMS) для иностранных клиентов. Создание бизнес-планов и предложений для инвесторов.",
+        "technologies": [],
+        "results": ""
+      },
+      {
+        "title": "Проведение рекламных кампаний IT-решений",
+        "role": "Head Of Marketing Department",
+        "period": "Январь 2001 - Март 2002 (1 год 3 месяца)",
+        "description": "Проведение рекламных кампаний для IT-решений: Apple, Tally, OKI, Minolta-QMS.",
+        "technologies": [],
+        "results": ""
+      },
+      {
+        "title": "Проведение рекламных кампаний для IT-решений",
+        "role": "Head Of Marketing Department",
+        "period": "Март 2000 - Декабрь 2000 (10 месяцев)",
+        "description": "Проведение рекламных кампаний для IT-решений: Cisco, Lucent, RAD, Digi.",
+        "technologies": [
+          "Cisco",
+          "Lucent",
+          "RAD",
+          "Digi"
+        ],
+        "results": ""
+      },
+      {
+        "title": "Управление рекламными кампаниями Cabletron",
+        "role": "Marketing manager",
+        "period": "Сентябрь 1999 - Март 2000 (7 месяцев)",
+        "description": "Управление рекламными кампаниями для сетевых продуктов Cabletron. Создание русской версии корпоративного веб-сайта.",
+        "technologies": [],
+        "results": ""
+      },
+      {
+        "title": "Рекламные кампании продуктов Sybase Software",
+        "role": "Marketing Manager",
+        "period": "Август 1998 - Май 1999 (10 месяцев)",
+        "description": "Проведение рекламных кампаний продуктов Sybase Software: СУБД, DWH, инструменты разработки ПО.",
+        "

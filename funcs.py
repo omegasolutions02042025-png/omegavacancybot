@@ -328,7 +328,26 @@ def parse_cb_rf():
     except Exception as e:
         print(f"Error parsing cb_rf: {e}")
         return None
-    
+
+def parse_my_fin():
+    try:
+        url = 'https://myfin.by/wiki/term/srednyaya-zarplata-v-belarusi'
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                          "Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Referer": "https://www.banki.ru/products/currency/cb/",
+            "X-Requested-With": "XMLHttpRequest"
+        }
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        el = soup.find('div', {'class': 'information-block__current-value x__current-value--mr'})
+        el = el.text.split("\n")[0].replace(" ", "").replace(",", ".")
+        print(el)
+        return float(el)
+    except Exception as e:
+        print(f"Error parsing cb_rf: {e}")
+        return None
     
 text = '''
 🆔SA-8974

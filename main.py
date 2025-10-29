@@ -1,7 +1,7 @@
 import asyncio
 import sys
 import signal
-from db import init_db, AsyncSessionLocal, clean_duplicate_save_resumes, periodic_cleanup_task
+from db import init_db, AsyncSessionLocal
 from aiogram import Bot, Dispatcher
 from telethon_bot import *
 import os
@@ -14,6 +14,8 @@ from privyazka_messangers import pr_router
 import redis.asyncio as redis
 from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
 from aiogram.fsm.strategy import FSMStrategy
+from aiogram.enums import ParseMode
+from aiogram.client.bot import DefaultBotProperties
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -41,7 +43,6 @@ async def main():
     tasks = []
     try:
         await init_db()
-        await clean_duplicate_save_resumes()  # Очищаем дубликаты при старте
         await telethon_client.start(phone=PHONE_NUMBER)
         await register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal, bot)
         await register_simple_edit_listener(telethon_client, -1002189931727, bot)
@@ -52,7 +53,6 @@ async def main():
             asyncio.create_task(check_and_delete_duplicates(telethon_client, -1002658129391, bot, TOPIC_MAP)),
             asyncio.create_task(telethon_client.run_until_disconnected()),
             asyncio.create_task(check_old_messages_and_mark(telethon_client, -1002658129391, bot)),
-            asyncio.create_task(periodic_cleanup_task()),
             asyncio.create_task(update_currency_sheet(bot, ADMIN_ID))
         ])
         

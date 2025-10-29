@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 import gspread
 from google.oauth2.service_account import Credentials
 from aiogram import Bot
-from funcs import parse_cb_rf
+from funcs import parse_cb_rf, parse_my_fin
 
 # === Конфигурация ===
 SERVICE_ACCOUNT_FILE = 'creds.json'
@@ -227,10 +227,14 @@ async def update_currency_sheet(bot: Bot, ADMIN_ID: int):
     sheet_name_1 = 'Расчет ставки (штат) ЮЛ РФ'
     sheet_name_2 = 'Расчет ставки (ИП) ЮЛ РФ'
     sheet_id = '1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
+    sheet_name_3 = 'Расчет ставки (штат/контракт) СНГ'
+    sheet_name_4 = 'Расчет ставки (Самозанятый/ИП) СНГ'
+    sheet_id_2 = '1ApDxmH0BL4rbuKTni6cj-D_d0vJ5KG45sEQjOyXM3PY'
 
 
     while True:
         curses = await asyncio.to_thread(parse_cb_rf)
+        zp = await asyncio.to_thread(parse_my_fin)
         usd, eur, byn = curses["USD"], curses["EUR"], curses["BYN"]
 
         await fill_column_with_sequential_numbers("G", sheet_name_1, 2, usd, sheet_id)
@@ -239,12 +243,32 @@ async def update_currency_sheet(bot: Bot, ADMIN_ID: int):
         await asyncio.sleep(2)
         await fill_column_with_sequential_numbers("F", sheet_name_1, 2, byn, sheet_id)
         await asyncio.sleep(2)
+        
 
         await fill_column_with_sequential_numbers("H", sheet_name_2, 2, usd, sheet_id)
         await asyncio.sleep(2)
         await fill_column_with_sequential_numbers("I", sheet_name_2, 2, eur, sheet_id)
         await asyncio.sleep(2)
         await fill_column_with_sequential_numbers("G", sheet_name_2, 2, byn, sheet_id)
+        await asyncio.sleep(2)
+
+        await fill_column_with_sequential_numbers("H", sheet_name_3, 2, usd, sheet_id_2)
+        await asyncio.sleep(2)
+        await fill_column_with_sequential_numbers("I", sheet_name_3, 2, eur, sheet_id_2)
+        await asyncio.sleep(2)
+        await fill_column_with_sequential_numbers("G", sheet_name_3, 2, byn, sheet_id_2)
+        await asyncio.sleep(2)
+        await fill_column_with_sequential_numbers("J", sheet_name_3, 2, zp, sheet_id_2)
+        await asyncio.sleep(2)
+
+        await fill_column_with_sequential_numbers("H", sheet_name_4, 2, usd, sheet_id_2)
+        await asyncio.sleep(2)
+        await fill_column_with_sequential_numbers("I", sheet_name_4, 2, eur, sheet_id_2)
+        await asyncio.sleep(2)
+        await fill_column_with_sequential_numbers("G", sheet_name_4, 2, byn, sheet_id_2)
+        await asyncio.sleep(2)
+        await fill_column_with_sequential_numbers("J", sheet_name_4, 2, zp, sheet_id_2)
+        await asyncio.sleep(2)
     
 
         await bot.send_message(ADMIN_ID, f"✅ Курсы валют обновлены: BYN {byn}, USD {usd}, EUR {eur}")

@@ -1,7 +1,8 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from db import get_tg_user, get_email_user
+from db import get_tg_user, get_email_user, get_contact
+from aiogram.types import CopyTextButton
 
 async def main_kb():
     builder = InlineKeyboardBuilder()
@@ -112,30 +113,18 @@ def scan_vac_rekr_yn_kb():
     builder.button(text='Нет', callback_data='no_vac_rekr')
     return builder.as_markup()
 
-def utochnit_prichinu_kb():
+def generate_mail_kb():
+    
     builder = InlineKeyboardBuilder()
-    builder.button(text='Уточнить причину', callback_data='utochnit_prichinu')
+   
+       
+    builder.button(text='Сгенерировать письмо финалиста', callback_data=f'generate_mail:PP')
+    builder.button(text='Сгенерировать уточняющее письмо', callback_data=f'generate_mail:CP')
+    builder.button(text='Сгенерировать отказ', callback_data=f'generate_mail:NP')
+    builder.button(text='Свернуть', callback_data=f'hide')
+    builder.adjust(1)
     return builder.as_markup()
-
-def generate_mail_kb(verdict_text: str):
-    print(verdict_text)
-    callback = None
-    if verdict_text == 'Полностью подходит':
-        callback = 'PP'
-        builder = InlineKeyboardBuilder()
-        builder.button(text='Сгенерировать письмо для кандидата', callback_data=f'generate_mail:{callback}')
-        return builder.as_markup()
-    elif verdict_text == 'Частично подходит (нужны уточнения)':
-        callback = 'CP'
-        builder = InlineKeyboardBuilder()
-        builder.button(text='Сгенерировать уточняющее письмо', callback_data=f'generate_mail:{callback}')
-        return builder.as_markup()
-    elif verdict_text == 'Не подходит':
-        callback = 'NP'
-        builder = InlineKeyboardBuilder()
-        builder.button(text='Сгенерировать отказ', callback_data=f'generate_mail:{callback}')
-        return builder.as_markup()
-    return None
+    
 
 def generate_klient_mail_kb():
     builder = InlineKeyboardBuilder()
@@ -143,88 +132,78 @@ def generate_klient_mail_kb():
     return builder.as_markup()
 
 
-def get_all_info_kb(verdict: str):
+def get_all_info_kb():
     builder = InlineKeyboardBuilder()
-    if verdict == 'Полностью подходит':
-        callback = 'PP'
-    elif verdict == 'Частично подходит (нужны уточнения)':
-        callback = 'CP'
-    elif verdict == 'Не подходит':
-        callback = 'NP'
-    builder.button(text='Подробнее', callback_data=f'get_all_info:{callback}')
+    
+    builder.button(text='Подробнее', callback_data=f'get_all_info')
+    builder.button(text='Удалить', callback_data=f'del')
+    builder.adjust(1)
     return builder.as_markup()
 
 
-def send_mail_to_candidate_kb(verdict: str):
-    print(verdict)
-    callback = None
-    if verdict == 'Полностью подходит':
-        callback = 'PP'
-    elif verdict == 'Частично подходит (нужны уточнения)':
-        callback = 'CP'
-    elif verdict == 'Не подходит':
-        callback = 'NP'
+def send_mail_to_candidate_kb(verdict: str, mail: str):
+   
     builder = InlineKeyboardBuilder()
-    builder.button(text='Отправить письмо кандидату', callback_data=f'send_mail_to_candidate:{callback}')
+    
+    
+    if verdict == 'Частично подходит (нужны уточнения)':
+        builder.button(text='Добавить уточнения и сделать WL', callback_data='add_utochnenie')
+    elif verdict == 'Полностью подходит':
+        builder.button(text='Вернуться к отправке в группу', callback_data='back_to_group')
+        
+    
+    builder.button(text='Отправить письмо кандидату', callback_data=f'send_mail_to_candidate')
+    builder.button(text='Показать сверку', callback_data=f'show_sverka')
+    builder.button(text='Копировать', switch_inline_query_current_chat=f'{mail}')
+    builder.button(text='Удалить', callback_data=f'del')
+    builder.adjust(1)
     return builder.as_markup()
 
-def send_mail_or_generate_client_mail_kb():
-    callback = 'PP'
+def send_mail_or_generate_client_mail_kb(mail: str, candidate_mail: str = None):
     builder = InlineKeyboardBuilder()
-    builder.button(text='Отправить письмо кандидату', callback_data=f'send_mail_to_candidate:{callback}')
+    builder.button(text='Отправить письмо кандидату', callback_data=f'send_mail_to_candidate')
+    if candidate_mail:
+        builder.button(text = 'Вернутся к письму для кандидата', callback_data='back_to_group')
     builder.button(text='Сгенерировать письмо для клиента', callback_data='generate_klient_mail')
+    builder.button(text='Показать сверку', callback_data='show_sverka')
+    builder.button(text='Копировать', switch_inline_query_current_chat=f'{mail}')
+    builder.button(text='Удалить', callback_data='del')
+    builder.adjust(1)
     return builder.as_markup()
 
 
-def create_contacts_kb(contacts: dict,verdict : str):
-    """
-    Создаёт inline-клавиатуру для доступных контактов кандидата.
-    Пример входных данных:
-    {
-      "phone": "Нет (требуется уточнение)",
-      "email": "example@gmail.com",
-      "telegram": "@username",
-      "linkedin": "https://linkedin.com/in/someone"
-    }
-    """
+async def create_contacts_kb(message_id):
+  
+    print(message_id)
     builder = InlineKeyboardBuilder()
-
-
-    # Email
-    email = contacts.get("email")
-    if email and email.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="📧 Email", callback_data=f"con:e:{email}:{verdict}")
-
-    # Telegram
-    telegram = contacts.get("telegram")
-    if telegram and telegram.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="💬 Telegram", callback_data=f"con:t:{telegram}:{verdict}")
-
-    # LinkedIn
-    linkedin = contacts.get("linkedin")
-    if linkedin and linkedin.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="🔗 LinkedIn", callback_data=f"con:l:{linkedin}:{verdict}")
-
-    # Телефон (если нужно отображать)
-    phone = contacts.get("phone")
-    if phone and phone.lower() not in ["нет", "нет (требуется уточнение)"]:
-        builder.button(text="📞 Телефон", callback_data=f"con:p:{phone}:{verdict}")
-    if not phone and not telegram and not linkedin and not email:
-        builder.button(text="❌ Нет данных", callback_data="no_data")
-    builder.adjust(2)
+    contacts = await get_contact(message_id)
+    
+    telegram = None
+    email = None
+    phone = None
+    
+    if contacts:
+        telegram = contacts.contact_tg
+        email = contacts.contact_email
+        phone = contacts.contact_phone
+    
+    
+    if not phone and not telegram and not email:
+            builder.button(text="Добавить контакты", callback_data="add_contacts")
+            return builder.as_markup()
+    if telegram:
+        builder.button(text="💬 Telegram", callback_data=f"con:t:{telegram}")
+    if email:
+        builder.button(text="📧 Email", callback_data=f"con:e:{email}")
+    if phone:
+        builder.button(text="📞 Телефон", copy_text=CopyTextButton(text=f"{phone}"))
+    builder.button(text="Добавить контакты", callback_data="add_contacts")
+    builder.button(text="Назад к письму", callback_data="show_mail")
+    builder.adjust(2,1,1)
     return builder.as_markup()
 
 
 
-def back_to_mail_kand_kb():
-    builder = InlineKeyboardBuilder()
-    builder.button(text='Назад', callback_data='back_to_mail_kand')
-    return builder.as_markup()
-
-def viber_kb():
-    builder = InlineKeyboardBuilder()
-    builder.button(text='Отправить вiber', callback_data='viber', url = 'viber://chat?number=%2B4957777777')
-    return builder.as_markup()
 
 def add_another_resume_kb():
     builder = InlineKeyboardBuilder()
@@ -272,4 +251,30 @@ def accept_delete_email_kb():
 def link_to_thread_kb(link):
     builder = InlineKeyboardBuilder()
     builder.button(text='Перейти к треду', callback_data='link_to_thread', url=link)
+    return builder.as_markup()
+
+
+def show_mail_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Показать письмо', callback_data='show_mail')
+    builder.button(text='Удалить', callback_data='del')
+    builder.adjust(1)
+    return builder.as_markup()
+
+def send_to_group_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Отправить в группу письмо и WL резюме', callback_data='send_to_group')
+    builder.button(text='Отправить в группу только письмо', callback_data='send_to_group_mail')
+    builder.button(text='Посмотреть WL резюме', callback_data='show_wl')
+    builder.button(text='Удалить', callback_data='del')
+    builder.button(text='Назад к письму', callback_data='back_to_mail')
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def contacts_add_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Telegram', callback_data='addcontacts_tg')
+    builder.button(text='Email', callback_data='addcontacts_email')
+    builder.button(text='Телефон', callback_data='addcontacts_phone')
     return builder.as_markup()
