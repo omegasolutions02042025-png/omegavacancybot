@@ -8,9 +8,16 @@ import asyncio
 from striprtf.striprtf import rtf_to_text
 from dotenv import load_dotenv
 import textract
+import logging
 
 from telethon_bot import ADMIN_ID
 load_dotenv()
+
+# Отключаем логирование pdfminer
+logging.getLogger('pdfminer').setLevel(logging.WARNING)
+logging.getLogger('pdfminer.pdfinterp').setLevel(logging.WARNING)
+logging.getLogger('pdfminer.pdfpage').setLevel(logging.WARNING)
+logging.getLogger('pdfminer.pdfdocument').setLevel(logging.WARNING)
 
 
 

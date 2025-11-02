@@ -6,7 +6,7 @@ from kb import service_kb, next_email_kb, next_telegram_kb, accept_delete_tg_kb,
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from send_email import send_email_gmail
-from db import add_email, add_session_tg, remove_session_tg, remove_session_email
+from db import add_email, add_session_tg, remove_session_tg, remove_session_email, get_tg_user
 import os
 from telethon import TelegramClient
 from read_jpg import extract_code_from_image
@@ -217,11 +217,13 @@ async def add_api_hash(message: Message, bot: Bot, state: FSMContext):
             await client.disconnect()
             await state.clear()
             return
-        await client.send_code_request(number)
+        
+        sent = await client.send_code_request(number)
+        phone_code_hash = sent.phone_code_hash
         await message.answer("Отправьте скриншот кода подтверждения")
         photo = FSInputFile("image.png")
         await message.answer_photo(photo=photo, caption='Вот пример фото')
-        await state.update_data(client=client, api_hash = api_hash)
+        await state.update_data(api_hash = api_hash, phone_code_hash = phone_code_hash)
         await state.set_state(PrivyazkaTelegram.waiting_for_code)
     except ApiIdInvalidError:
         await message.answer("❌ Неверный API ID или API Hash. Проверьте данные и попробуйте еще раз.\n\nВведите API ID:")
@@ -243,27 +245,30 @@ async def add_code(message: Message, bot: Bot, state: FSMContext):
     await bot.download_file(file_info.file_path, destination=save_path)
     code = extract_code_from_image(save_path)
     os.remove(save_path)
-    
+    user_name = message.from_user.username
     data = await state.get_data()
     api_id = data.get("api_id")
     api_hash = data.get("api_hash")
     number = data.get("number")
-    client : TelegramClient = data.get("client")
+    phone_code_hash = data.get("phone_code_hash")
     user_name = message.from_user.username
     if not user_name:
         await message.answer("Для продолжения создайте имя пользователя в Telegram и отправте еще раз код подтверждения")
         return
     
     try:
-        await client.sign_in(code=code)
+        client = TelegramClient(f"sessions/{user_name}", api_id, api_hash)
+        await client.connect()
+        await client.sign_in(phone=number, code=code, phone_code_hash=phone_code_hash)
         me = await client.get_me()
         await message.answer(f"✅ Успешный вход как {me.first_name} (@{me.username})")
         await client.disconnect()
-        await add_session_tg(user_name_tg=user_name, api_id=api_id, api_hash=api_hash)
+        await add_session_tg(user_name_tg=user_name, api_id=str(api_id), api_hash=str(api_hash))
         await state.clear()
     except SessionPasswordNeededError:
         await message.answer("🔐 Включена 2FA. Введите пароль от аккаунта:")
         await state.set_state(PrivyazkaTelegram.waiting_for_password)
+        await state.update_data(code = code)
 
     except PhoneCodeInvalidError:
         await message.answer("❌ Неверный код. Отправьте новый корректный код.")
@@ -287,18 +292,21 @@ async def add_password(message: Message, bot: Bot, state: FSMContext):
     api_id = data.get("api_id")
     api_hash = data.get("api_hash")
     number = data.get("number")
-    client : TelegramClient = data.get("client")
+    code = data.get("code")
     user_name = message.from_user.username
+    phone_code_hash = data.get("phone_code_hash")
     if not user_name:
         await message.answer("Для продолжения создайте имя пользователя в Telegram и отправте еще раз пароль")
         return
     
     try:
+        client = TelegramClient(f"sessions/{user_name}", api_id, api_hash)
+        await client.connect()
         await client.sign_in(password=password)
         me = await client.get_me()
         await message.answer(f"✅ Успешный вход как {me.first_name} (@{me.username})")
         await client.disconnect()
-        await add_session_tg(user_name_tg=user_name, api_id=api_id, api_hash=api_hash)
+        await add_session_tg(user_name_tg=user_name, api_id=str(api_id), api_hash=str(api_hash))
         await state.clear()
         
     except Exception as e:
@@ -313,6 +321,13 @@ async def remove_tg(callback: CallbackQuery, bot: Bot, state: FSMContext):
 @pr_router.callback_query(F.data == "accept_delete_tg")
 async def accept_delete_tg(callback: CallbackQuery, bot: Bot, state: FSMContext):
     user_name = callback.from_user.username
+    session = await get_tg_user(user_name_tg=user_name)
+    api_id = session.api_id
+    api_hash = session.api_hash
+    client = TelegramClient(f"sessions/{user_name}", api_id, api_hash)
+    await client.connect()
+    await client.log_out()
+    await client.disconnect()
     os.remove(f'sessions/{user_name}.session')
     await remove_session_tg(user_name_tg=user_name)
     await callback.message.edit_text("Успешно удалено")

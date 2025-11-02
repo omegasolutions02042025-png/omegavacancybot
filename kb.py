@@ -113,7 +113,7 @@ def scan_vac_rekr_yn_kb():
     builder.button(text='Нет', callback_data='no_vac_rekr')
     return builder.as_markup()
 
-def generate_mail_kb():
+def generate_mail_kb(again = False):
     
     builder = InlineKeyboardBuilder()
    
@@ -121,7 +121,8 @@ def generate_mail_kb():
     builder.button(text='Сгенерировать письмо финалиста', callback_data=f'generate_mail:PP')
     builder.button(text='Сгенерировать уточняющее письмо', callback_data=f'generate_mail:CP')
     builder.button(text='Сгенерировать отказ', callback_data=f'generate_mail:NP')
-    builder.button(text='Свернуть', callback_data=f'hide')
+    if not again:
+        builder.button(text='Свернуть', callback_data=f'hide')
     builder.adjust(1)
     return builder.as_markup()
     
@@ -132,11 +133,11 @@ def generate_klient_mail_kb():
     return builder.as_markup()
 
 
-def get_all_info_kb():
+def get_all_info_kb():  
     builder = InlineKeyboardBuilder()
     
     builder.button(text='Подробнее', callback_data=f'get_all_info')
-    builder.button(text='Удалить', callback_data=f'del')
+    builder.button(text='Удалить кандидата из списка', callback_data=f'del')
     builder.adjust(1)
     return builder.as_markup()
 
@@ -155,7 +156,8 @@ def send_mail_to_candidate_kb(verdict: str, mail: str):
     builder.button(text='Отправить письмо кандидату', callback_data=f'send_mail_to_candidate')
     builder.button(text='Показать сверку', callback_data=f'show_sverka')
     builder.button(text='Копировать', switch_inline_query_current_chat=f'{mail}')
-    builder.button(text='Удалить', callback_data=f'del')
+    builder.button(text='Удалить кандидата из списка', callback_data=f'del')
+    builder.button(text='Сгенерировать письмо снова', callback_data='generate_mail_again')
     builder.adjust(1)
     return builder.as_markup()
 
@@ -167,7 +169,8 @@ def send_mail_or_generate_client_mail_kb(mail: str, candidate_mail: str = None):
     builder.button(text='Сгенерировать письмо для клиента', callback_data='generate_klient_mail')
     builder.button(text='Показать сверку', callback_data='show_sverka')
     builder.button(text='Копировать', switch_inline_query_current_chat=f'{mail}')
-    builder.button(text='Удалить', callback_data='del')
+    builder.button(text='Удалить кандидата из списка', callback_data='del')
+    builder.button(text='Сгенерировать письмо снова', callback_data='generate_mail_again')
     builder.adjust(1)
     return builder.as_markup()
 
@@ -196,13 +199,18 @@ async def create_contacts_kb(message_id):
     if email:
         builder.button(text="📧 Email", callback_data=f"con:e:{email}")
     if phone:
-        builder.button(text="📞 Телефон", copy_text=CopyTextButton(text=f"{phone}"))
+        phone = phone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+        builder.button(text=f"📞 {phone}", callback_data=f"con:p:{phone}")
+        
     builder.button(text="Добавить контакты", callback_data="add_contacts")
     builder.button(text="Назад к письму", callback_data="show_mail")
     builder.adjust(2,1,1)
     return builder.as_markup()
 
-
+def back_to_contact_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Назад", callback_data="back_to_contact")
+    return builder.as_markup()
 
 
 def add_another_resume_kb():
@@ -257,7 +265,7 @@ def link_to_thread_kb(link):
 def show_mail_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text='Показать письмо', callback_data='show_mail')
-    builder.button(text='Удалить', callback_data='del')
+    builder.button(text='Удалить кандидата из списка', callback_data='del')
     builder.adjust(1)
     return builder.as_markup()
 
@@ -266,15 +274,27 @@ def send_to_group_kb():
     builder.button(text='Отправить в группу письмо и WL резюме', callback_data='send_to_group')
     builder.button(text='Отправить в группу только письмо', callback_data='send_to_group_mail')
     builder.button(text='Посмотреть WL резюме', callback_data='show_wl')
-    builder.button(text='Удалить', callback_data='del')
+    builder.button(text='Удалить кандидата из списка', callback_data='del')
     builder.button(text='Назад к письму', callback_data='back_to_mail')
     builder.adjust(1)
     return builder.as_markup()
 
 
-def contacts_add_kb():
+def contacts_add_kb(chat_id, mess_id):
     builder = InlineKeyboardBuilder()
     builder.button(text='Telegram', callback_data='addcontacts_tg')
     builder.button(text='Email', callback_data='addcontacts_email')
     builder.button(text='Телефон', callback_data='addcontacts_phone')
+    builder.button(text='Назад', url=f'https://t.me/c/{chat_id}/{mess_id}')
+    return builder.as_markup()
+
+def add_con_url_kb(chat_id):
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Перейти', url=f'https://t.me/c/{chat_id}/1')
+    builder.button(text="Назад", callback_data="back_to_contact")
+    return builder.as_markup()
+
+def return_to_contact_kb(mess_id,chat_id):
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Вернуться к кандидату', url=f'https://t.me/c/{chat_id}/{mess_id}')
     return builder.as_markup()

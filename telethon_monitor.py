@@ -175,7 +175,7 @@ async def mark_inactive_and_schedule_delete(client: TelegramClient, mapping, vac
             vacancy_id = None
     
         await client.delete_messages(mapping.dst_chat_id, mapping.dst_msg_id)
-
+        await remove_actual_vacancy(vacancy_id, bot, client)
         message = await client.send_message(mapping.dst_chat_id, new_text)
         
 
@@ -266,23 +266,25 @@ async def check_and_delete_duplicates(teleton_client: TelegramClient, channel_id
 
 
 
-async def mark_as_deleted(client: TelegramClient,  chat_id: int, vacancy_id: str, name_vac: str, bot: Bot):
+async def mark_as_deleted(client: TelegramClient,  chat_id: int, vacancy_id: str, name_vac: str, bot: Bot, teleton_client: TelegramClient):
     try:
         async for message in client.iter_messages(chat_id):
             if vacancy_id in message.text:
                 msg_id = message.id
+                title = get_vacancy_title(message.text)
                 break
             if not message.text:
                 continue
-        if vacancy_id and name_vac:
+        if vacancy_id and title:
         
-            new_text = f"🆔{vacancy_id} — вакансия неактивна\n{name_vac}"
+            new_text = f"🆔{vacancy_id} — вакансия неактивна\n{title}"
         elif vacancy_id:
             new_text = f"🆔{vacancy_id} — вакансия неактивна"
         else:
             new_text = "Вакансия неактивна"
             vacancy_id = None
         await client.delete_messages(chat_id, msg_id)
+        await remove_actual_vacancy(vacancy_id, bot, teleton_client)
         message = await client.send_message(chat_id, new_text)
 
         # Закрепляем
@@ -294,6 +296,7 @@ async def mark_as_deleted(client: TelegramClient,  chat_id: int, vacancy_id: str
 
         # Открепляем и удаляем
         await client.delete_messages(chat_id, message.id)
+        
         await bot.send_message(ADMIN_ID, f"🗑 Удалено сообщение {vacancy_id} {message.id}")
 
     except Exception as e:
@@ -316,6 +319,7 @@ async def check_old_messages_and_mark(teleton_client: TelegramClient, channel_id
                 continue
 
             msg_date = message.date
+            
             if msg_date.tzinfo is None:  # если naive
                 msg_date = msg_date.replace(tzinfo=timezone.utc)
             else:  # если aware, приведём к UTC на всякий случай
@@ -327,6 +331,9 @@ async def check_old_messages_and_mark(teleton_client: TelegramClient, channel_id
 
             if age > max_age:
                 await bot.send_message(ADMIN_ID, f'⚠️Удалено сообщение {message.id} старше 21 дня ({age.days} дней). Помечаем...')
+                message_text = message.text
+                vacancy_id = extract_vacancy_id(message_text)
+                await remove_actual_vacancy(vacancy_id)
                 await teleton_client.delete_messages(channel_id, message.id)
                 
         await asyncio.sleep(3600)
@@ -348,6 +355,7 @@ async def on_edit(message, bot: Bot, telethon_client: TelegramClient, src_chat_i
     print(vacancy_id)
     if not vacancy_id:
         return
+        
     if has_strikethrough_id(message, vacancy_id):
         await bot.send_message(ADMIN_ID, f"🗑 Найден зачеркнутый ID {vacancy_id} в {src_chat_id} → удаляем сообщение {message.id} из {src_chat_id}, функция cleanup_by_striked_id")
         title = get_vacancy_title(message.text)
@@ -355,6 +363,7 @@ async def on_edit(message, bot: Bot, telethon_client: TelegramClient, src_chat_i
     elif stop_pattern.search(message.text):
         await bot.send_message(ADMIN_ID, f"🛑 Найдено слово 'стоп' в {vacancy_id} {src_chat_id} → удаляем сообщение {message.id} из {src_chat_id}, функция cleanup_by_striked_id")
         title = get_vacancy_title(message.text)
+        
         asyncio.create_task(mark_as_deleted(telethon_client, chat_id, vacancy_id, title, bot))
     
 

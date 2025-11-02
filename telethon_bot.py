@@ -2,14 +2,15 @@
 from datetime import datetime, timedelta, timezone
 import re
 from telethon import TelegramClient, events, types
-from db import add_message_mapping, add_vacancy_thread
+from db import add_message_mapping, add_vacancy_thread, add_actual_vacancy, update_actual_vacancy
 from googlesheets import  search_and_extract_values
 from funcs import check_project_duration, send_mess_to_group, get_message_datetime, remove_vacancy_id
 from aiogram import Bot
-
+from utils import extract_telegram_usernames
 import os
 from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini
 from telethon_monitor import has_strikethrough
+from utils import extract_telegram_usernames
 
 VACANCY_ID_REGEX = re.compile(
     r"(?:🆔\s*)?(?:[\w\-\u0400-\u04FF]+[\s\-]*)?\d+", 
@@ -78,6 +79,10 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                 
                     
                     vac_id = text_gpt.get('vacancy_id')
+                    if vac_id is None or vac_id == 'None':
+                        await bot.send_message(ADMIN_ID, f'❌ Нет айди в GPT в сообщении {msg.id}')
+                        continue
+                    vac_id = vac_id.replace("_", "").replace(" ", "")
                     rate = text_gpt.get("rate")
                     vacancy = text_gpt.get('vacancy_title')
                     deadline_date = text_gpt.get("deadline_date")
@@ -258,6 +263,10 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                             text=ms_text,
                             parse_mode='HTML',
                         )
+                        user_name_tg = extract_telegram_usernames(ms_text)
+                        
+                        await add_actual_vacancy(vac_id, vacancy, mess.message_id, user_name_tg)
+                        await update_actual_vacancy(bot, telethon_client)
             
                     except Exception as e:
                         await bot.send_message(ADMIN_ID, f'❌ Ошибка при отправке в сообщении {msg.id}: {e}')
@@ -340,6 +349,10 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                 await bot.send_message(ADMIN_ID, f'❌ Вакансия отсеяна в топике {src_topic_id} в чате {event.chat_id}')
                 return
             vac_id = text_gpt.get('vacancy_id')
+            if vac_id is None or vac_id == 'None':
+                await bot.send_message(ADMIN_ID, f'❌ Нет айди в топике {src_topic_id} в чате {event.chat_id}')
+                return
+            vac_id = vac_id.replace("_", "").replace(" ", "")
             rate = text_gpt.get("rate")
             print(f'rate: {rate} в {vac_id}')
             vacancy = text_gpt.get('vacancy_title')
@@ -512,13 +525,16 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
             cleaned_text = remove_vacancy_id(formatted_text)
             url = f"https://t.me/omega_vacancy_bot?start={mess.message_id}_{vac_id}"
             ms_text = f"<a href='{url}'>{vac_id}</a>\n{cleaned_text}"
+            
             forwarded_msg = await bot.edit_message_text(
                 chat_id=dst_chat_id,
                 message_id=mess.message_id,
                 text=ms_text,
                 parse_mode='HTML',
             )
-            
+            user_name_tg = extract_telegram_usernames(ms_text)
+            await add_actual_vacancy(vac_id, vacancy, mess.message_id, user_name_tg)
+            await update_actual_vacancy(bot, telethon_client)
             await send_mess_to_group(GROUP_ID, formatted_text, vac_id, bot)
         except Exception as e:
             await bot.send_message(ADMIN_ID, f'❌ Не удалось отправить в канал в топике {src_topic_id} в чате {event.chat_id}: {e}')
@@ -554,7 +570,7 @@ async def send_message_by_username(username: str, text: str, client: TelegramCli
 
 from telethon import functions, types
 
-async def create_recruiter_forum(recruiter_id: int, recruiter_username: str, bot_username: str, client: TelegramClient, vac_id: str, message_text: str, bot: Bot):
+async def create_recruiter_forum(recruiter_id: int, recruiter_username: str, bot_username: str, client: TelegramClient, vac_id: str, message_text: str, bot: Bot, vac_title: str):
     title = f"Omega Recruiter — {recruiter_username}"
     about = f"Приватная форум-группа для рекрутера {recruiter_username}"
     group_id = -1002658129391  # ID твоей группы
@@ -657,7 +673,7 @@ async def create_recruiter_forum(recruiter_id: int, recruiter_username: str, bot
     # 4️⃣ Создаём тестовую тему (пример вакансии)
     topic_result = await client(functions.channels.CreateForumTopicRequest(
         channel=group,
-        title=f"{vac_id}",
+        title=f"{vac_id}  {vac_title}",
         icon_color=7322096 
     ))
 
@@ -679,14 +695,14 @@ async def create_recruiter_forum(recruiter_id: int, recruiter_username: str, bot
     group_id = f'-100{group_id}'
 
     await bot.send_message(chat_id = group_id, message_thread_id = topic_id, text = message_text, parse_mode='HTML')
-    await add_vacancy_thread(thread_id = topic_id, vacancy_text = message_text, vacancy_id = vac_id)
+    await add_vacancy_thread(thread_id = topic_id, chat_id = group_id, vacancy_text = message_text, vacancy_id = vac_id)
 
     return group_id, topic_id
         
     
 
 
-async def create_vacancy_thread(group_id: int, mes_text: str, client: TelegramClient, vac_id: str, bot):
+async def create_vacancy_thread(group_id: int, mes_text: str, client: TelegramClient, vac_id: str, bot, title: str):
     """
     Создаёт новый тред (forum topic) в указанной форум-группе.
     Возвращает словарь с данными темы.
@@ -704,7 +720,7 @@ async def create_vacancy_thread(group_id: int, mes_text: str, client: TelegramCl
     # 1️⃣ Создаём тему в форуме
     result = await client(functions.channels.CreateForumTopicRequest(
         channel=group_id,
-        title=f"{vac_id}",
+        title=f"{vac_id}  {title}",
         icon_color=7322096  # красивый синий (HEX #6FB1FC)
     ))
 
@@ -726,7 +742,7 @@ async def create_vacancy_thread(group_id: int, mes_text: str, client: TelegramCl
 
     try:
         await bot.send_message(chat_id = group_id, message_thread_id = topic_id, text = mes_text, parse_mode='HTML')
-        await add_vacancy_thread(thread_id = topic_id, vacancy_text = mes_text, vacancy_id = vac_id)
+        await add_vacancy_thread(thread_id = topic_id, chat_id = group_id, vacancy_text = mes_text, vacancy_id = vac_id)
         print(f"[+] Отправлено описание вакансии в тред {topic_id}")
     except Exception as e:
         print(f"❌ Ошибка при отправке в тред {topic_id}: {e}")

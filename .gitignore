@@ -1,7 +1,10 @@
 venv/
 .venv/
 downloads/
+downloads_for_db/
 __pycache__/
+sessions/
+.vscode/
 *.pyc
 *.pyo
 *.pyd
@@ -9,5 +12,9 @@ __pycache__/
 .env
 *.session
 *.session-journal
-*.db 
+*.db
+oauth.json 
 creds.json
+token.json
+token.pickle
+

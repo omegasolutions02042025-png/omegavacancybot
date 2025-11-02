@@ -120,7 +120,7 @@ class VacancyThread(Base):
     __tablename__ = "vacancy_thread"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    thread_id = Column(Integer, nullable=False)
+    thread_chat_id = Column(String, nullable=False)
     vacancy_text = Column(String, nullable=False)
     vacancy_id = Column(String, nullable=False)
     
@@ -133,6 +133,14 @@ class RecruterGroup(Base):
     recruter_user_name = Column(String, nullable=False)
     group_id = Column(String, nullable=False)
     
+class ActualVacancy(Base):
+    __tablename__ = "actual_vacancy"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    vacancy_id = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    message_id = Column(Integer, nullable=False)
+    user_name_tg = Column(String, nullable=False)
     
 
 async def init_db():
@@ -429,16 +437,21 @@ async def update_contact_message_id(message_id: int, new_message_id: int):
 #Вакансии
 #=====================================  
 
-async def add_vacancy_thread(thread_id: int, vacancy_text: str, vacancy_id: int):
+async def add_vacancy_thread(thread_id: int, chat_id: int, vacancy_text: str, vacancy_id: int):
+    tread_chat_id = str(chat_id).replace('-100', '')
+    tread_chat_id = f"{tread_chat_id}_{thread_id}"
     async with AsyncSessionLocal() as session:
-        vacancy_thread = VacancyThread(thread_id=thread_id, vacancy_text=vacancy_text, vacancy_id=vacancy_id)
+        vacancy_thread = VacancyThread(thread_chat_id=tread_chat_id, vacancy_text=vacancy_text, vacancy_id=vacancy_id)
         session.add(vacancy_thread)
         await session.commit()
 
-async def get_vacancy_thread(thread_id: int):
+async def get_vacancy_thread(thread_id: int, chat_id: int):
+    tread_chat_id = str(chat_id).replace('-100', '')
+    tread_chat_id = f"{tread_chat_id}_{thread_id}"
+    print(tread_chat_id)
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(VacancyThread).where(VacancyThread.thread_id == thread_id)
+            select(VacancyThread).where(VacancyThread.thread_chat_id == tread_chat_id)
         )
         return result.scalar_one_or_none()
 
@@ -606,3 +619,103 @@ async def get_recruter_group(recruter_user_name: str):
             select(RecruterGroup).where(RecruterGroup.recruter_user_name == recruter_user_name)
         )
         return result.scalar_one_or_none()
+
+
+#===========================================
+#Работа с таблицей actual_vacancy
+#===========================================
+
+async def add_actual_vacancy(vacancy_id: int, title: str, message_id: int, user_name_tg: str):
+    async with AsyncSessionLocal() as session:
+        try:
+            res = await session.execute(
+                select(ActualVacancy).where(ActualVacancy.vacancy_id == vacancy_id)
+            )
+            record = res.scalar_one_or_none()
+            if record:
+                await session.delete(record)
+                await session.commit()
+                print(f"🧹 Удалена запись ActualVacancy для {vacancy_id}")
+                
+            new_record = ActualVacancy(vacancy_id=vacancy_id, title=title, message_id=message_id, user_name_tg=user_name_tg)
+            session.add(new_record)
+            await session.commit()
+            print(f"✅ Добавлена новая запись ActualVacancy для {vacancy_id}")
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при добавлении ActualVacancy: {e}")
+
+from telethon import TelegramClient
+from aiogram import Bot
+
+
+async def update_actual_vacancy(bot: Bot, client: TelegramClient):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(ActualVacancy.user_name_tg)
+        )
+        res_one = result.all()
+        if res_one:
+            for (user_name_tg,) in res_one:
+                print(user_name_tg)
+                print(type(user_name_tg))
+                res = await session.execute(
+                    select(ActualVacancy.vacancy_id, ActualVacancy.title, ActualVacancy.message_id)
+                    .where(ActualVacancy.user_name_tg == user_name_tg)
+                )
+                res = res.all()
+                if res:
+                    # Удаляем старые сообщения этого пользователя
+                    async for msg in client.iter_messages(-1002658129391, reply_to=3388):
+                        
+                        if msg.id == 3388:
+                            break
+                        if user_name_tg in msg.text:    
+                            try:
+                                await bot.delete_message(
+                                    chat_id=-1002658129391,
+                                    message_id=msg.id
+                                )
+                            except Exception as e:
+                                print(f"Ошибка при удалении сообщения {msg.id}: {e}")
+
+                    text = f'Вакансии рекрутера {user_name_tg}:\n'
+                    for row in res:
+                        vac_id = row[0]
+                        title = row[1]
+                        message_id = row[2]
+                        url = f"https://t.me/omega_vacancy_bot?start={message_id}_{vac_id}"
+                        id_url = f"<a href='{url}'>{vac_id}</a>"
+                        mess_url = f"https://t.me/c/2658129391/{message_id}"
+                        title_url = f"<a href='{mess_url}'>{title}</a>"
+                        
+                        text += f"🆔{id_url} 🥇{title_url}\n"
+                        
+                    await bot.send_message(
+                            chat_id=-1002658129391,
+                            text=text,
+                            message_thread_id=3388,
+                            parse_mode="HTML",
+                            disable_web_page_preview=True,
+                            disable_notification=True
+                        )
+        
+
+async def remove_actual_vacancy(vacancy_id: int, bot: Bot, client: TelegramClient):
+    async with AsyncSessionLocal() as session:
+        try:
+            record = await session.execute(
+                select(ActualVacancy).where(ActualVacancy.vacancy_id == vacancy_id)
+            )
+            record = record.scalar_one_or_none()
+            if record:
+                await session.delete(record)
+                await session.commit()
+                
+                await update_actual_vacancy(bot, client)
+
+                
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при удалении ActualVacancy: {e}")
+    
