@@ -321,6 +321,313 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
     
 
 
+async def forward_messages_from_chats(telethon_client, CHAT_LIST, AsyncSessionLocal, bot : Bot, days=14):
+    """
+    Пересылает сообщения из списка обычных чатов (без топиков) в целевой чат.
+    
+    Args:
+        telethon_client: Клиент Telethon
+        CHAT_LIST: Список chat_id исходных чатов (например, [-1001259051878])
+        AsyncSessionLocal: Сессия БД
+        bot: Бот Aiogram
+        days: Количество дней назад для выборки сообщений (по умолчанию 14)
+    """
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+    await bot.send_message(ADMIN_ID, f"[i] Берем сообщения с {cutoff_date}")
+    
+    # Фиксированные параметры для отправки
+    dst_chat = -1002658129391
+    dst_topic_id = 13390
+
+    for src_chat in CHAT_LIST:
+        await bot.send_message(ADMIN_ID, f"[i] Проверяем чат {src_chat}")
+        try:
+            msgs = []
+            # Итерируемся по сообщениям из обычного чата (без reply_to)
+            async for msg in telethon_client.iter_messages(
+                src_chat,
+                reverse=True,
+            ):
+                if msg.date >= cutoff_date:
+                    msgs.append(msg)
+            msgs.sort(key=lambda m: m.date)
+            
+            for msg in msgs:
+                text = msg.text
+                if not text:
+                    continue
+                
+                if check_project_duration(text):
+                    await bot.send_message(ADMIN_ID, f'❌ Маленькая продолжительность проекта в сообщении {msg.id}')
+                    continue
+
+                if has_strikethrough(msg):
+                    await bot.send_message(ADMIN_ID, f"❌ Сообщение {msg.id} содержит зачёркнутый текст — пропускаем")
+                    continue
+                
+                try:
+                    text_gpt = await process_vacancy_with_gemini(text)
+                except Exception as e:
+                    await bot.send_message(ADMIN_ID, f'❌ Ошибка в GPT в сообщении {msg.id}: {e}')
+                    continue
+                
+                reason = text_gpt.get("reason")
+                if reason:
+                    await bot.send_message(ADMIN_ID, f'❌ Вакансия отсеяна в GPT в сообщении {msg.id}: {reason}')
+                    continue
+                
+                if text_gpt == None or text_gpt == 'None':
+                    await bot.send_message(ADMIN_ID, f'❌ Вакансия отсеяна в GPT в сообщении {msg.id}')
+                    continue
+            
+                try:
+                    text = text_gpt.get("text")
+                    if text is None:
+                        await bot.send_message(ADMIN_ID, f'❌ Вакансия отсеяна в GPT в сообщении {msg.id}')
+                        continue
+                
+                    
+                    vac_id = text_gpt.get('vacancy_id')
+                    if vac_id is None or vac_id == 'None':
+                        await bot.send_message(ADMIN_ID, f'❌ Нет айди в GPT в сообщении {msg.id}')
+                        continue
+                    vac_id = vac_id.replace("_", "").replace(" ", "")
+                    rate = text_gpt.get("rate")
+                    vacancy = text_gpt.get('vacancy_title')
+                    deadline_date = text_gpt.get("deadline_date")
+                    deadline_time = text_gpt.get("deadline_time")
+                    utochnenie = text_gpt.get("utochnenie")
+                    delay_payment = text_gpt.get("delay_payment")
+                    acts = text_gpt.get("acts")
+                    only_fulltime = text_gpt.get("only_fulltime")
+                    short_project = text_gpt.get("short_project")
+                    long_payment = text_gpt.get("long_payment")
+                    message_date = f'Дата публикации: {get_message_datetime(msg)}'
+                    location = text_gpt.get("location")
+                    rf_loc = False
+                    rb_loc = False
+                    for loc in location:
+                        if loc == 'РФ':
+                            rf_loc = True
+                        elif loc == 'РБ':
+                            rb_loc = True
+                    
+                    print(f'rate: {rate} в {vac_id}')
+                    print(f'rf_loc: {rf_loc} в {vac_id}')
+                    print(f'rb_loc: {rb_loc} в {vac_id}')
+                    
+                    if vacancy is None or vacancy == 'None':
+                        await bot.send_message(ADMIN_ID, f'❌ Нет вакансии в GPT в сообщении {msg.id}')
+                        continue
+                     
+
+                    # Вакансия отсекается, если нет ID
+                    if vac_id is None  or vac_id == 'None':
+                        await bot.send_message(ADMIN_ID, f'❌ Вакансия отсеяна, нет ID в сообщении {msg.id}')
+                        continue
+
+                    # Блок для обработки ставки
+                    if delay_payment:
+                        delay_payment_text = f"С отсрочкой платежа {delay_payment}после подписания акта:\n"
+                        no_rate_delay = f'Условия оплаты: {delay_payment}'
+                    else:
+                        delay_payment_text = 'С отсрочкой платежа "35 рабочих дней" после подписания акта:\n'
+                        no_rate_delay = 'Условия оплаты: Срок уточняется'
+        
+        
+        
+        
+        # Блок для обработки ставки
+                    if rate is None or rate =='0' or type(rate) != dict:
+        # если ставки нет — общий текст
+                        text_cleaned = (
+                            f"🆔{vac_id}\n\n"
+                            f"{vacancy}\n\n"
+                            f"Месячная ставка (на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n"
+                            f"{no_rate_delay}\n\n"
+                            f"{text}"
+                                            )
+                    else:
+                        rate_rb = rate.get("РБ")
+                        rate_rf = rate.get("РФ")
+                        rate_rf_contract = None
+                        rate_rf_ip = None
+                        rate_partners_rf = None
+                        rate_rb_contract = None
+                        rate_rb_ip = None
+                        rate_partners_rb = None
+                        print(rate_rf, rate_rb)
+
+                        if rate_rb:
+                            rate_rb = int(rate_rb)
+                        if rate_rf:
+                            rate_rf = int(rate_rf)
+
+                        # --- варианты для РФ ---
+                        if rf_loc:
+                            rate_rf_contract = await search_and_extract_values(
+                                'K', rate_rf, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
+                            )
+                            rate_rf_ip = await search_and_extract_values(
+                                'K', rate_rf, ['B', 'J'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
+                            )
+
+                            rate_partners_rf = await search_and_extract_values(
+                                'H', rate_rf, ['L'], 'СНГ (РФ)','https://docs.google.com/spreadsheets/d/1M5YnAuCVghdjCBvCtoflTtRPm7lLHI98abuNyZpO3vc', partner=True
+                            )
+
+                        # --- варианты для РБ ---
+                        if rb_loc:
+                            rate_rb_contract = await search_and_extract_values(
+                                'M', rate_rb, ['B'], 'Расчет ставки (штат/контракт) СНГ'
+                            )
+                            rate_rb_ip = await search_and_extract_values(
+                                'N', rate_rb, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ'
+                            )
+                            rate_partners_rb = await search_and_extract_values(
+                                'H', rate_rb, ['L'], 'СНГ (РБ)','https://docs.google.com/spreadsheets/d/1M5YnAuCVghdjCBvCtoflTtRPm7lLHI98abuNyZpO3vc', partner=True
+                            )
+                            print(rate_partners_rb)
+                            print(rate_partners_rf)
+                            
+
+                        # --- объединённая логика оформления ---
+                        def build_salary_block(flag_rf=False, flag_rb=False):
+                            """Внутренняя функция для форматирования текста ставок"""
+                            flag_text = "🇷🇺" if flag_rf else "🇧🇾"
+                            region = "РФ" if flag_rf else "РБ"
+
+                            # выбираем нужные пары
+                            contract_data = rate_rf_contract if flag_rf else rate_rb_contract
+                            ip_data = rate_rf_ip if flag_rf else rate_rb_ip
+
+                            if not contract_data or not ip_data:
+                                return (
+                                    f"{flag_text}💰 Месячная ставка для юр лица {region}: "
+                                    f"смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n"
+                                )
+
+                            rate_contract = contract_data.get('B')
+                            rate_ip = ip_data.get('B')
+                            gross = None
+                            if ip_data.get('L'):
+                                gross = ip_data.get('L')
+                            else:
+                                gross = ip_data.get('J')
+
+                            # округляем IP/самозанятый до 1000
+                            try:
+                                rounded = (int(rate_ip) // 1000) * 1000
+                                rate_ip = f"{rounded:,}".replace(",", " ")
+                            except Exception:
+                                pass
+
+                            # форматы актирования и зачёркиваний
+                            if acts:
+                                acts_text = "Актирование: поквартальное\n"
+                            else:
+                                acts_text = "Актирование: ежемесячное\n"
+                            state_contract_text = (
+                                    f"Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
+                                    f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)\n"
+                                )
+
+
+                            
+                            ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)'
+
+                            return (
+                                f"{flag_text}"
+                                f"💰 Месячная ставка для юр лица {region}:\n"
+                                f"{state_contract_text}\n\n"
+                                f"{ip_text}\n"
+                            )
+
+                        # --- итоговое формирование ---
+                        salary_text = ""
+                        rate_partners_rf = rate_partners_rf.get('L', 'Ставка из исходного текста') if rate_partners_rf else None
+                        rate_partners_rb = rate_partners_rb.get('L', 'Ставка из исходного текста') if rate_partners_rb else None
+                        if rate_partners_rf and rate_partners_rb:
+                            salary_p_text = f'Ставка для подрядчиков РФ: {rate_partners_rf}\nСтавка для подрядчиков РБ: {rate_partners_rb}'
+                        elif rate_partners_rf:
+                            salary_p_text = f'Ставка для подрядчиков РФ: {rate_partners_rf}'
+                        elif rate_partners_rb:
+                            salary_p_text = f'Ставка для подрядчиков РБ: {rate_partners_rb}'
+                        else:
+                            salary_p_text = ''
+                        print(salary_p_text)
+                        text_cleaned_part = f"🆔{vac_id}\n\n{vacancy}\n\n{salary_p_text}\n{text}"
+
+                        if rf_loc and rb_loc:
+                            # обе страны
+                            salary_text = build_salary_block(flag_rb=True) + "\n" + build_salary_block(flag_rf=True)
+                        elif rf_loc:
+                            # только РФ
+                            salary_text = build_salary_block(flag_rf=True)
+                        elif rb_loc:
+                            # только РБ
+                            salary_text = build_salary_block(flag_rb=True)
+                        else:
+                            # ни одна не указана
+                            salary_text = (
+                                "💰 Месячная ставка: смотрим ваши предложения "
+                                "(приоритет на минимальную)\n\n"
+                                f"{no_rate_delay}\n"
+                            )
+                        text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n{salary_text}\n{text}"
+                    formatted_text = await format_vacancy_gemini(text_cleaned, vac_id, message_date)
+                    formatted_text_part = await format_vacancy_gemini_for_partners(text_cleaned_part, vac_id, message_date)
+                        
+                    if utochnenie == 'True' or utochnenie is True:
+                        await bot.send_message(ADMIN_ID, "Отправлено для уточнения")
+                        await bot.send_message(ADMIN_ID, formatted_text)
+                        continue
+                    try:                 
+                        mess = await bot.send_message(chat_id=dst_chat, text='.', message_thread_id=dst_topic_id)
+                        message_id_part = await bot.send_message(chat_id=-1003360331196, text='.', parse_mode='HTML')
+                        cleaned_text = remove_vacancy_id(formatted_text)
+                        cleaned_text_part = remove_vacancy_id(formatted_text_part)
+                        url = f"https://t.me/omega_vacancy_bot?start={mess.message_id}_{vac_id}"
+                        ms_text = f"<a href='{url}'>{vac_id}</a>\n{cleaned_text}"
+                        ms_text_part = f"<a href='{url}'>{vac_id}</a>\n{cleaned_text_part}"
+                        forwarded_msg = await bot.edit_message_text(
+                            chat_id=dst_chat,
+                            message_id=mess.message_id,
+                            text=ms_text,
+                            parse_mode='HTML',
+                        )
+                        await bot.edit_message_text(chat_id=-1003360331196, message_id=message_id_part.message_id, text=ms_text_part,parse_mode='HTML')
+                        user_name_tg = extract_telegram_usernames(ms_text)
+                        await send_mess_to_group(GROUP_ID, formatted_text, vac_id, bot)
+                        await add_actual_vacancy(vac_id, vacancy, mess.message_id, user_name_tg)
+                        await update_actual_vacancy(bot, telethon_client)
+            
+                    except Exception as e:
+                        await bot.send_message(ADMIN_ID, f'❌ Ошибка при отправке в сообщении {msg.id}: {e}')
+                        continue
+                    
+                    
+                    
+                
+                    await add_message_mapping(
+                        src_chat_id=src_chat,
+                        src_msg_id=msg.id,
+                        dst_chat_id=dst_chat,
+                        dst_msg_id=forwarded_msg.message_id,
+                        deadline_date=deadline_date,
+                        deadline_time=deadline_time
+                    )
+                
+                except Exception as e:
+                    traceback.print_exc()
+                    await bot.send_message(ADMIN_ID, f'❌ Ошибка при обработке и отправке в сообщении {msg.id}: {e}')
+                    continue
+            
+        except Exception as e:
+            await bot.send_message(ADMIN_ID, f"[!] Ошибка при чтении чата {src_chat}: {e}")
+    
+
+
 
 
 async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal, bot : Bot):
@@ -605,6 +912,294 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
             deadline_time=deadline_time
         )
         await bot.send_message(ADMIN_ID, f'✅ Вакансия добавлена в канал в топике {src_topic_id} в чате {event.chat_id}')
+
+
+async def register_chat_listener(telethon_client, src_chat, dst_chat, dst_thread_id, AsyncSessionLocal, bot : Bot):
+    """
+    Регистрирует обработчик новых сообщений из обычного чата (без топиков).
+    
+    Args:
+        telethon_client: Клиент Telethon
+        src_chat: chat_id исходного чата (например, -1001259051878)
+        dst_chat: chat_id целевого чата для пересылки (например, -1002658129391)
+        dst_thread_id: thread_id (message_thread_id) в целевом чате (например, 13390)
+        AsyncSessionLocal: Сессия БД
+        bot: Бот Aiogram
+    """
+    print(f'Сканирование чата {src_chat} включено')
+
+    @telethon_client.on(events.NewMessage(chats=src_chat))
+    async def new_chat_message(event):
+        # Проверяем, что сообщение НЕ из топика (для обычных чатов)
+        if hasattr(event.message, 'reply_to') and event.message.reply_to:
+            # Если есть reply_to, это может быть топик - пропускаем
+            return
+        
+        # Проверяем, что сообщение из нужного чата
+        if event.chat_id != src_chat:
+            return
+
+        text = getattr(event.message, 'message', '') or ""
+        if not text:
+            return
+
+        # Добавляем все необходимые фильтры
+
+        if has_strikethrough(event.message):
+            await bot.send_message(ADMIN_ID, f"❌ Сообщение {event.message.id} содержит зачёркнутый текст — пропускаем")
+            return
+
+        if check_project_duration(text):
+            await bot.send_message(ADMIN_ID, f'❌ Маленькая продолжительность проекта в чате {event.chat_id}')
+            return
+
+        try:
+            text_gpt = await process_vacancy_with_gemini(text)
+        except Exception as e:
+            await bot.send_message(ADMIN_ID, f'❌ Ошибка при обработке вакансии в чате {event.chat_id}: {e}')
+            return
+        
+        reason = text_gpt.get("reason")
+        if reason:
+            await bot.send_message(ADMIN_ID, f'❌ Вакансия отсеяна в чате {event.chat_id}: {reason}')
+            return
+        
+        if text_gpt is None or text_gpt == 'None':
+            return
+
+        try:
+            text = text_gpt.get("text")
+            if text == None or text == 'None':
+                await bot.send_message(ADMIN_ID, f'❌ Вакансия отсеяна в чате {event.chat_id}')
+                return
+            vac_id = text_gpt.get('vacancy_id')
+            if vac_id is None or vac_id == 'None':
+                await bot.send_message(ADMIN_ID, f'❌ Нет айди в чате {event.chat_id}')
+                return
+            vac_id = vac_id.replace("_", "").replace(" ", "")
+            rate = text_gpt.get("rate")
+            print(f'rate: {rate} в {vac_id}')
+            vacancy = text_gpt.get('vacancy_title')
+            if vacancy is None or vacancy == 'None':
+                await bot.send_message(ADMIN_ID, f'❌ Нет вакансии в чате {event.chat_id}')
+                return
+            if vac_id is None or vac_id == 'None':
+                await bot.send_message(ADMIN_ID, f'❌ Нет айди в чате {event.chat_id}')
+                return
+
+            deadline_date = text_gpt.get("deadline_date")
+            deadline_time = text_gpt.get("deadline_time")
+            utochnenie = text_gpt.get("utochnenie")
+            delay_payment = text_gpt.get("delay_payment")
+            acts = text_gpt.get("acts")
+            only_fulltime = text_gpt.get("only_fulltime")
+            short_project = text_gpt.get("short_project")
+            long_payment = text_gpt.get("long_payment")
+            message_date = f"Дата публикации: {get_message_datetime(event.message)}"
+            location = text_gpt.get("location")
+            rf_loc = False
+            rb_loc = False
+            for loc in location:
+                if loc == 'РФ':
+                    rf_loc = True
+                elif loc == 'РБ':
+                    rb_loc = True
+            print(f'location: {location} в {vac_id}')
+            
+            if delay_payment:
+                delay_payment_text = f"С отсрочкой платежа {delay_payment}после подписания акта:\n"
+                no_rate_delay = f'Условия оплаты: {delay_payment}'
+            else:
+                delay_payment_text = 'С отсрочкой платежа "35 рабочих дней" после подписания акта:\n'
+                no_rate_delay = 'Условия оплаты: Срок уточняется'
+            
+            if rate is None or rate =='0' or type(rate) != dict:
+                text_cleaned = (
+                    f"🆔{vac_id}\n\n"
+                    f"{vacancy}\n\n"
+                    f"Месячная ставка (на руки) до: смотрим ваши предложения (приоритет на минимальную)\n\n"
+                    f"{no_rate_delay}\n\n"
+                    f"{text}"
+                                    )
+                text_cleaned_part = (f"🆔{vac_id}\n\n"
+                                    f"{vacancy}\n\n"
+                                    f"Ставка для партнеров: смотрим ваши предложения\n\n"
+                                    f"{no_rate_delay}\n\n"
+                                    f"{text}")
+            else:
+                rate_rb = rate.get("РБ")
+                rate_rf = rate.get("РФ")
+                rate_partners_rf = None
+                rate_partners_rb = None
+                print(rate_rf, rate_rb)
+                if rate_rb:
+                    rate_rb = int(rate_rb)
+                if rate_rf:
+                    rate_rf = int(rate_rf)
+
+                # --- варианты для РФ ---
+                if rf_loc:
+                    rate_rf_contract = await search_and_extract_values(
+                        'K', rate_rf, ['B'], 'Расчет ставки (штат) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
+                    )
+                    rate_rf_ip = await search_and_extract_values(
+                        'K', rate_rf, ['B', 'J'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
+                    )
+                    rate_partners_rf = await search_and_extract_values(
+                    'H', rate_rf, ['L'], 'СНГ (РФ)','https://docs.google.com/spreadsheets/d/1M5YnAuCVghdjCBvCtoflTtRPm7lLHI98abuNyZpO3vc', partner=True
+                    )
+
+                # --- варианты для РБ ---
+                if rb_loc:
+                    rate_rb_contract = await search_and_extract_values(
+                        'M', rate_rb, ['B'], 'Расчет ставки (штат/контракт) СНГ'
+                    )
+                    rate_rb_ip = await search_and_extract_values(
+                        'N', rate_rb, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ'
+                    )
+
+                    rate_partners_rb = await search_and_extract_values(
+                    'H', rate_rf, ['L'], 'СНГ (РБ)','https://docs.google.com/spreadsheets/d/1M5YnAuCVghdjCBvCtoflTtRPm7lLHI98abuNyZpO3vc', partner=True
+                    )       
+
+                # --- объединённая логика оформления ---
+                def build_salary_block(flag_rf=False, flag_rb=False):
+                    """Внутренняя функция для форматирования текста ставок"""
+                    flag_text = "🇷🇺" if flag_rf else "🇧🇾"
+                    region = "РФ" if flag_rf else "РБ"
+
+                    # выбираем нужные пары
+                    contract_data = rate_rf_contract if flag_rf else rate_rb_contract
+                    ip_data = rate_rf_ip if flag_rf else rate_rb_ip
+
+                    if not contract_data or not ip_data:
+                        return (
+                            f"{flag_text}💰 Месячная ставка для юр лица {region}: "
+                            f"смотрим ваши предложения (приоритет на минимальную)\n\n{no_rate_delay}\n"
+                        )
+
+                    rate_contract = contract_data.get('B')
+                    rate_ip = ip_data.get('B')
+                    gross = None
+                    if ip_data.get('L'):
+                        gross = ip_data.get('L')
+                    else:
+                        gross = ip_data.get('J')
+
+                    # округляем IP/самозанятый до 1000
+                    try:
+                        rounded = (int(rate_ip) // 1000) * 1000
+                        rate_ip = f"{rounded:,}".replace(",", " ")
+                    except Exception:
+                        pass
+
+                    # форматы актирования и зачёркиваний
+                    if acts:
+                        acts_text = "Актирование: поквартальное\n"
+                      
+                    else:
+                        acts_text = "Актирование: ежемесячное\n"
+                    state_contract_text = (
+                            f"Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
+                            f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)\n"
+                        )
+
+                    
+
+                 
+                    ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)'
+
+                    return (
+                        f"{flag_text}"
+                        f"💰 Месячная ставка для юр лица {region}:\n"
+                        f"{state_contract_text}\n\n"
+                        f"{ip_text}\n"
+                    )
+
+                # --- итоговое формирование ---
+                salary_text = ""
+
+                if rf_loc and rb_loc:
+                    # обе страны
+                    salary_text = build_salary_block(flag_rb=True) + "\n" + build_salary_block(flag_rf=True)
+                elif rf_loc:
+                    # только РФ
+                    salary_text = build_salary_block(flag_rf=True)
+                elif rb_loc:
+                    # только РБ
+                    salary_text = build_salary_block(flag_rb=True)
+                else:
+                    # ни одна не указана
+                    salary_text = (
+                        "💰 Месячная ставка: смотрим ваши предложения "
+                        "(приоритет на минимальную)\n\n"
+                        f"{no_rate_delay}\n"
+                    )
+                text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n{salary_text}\n{text}"
+                salary_p_text = ''
+                rate_partners_rf = rate_partners_rf.get('L', 'Ставка из исходного текста') if rate_partners_rf else None
+                rate_partners_rb = rate_partners_rb.get('L', 'Ставка из исходного текста') if rate_partners_rb else None
+                if rate_partners_rf and rate_partners_rb:
+                    salary_p_text = f'Ставка для подрядчиков РФ: {rate_partners_rf}\nСтавка для подрядчиков РБ: {rate_partners_rb}'
+                elif rate_partners_rf:
+                    salary_p_text = f'Ставка для подрядчиков РФ: {rate_partners_rf}'
+                elif rate_partners_rb:
+                    salary_p_text = f'Ставка для подрядчиков РБ: {rate_partners_rb}'
+                else:
+                    salary_p_text = ''
+                print(salary_p_text)
+                text_cleaned_part = f"🆔{vac_id}\n\n{vacancy}\n\n{salary_p_text}\n{text}"
+                
+            formatted_text = await format_vacancy_gemini(text_cleaned, vac_id, message_date)
+            formatted_text_part = await format_vacancy_gemini_for_partners(text_cleaned_part, vac_id, message_date)   
+        except Exception as e:
+            await bot.send_message(ADMIN_ID, f'❌ Ошибка обработки данных вакансии в чате {event.chat_id}: {e}')
+            return
+
+        try:
+            if utochnenie == 'True' or utochnenie is True:
+                await bot.send_message(ADMIN_ID, "Отправлено для уточнения")
+                await bot.send_message(ADMIN_ID, formatted_text)
+                return  # Если отправили в группу уточнений, не отправляем в канал
+        except Exception as e:
+            await bot.send_message(ADMIN_ID, f'❌ Ошибка отправки в группу уточнений в чате {event.chat_id}: {e}')
+            return
+
+        try:
+            mess = await bot.send_message(chat_id=dst_chat, text='.', message_thread_id=dst_thread_id)
+            message_id_part = await bot.send_message(chat_id=-1003360331196, text='.', parse_mode='HTML')
+            cleaned_text = remove_vacancy_id(formatted_text)
+            clean_text_part = remove_vacancy_id(formatted_text_part)
+            url = f"https://t.me/omega_vacancy_bot?start={mess.message_id}_{vac_id}"
+            ms_text = f"<a href='{url}'>{vac_id}</a>\n{cleaned_text}"
+            text_cleaned_part = f'<a href="{url}">{vac_id}</a>\n{clean_text_part}'
+            forwarded_msg = await bot.edit_message_text(
+                chat_id=dst_chat,
+                message_id=mess.message_id,
+                text=ms_text,
+                parse_mode='HTML',
+            )
+            await bot.edit_message_text(chat_id=-1003360331196, message_id=message_id_part.message_id, text=text_cleaned_part,parse_mode='HTML')
+            user_name_tg = extract_telegram_usernames(ms_text)
+            await send_mess_to_group(GROUP_ID, formatted_text, vac_id, bot)
+            await add_actual_vacancy(vac_id, vacancy, mess.message_id, user_name_tg)
+            await update_actual_vacancy(bot, telethon_client)
+            
+        except Exception as e:
+            await bot.send_message(ADMIN_ID, f'❌ Не удалось отправить в канал в чате {event.chat_id}: {e}')
+            traceback.print_exc()
+            return
+
+        # Сохраняем сопоставление сообщений
+        await add_message_mapping(
+            src_chat_id=event.chat_id,
+            src_msg_id=event.message.id,
+            dst_chat_id=dst_chat,
+            dst_msg_id=forwarded_msg.message_id,
+            deadline_date=deadline_date,
+            deadline_time=deadline_time
+        )
+        await bot.send_message(ADMIN_ID, f'✅ Вакансия добавлена в канал в чате {event.chat_id}')
 
 
 async def send_message_by_username(username: str, text: str, client: TelegramClient):
