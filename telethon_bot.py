@@ -1,6 +1,7 @@
 
 from datetime import datetime, timedelta, timezone
 import re
+import asyncio
 from telethon import TelegramClient, events, types
 from db import add_message_mapping, add_vacancy_thread, add_actual_vacancy, update_actual_vacancy
 from googlesheets import  search_and_extract_values
@@ -8,9 +9,10 @@ from funcs import check_project_duration, send_mess_to_group, get_message_dateti
 from aiogram import Bot
 from utils import extract_telegram_usernames
 import os
-from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini
+from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini, scrap_vacancy, format_vacancy_gemini_for_partners
 from telethon_monitor import has_strikethrough
 from utils import extract_telegram_usernames
+import traceback
 
 VACANCY_ID_REGEX = re.compile(
     r"(?:🆔\s*)?(?:[\w\-\u0400-\u04FF]+[\s\-]*)?\d+", 
@@ -141,7 +143,14 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                     else:
                         rate_rb = rate.get("РБ")
                         rate_rf = rate.get("РФ")
+                        rate_rf_contract = None
+                        rate_rf_ip = None
+                        rate_partners_rf = None
+                        rate_rb_contract = None
+                        rate_rb_ip = None
+                        rate_partners_rb = None
                         print(rate_rf, rate_rb)
+
                         if rate_rb:
                             rate_rb = int(rate_rb)
                         if rate_rf:
@@ -156,6 +165,10 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                                 'K', rate_rf, ['B', 'J'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                             )
 
+                            rate_partners_rf = await search_and_extract_values(
+                                'H', rate_rf, ['L'], 'СНГ (РФ)','https://docs.google.com/spreadsheets/d/1M5YnAuCVghdjCBvCtoflTtRPm7lLHI98abuNyZpO3vc', partner=True
+                            )
+
                         # --- варианты для РБ ---
                         if rb_loc:
                             rate_rb_contract = await search_and_extract_values(
@@ -164,6 +177,12 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                             rate_rb_ip = await search_and_extract_values(
                                 'N', rate_rb, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ'
                             )
+                            rate_partners_rb = await search_and_extract_values(
+                                'H', rate_rb, ['L'], 'СНГ (РБ)','https://docs.google.com/spreadsheets/d/1M5YnAuCVghdjCBvCtoflTtRPm7lLHI98abuNyZpO3vc', partner=True
+                            )
+                            print(rate_partners_rb)
+                            print(rate_partners_rf)
+                            
 
                         # --- объединённая логика оформления ---
                         def build_salary_block(flag_rf=False, flag_rb=False):
@@ -199,25 +218,16 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                             # форматы актирования и зачёркиваний
                             if acts:
                                 acts_text = "Актирование: поквартальное\n"
-                                state_contract_text = (
-                                    f"<s>Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
-                                    f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)</s>\n"
-                                )
                             else:
                                 acts_text = "Актирование: ежемесячное\n"
-                                state_contract_text = (
+                            state_contract_text = (
                                     f"Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
                                     f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)\n"
                                 )
 
-                            # зачёркивания по условиям
-                            if short_project or long_payment:
-                                state_contract_text = f"<s>{state_contract_text}</s>"
 
-                            if only_fulltime:
-                                ip_text = f"<s>Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)</s>"
-                            else:
-                                ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)'
+                            
+                            ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)'
 
                             return (
                                 f"{flag_text}"
@@ -228,6 +238,18 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
 
                         # --- итоговое формирование ---
                         salary_text = ""
+                        rate_partners_rf = rate_partners_rf.get('L', 'Ставка из исходного текста') if rate_partners_rf else None
+                        rate_partners_rb = rate_partners_rb.get('L', 'Ставка из исходного текста') if rate_partners_rb else None
+                        if rate_partners_rf and rate_partners_rb:
+                            salary_p_text = f'Ставка для подрядчиков РФ: {rate_partners_rf}\nСтавка для подрядчиков РБ: {rate_partners_rb}'
+                        elif rate_partners_rf:
+                            salary_p_text = f'Ставка для подрядчиков РФ: {rate_partners_rf}'
+                        elif rate_partners_rb:
+                            salary_p_text = f'Ставка для подрядчиков РБ: {rate_partners_rb}'
+                        else:
+                            salary_p_text = ''
+                        print(salary_p_text)
+                        text_cleaned_part = f"🆔{vac_id}\n\n{vacancy}\n\n{salary_p_text}\n{text}"
 
                         if rf_loc and rb_loc:
                             # обе страны
@@ -247,6 +269,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                             )
                         text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n{salary_text}\n{text}"
                     formatted_text = await format_vacancy_gemini(text_cleaned, vac_id, message_date)
+                    formatted_text_part = await format_vacancy_gemini_for_partners(text_cleaned_part, vac_id, message_date)
                         
                     if utochnenie == 'True' or utochnenie is True:
                         await bot.send_message(ADMIN_ID, "Отправлено для уточнения")
@@ -254,24 +277,29 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                         continue
                     try:                 
                         mess = await bot.send_message(chat_id=dst_chat, text='.', message_thread_id=dst_topic_id)
+                        message_id_part = await bot.send_message(chat_id=-1003360331196, text='.', parse_mode='HTML')
                         cleaned_text = remove_vacancy_id(formatted_text)
+                        cleaned_text_part = remove_vacancy_id(formatted_text_part)
                         url = f"https://t.me/omega_vacancy_bot?start={mess.message_id}_{vac_id}"
                         ms_text = f"<a href='{url}'>{vac_id}</a>\n{cleaned_text}"
+                        ms_text_part = f"<a href='{url}'>{vac_id}</a>\n{cleaned_text_part}"
                         forwarded_msg = await bot.edit_message_text(
                             chat_id=dst_chat,
                             message_id=mess.message_id,
                             text=ms_text,
                             parse_mode='HTML',
                         )
+                        await bot.edit_message_text(chat_id=-1003360331196, message_id=message_id_part.message_id, text=ms_text_part,parse_mode='HTML')
                         user_name_tg = extract_telegram_usernames(ms_text)
-                        
+                        await send_mess_to_group(GROUP_ID, formatted_text, vac_id, bot)
                         await add_actual_vacancy(vac_id, vacancy, mess.message_id, user_name_tg)
                         await update_actual_vacancy(bot, telethon_client)
             
                     except Exception as e:
                         await bot.send_message(ADMIN_ID, f'❌ Ошибка при отправке в сообщении {msg.id}: {e}')
                         continue
-                    await send_mess_to_group(GROUP_ID, formatted_text, vac_id, bot)
+                    
+                    
                     
                 
                     await add_message_mapping(
@@ -284,6 +312,7 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
                     )
                 
                 except Exception as e:
+                    traceback.print_exc()
                     await bot.send_message(ADMIN_ID, f'❌ Ошибка при обработке и отправке в сообщении {msg.id}: {e}')
                     continue
             
@@ -397,9 +426,16 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                     f"{no_rate_delay}\n\n"
                     f"{text}"
                                     )
+                text_cleaned_part = (f"🆔{vac_id}\n\n"
+                                    f"{vacancy}\n\n"
+                                    f"Ставка для партнеров: смотрим ваши предложения\n\n"
+                                    f"{no_rate_delay}\n\n"
+                                    f"{text}")
             else:
                 rate_rb = rate.get("РБ")
                 rate_rf = rate.get("РФ")
+                rate_partners_rf = None
+                rate_partners_rb = None
                 print(rate_rf, rate_rb)
                 if rate_rb:
                     rate_rb = int(rate_rb)
@@ -414,6 +450,9 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                     rate_rf_ip = await search_and_extract_values(
                         'K', rate_rf, ['B', 'J'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                     )
+                    rate_partners_rf = await search_and_extract_values(
+                    'H', rate_rf, ['L'], 'СНГ (РФ)','https://docs.google.com/spreadsheets/d/1M5YnAuCVghdjCBvCtoflTtRPm7lLHI98abuNyZpO3vc', partner=True
+                    )
 
                 # --- варианты для РБ ---
                 if rb_loc:
@@ -423,6 +462,10 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                     rate_rb_ip = await search_and_extract_values(
                         'N', rate_rb, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ'
                     )
+
+                    rate_partners_rb = await search_and_extract_values(
+                    'H', rate_rf, ['L'], 'СНГ (РБ)','https://docs.google.com/spreadsheets/d/1M5YnAuCVghdjCBvCtoflTtRPm7lLHI98abuNyZpO3vc', partner=True
+                    )       
 
                 # --- объединённая логика оформления ---
                 def build_salary_block(flag_rf=False, flag_rb=False):
@@ -458,25 +501,18 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                     # форматы актирования и зачёркиваний
                     if acts:
                         acts_text = "Актирование: поквартальное\n"
-                        state_contract_text = (
-                            f"<s>Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
-                            f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)</s>\n"
-                        )
+                      
                     else:
                         acts_text = "Актирование: ежемесячное\n"
-                        state_contract_text = (
+                    state_contract_text = (
                             f"Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
                             f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)\n"
                         )
 
-                    # зачёркивания по условиям
-                    if short_project or long_payment:
-                        state_contract_text = f"<s>{state_contract_text}</s>"
+                    
 
-                    if only_fulltime:
-                        ip_text = f"<s>Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)</s>"
-                    else:
-                        ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)'
+                 
+                    ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)'
 
                     return (
                         f"{flag_text}"
@@ -505,8 +541,22 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
                         f"{no_rate_delay}\n"
                     )
                 text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n{salary_text}\n{text}"
+                salary_p_text = ''
+                rate_partners_rf = rate_partners_rf.get('L', 'Ставка из исходного текста') if rate_partners_rf else None
+                rate_partners_rb = rate_partners_rb.get('L', 'Ставка из исходного текста') if rate_partners_rb else None
+                if rate_partners_rf and rate_partners_rb:
+                    salary_p_text = f'Ставка для подрядчиков РФ: {rate_partners_rf}\nСтавка для подрядчиков РБ: {rate_partners_rb}'
+                elif rate_partners_rf:
+                    salary_p_text = f'Ставка для подрядчиков РФ: {rate_partners_rf}'
+                elif rate_partners_rb:
+                    salary_p_text = f'Ставка для подрядчиков РБ: {rate_partners_rb}'
+                else:
+                    salary_p_text = ''
+                print(salary_p_text)
+                text_cleaned_part = f"🆔{vac_id}\n\n{vacancy}\n\n{salary_p_text}\n{text}"
                 
-            formatted_text = await format_vacancy_gemini(text_cleaned, vac_id, message_date)   
+            formatted_text = await format_vacancy_gemini(text_cleaned, vac_id, message_date)
+            formatted_text_part = await format_vacancy_gemini_for_partners(text_cleaned_part, vac_id, message_date)   
         except Exception as e:
             await bot.send_message(ADMIN_ID, f'❌ Ошибка обработки данных вакансии в топике {src_topic_id} в чате {event.chat_id}: {e}')
             return
@@ -522,22 +572,27 @@ async def register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal,
 
         try:
             mess = await bot.send_message(chat_id=dst_chat_id, text='.', message_thread_id=dst_topic_id)
+            message_id_part = await bot.send_message(chat_id=-1003360331196, text='.', parse_mode='HTML')
             cleaned_text = remove_vacancy_id(formatted_text)
+            clean_text_part = remove_vacancy_id(formatted_text_part)
             url = f"https://t.me/omega_vacancy_bot?start={mess.message_id}_{vac_id}"
             ms_text = f"<a href='{url}'>{vac_id}</a>\n{cleaned_text}"
-            
+            text_cleaned_part = f'<a href="{url}">{vac_id}</a>\n{clean_text_part}'
             forwarded_msg = await bot.edit_message_text(
                 chat_id=dst_chat_id,
                 message_id=mess.message_id,
                 text=ms_text,
                 parse_mode='HTML',
             )
+            await bot.edit_message_text(chat_id=-1003360331196, message_id=message_id_part.message_id, text=text_cleaned_part,parse_mode='HTML')
             user_name_tg = extract_telegram_usernames(ms_text)
+            await send_mess_to_group(GROUP_ID, formatted_text, vac_id, bot)
             await add_actual_vacancy(vac_id, vacancy, mess.message_id, user_name_tg)
             await update_actual_vacancy(bot, telethon_client)
-            await send_mess_to_group(GROUP_ID, formatted_text, vac_id, bot)
+            
         except Exception as e:
             await bot.send_message(ADMIN_ID, f'❌ Не удалось отправить в канал в топике {src_topic_id} в чате {event.chat_id}: {e}')
+            traceback.print_exc()
             return
 
         # Сохраняем сопоставление сообщений
@@ -571,28 +626,40 @@ async def send_message_by_username(username: str, text: str, client: TelegramCli
 from telethon import functions, types
 
 async def create_recruiter_forum(recruiter_id: int, recruiter_username: str, bot_username: str, client: TelegramClient, vac_id: str, message_text: str, bot: Bot, vac_title: str):
+    recruiter_input = None
+    if recruiter_username:
+        try:
+            resolved = await client(functions.contacts.ResolveUsernameRequest(recruiter_username))
+            user = resolved.users[0]
+            recruiter_input = types.InputUser(user.id, user.access_hash)
+        except errors.UsernameNotOccupiedError:
+            pass
+        except IndexError:
+            pass
     title = f"Omega Recruiter — {recruiter_username}"
     about = f"Приватная форум-группа для рекрутера {recruiter_username}"
     group_id = -1002658129391  # ID твоей группы
-    group = await client.get_entity(group_id)
-    dialogs = await client.get_dialogs()
-    entity = None
-    for dialog in dialogs:
-        if dialog.entity.id == recruiter_id:
-            entity = await client.get_input_entity(dialog.entity)
-            break
+    if not recruiter_input:
+        
+        group = await client.get_entity(group_id)
+        dialogs = await client.get_dialogs()
+        entity = None
+        for dialog in dialogs:
+            if dialog.entity.id == recruiter_id:
+                entity = await client.get_input_entity(dialog.entity)
+                break
 
-
-    # 2️⃣ Или если он есть в группе
-    participants = await client.get_participants(group)
-    for p in participants:
-        if p.id == recruiter_id:
-            entity = await client.get_input_entity(p)
-            break
-    if not entity:
-        print("❌ Не удалось найти пользователя в группе")
-        return
-
+        if not entity:
+            participants = await client.get_participants(group)
+            for p in participants:
+                if p.id == recruiter_id:
+                    entity = await client.get_input_entity(p)
+                    break
+        if not entity:
+            print("❌ Не удалось найти пользователя в группе")
+            return
+    else:
+        entity = recruiter_input
     # 1️⃣ Создаём мегагруппу
     result = await client(functions.channels.CreateChannelRequest(
         title=title,
@@ -614,10 +681,13 @@ async def create_recruiter_forum(recruiter_id: int, recruiter_username: str, bot
     
 
     # 3️⃣ Добавляем туда рекрутера и бота
-    await client(functions.channels.InviteToChannelRequest(
-        channel=group,
-        users=[entity, f"@{bot_username}"]
-    ))
+    try:
+        await client(functions.channels.InviteToChannelRequest(
+            channel=group,
+            users=[entity, f"@{bot_username}", f'@kupitmancik']
+        ))
+    except Exception as e:
+        await bot.send_message(ADMIN_ID, f"❌ Ошибка при добавлении @{bot_username} и рекрутера {recruiter_username}: {e}")
     print(f"[+] Добавлены @{bot_username} и рекрутер {recruiter_username}")
     
     # 3.5️⃣ Даем боту права администратора
@@ -643,7 +713,7 @@ async def create_recruiter_forum(recruiter_id: int, recruiter_username: str, bot
         ))
         print(f"[+] Боту @{bot_username} предоставлены права администратора")
     except Exception as e:
-        print(f"❌ Ошибка при предоставлении прав боту: {e}")
+        await bot.send_message(ADMIN_ID, f"❌ Ошибка при предоставлении прав боту: {e}")
     
     # 3.6️⃣ Даем рекрутеру права администратора
     try:
@@ -668,7 +738,7 @@ async def create_recruiter_forum(recruiter_id: int, recruiter_username: str, bot
         ))
         print(f"[+] Рекрутеру {recruiter_username} предоставлены права администратора")
     except Exception as e:
-        print(f"❌ Ошибка при предоставлении прав рекрутеру: {e}")
+        await bot.send_message(ADMIN_ID, f"❌ Ошибка при предоставлении прав рекрутеру: {e}")
 
     # 4️⃣ Создаём тестовую тему (пример вакансии)
     topic_result = await client(functions.channels.CreateForumTopicRequest(
@@ -688,7 +758,7 @@ async def create_recruiter_forum(recruiter_id: int, recruiter_username: str, bot
                 break
     
     if not topic_id:
-        print("❌ Не удалось получить topic_id")
+        await bot.send_message(ADMIN_ID, "❌ Не удалось получить topic_id")
         return group_id
         
     print(f"[+] Создана тема: {topic_id}")
@@ -702,7 +772,7 @@ async def create_recruiter_forum(recruiter_id: int, recruiter_username: str, bot
     
 
 
-async def create_vacancy_thread(group_id: int, mes_text: str, client: TelegramClient, vac_id: str, bot, title: str):
+async def create_vacancy_thread(group_id: int, mes_text: str, client: TelegramClient, vac_id: str, bot: Bot, title: str):
     """
     Создаёт новый тред (forum topic) в указанной форум-группе.
     Возвращает словарь с данными темы.
@@ -735,7 +805,7 @@ async def create_vacancy_thread(group_id: int, mes_text: str, client: TelegramCl
                 break
     
     if not topic_id:
-        print(f"❌ Не удалось получить topic_id для группы {group_id}")
+        await bot.send_message(ADMIN_ID, f"❌ Не удалось получить topic_id для группы {group_id}")
         return
 
     print(f"[+] Создан новый тред в группе {group_id}: {vac_id} (topic_id={topic_id})")
@@ -745,6 +815,272 @@ async def create_vacancy_thread(group_id: int, mes_text: str, client: TelegramCl
         await add_vacancy_thread(thread_id = topic_id, chat_id = group_id, vacancy_text = mes_text, vacancy_id = vac_id)
         print(f"[+] Отправлено описание вакансии в тред {topic_id}")
     except Exception as e:
-        print(f"❌ Ошибка при отправке в тред {topic_id}: {e}")
+        await bot.send_message(ADMIN_ID, f"❌ Ошибка при отправке в тред {topic_id}: {e}")
         
     return topic_id, tread_create
+
+from utils import replace_channel_mail
+
+import os
+from telethon import TelegramClient, errors
+
+from aiogram.exceptions import TelegramRetryAfter
+from telethon.errors import FloodWaitError
+
+async def replace_mails_in_channel(client: TelegramClient, bot: Bot):
+    GROUP_ID_STR = os.getenv("GROUP_ID")
+    try:
+        GROUP_ID = int(GROUP_ID_STR)
+    except (ValueError, TypeError):
+        print(f"❌ Ошибка: GROUP_ID должен быть числом, получено: {GROUP_ID_STR}")
+        return
+    
+    print(f"GROUP_ID: {GROUP_ID} (type: {type(GROUP_ID)})")
+    print("[+] Запущен процесс замены ссылок в группе")
+    
+    try:
+        # Получаем entity для группы
+        entity = await client.get_entity(GROUP_ID)
+        print(f"[+] Получена entity для группы: {entity.title if hasattr(entity, 'title') else entity}")
+        
+        message_count = 0
+        async for message in client.iter_messages(entity, limit=None, reverse=False):
+            message_count += 1
+            if message_count % 100 == 0:
+                print(f"[+] Обработано {message_count} сообщений...")
+            
+            # service messages пропускаем
+            if not message.message:
+                continue
+
+            new_text = replace_channel_mail(message.message)
+            
+            if not new_text:
+                try:
+                    #await client.delete_messages(entity=GROUP_ID, message_ids=message.id)
+                    print(f"[✓] Удалено сообщение {message.id} в группе {GROUP_ID}")
+                    continue
+                except Exception as e:
+                    print(f"[!] Ошибка при удалении {message.id}: {e}")
+                    
+                   
+                    continue
+
+            # Если new_text не None, значит была замена - редактируем
+            if new_text:
+                try:
+                    await client.edit_message(entity=GROUP_ID, message=message.id, text=new_text)
+                    print(f"[✓] Заменено сообщение {message.id} в группе {GROUP_ID}")
+                    await asyncio.sleep(5)
+                
+                except TelegramRetryAfter as e:
+                    print(f"[!] Ошибка при редактировании {message.id}: {e}")
+                    print(f"[!] Задержка на {e.retry_after} секунд")
+                    await asyncio.sleep(e.retry_after)
+                    continue
+                except FloodWaitError as e:
+                    print(f"[!] Ошибка при редактировании {message.id}: {e}")
+                    print(f"[!] Задержка на {e.seconds} секунд")
+                    await asyncio.sleep(e.seconds)
+                    continue
+                except Exception as e:
+                    print(f"[!] Ошибка при редактировании {message.id}: {e}")
+                    await client.delete_messages(entity=GROUP_ID, message_ids=message.id)
+                    print(f"[✓] Удалено сообщение {message.id} в группе {GROUP_ID}")
+                    await asyncio.sleep(5)
+                    continue
+        
+        print(f"[+] Завершено. Всего обработано сообщений: {message_count}")
+        
+    except Exception as e:
+        print(f"❌ Ошибка при итерации по сообщениям: {e}")
+        import traceback
+        traceback.print_exc()
+
+from funcs import remove_vacancy_id, extract_vacancy_id, get_vacancy_title
+from telethon.tl import functions
+import asyncio
+import requests
+import json
+import re
+
+def strip_md_link(text: str) -> str:
+    # находим конструкции вида [текст](ссылка) и оставляем только текст
+    return re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+
+
+async def send_vac_to_site(client: TelegramClient):
+    import json
+    
+    channel = -1002658129391
+    
+    # Получаем информацию о канале/группе
+   
+    
+    async for message in client.iter_messages(channel, limit=None, reverse=False):
+        data = []
+        if not message.message:
+            continue
+        if not message.text:
+            continue
+        if 'вакансия неактивна' in message.text.lower():
+            print('Вакансия неактивна')
+            continue
+        
+        vac_id = extract_vacancy_id(message.text)
+        if not vac_id:
+            continue
+            
+        message_text = remove_vacancy_id(message.text)
+        title = get_vacancy_title(message_text)
+        if not title:
+            continue
+       
+        vacancy_scraping = await scrap_vacancy(message_text)
+        try:
+            vacancy_scraping = json.loads(vacancy_scraping)
+        except Exception as e:
+            print(f"❌ Ошибка при загрузке вакансии: {e}")
+            continue
+        work_format = vacancy_scraping['work_format']
+        employment_type = vacancy_scraping['employment_type']
+        english_level = vacancy_scraping['english_level']
+        grade = vacancy_scraping['grade']
+        company_type = vacancy_scraping['company_type']
+        specialization = vacancy_scraping['specializations']
+        skills = vacancy_scraping['skills']
+        domains = vacancy_scraping['domains']
+        location = vacancy_scraping['location']
+        manager_username = vacancy_scraping['manager_username']
+        customer = vacancy_scraping['customer']
+        categories = vacancy_scraping['categories']
+        subcategories = vacancy_scraping['subcategories']
+        salary = vacancy_scraping.get('salary', '')
+        created_at = message.date.isoformat() if message.date else None
+        specialization = ', '.join(specialization) if specialization else None
+        skills = ', '.join(skills) if skills else None
+        domains = ', '.join(domains) if domains else None
+        location = ', '.join(location) if location else None
+        categories =', '.join(categories) if categories else None
+        subcategories =', '.join(subcategories) if subcategories else None
+
+        
+        
+        
+        if not vacancy_scraping:
+            continue    
+            
+        data.append({
+            'vacancy_id': vac_id,
+            'title': title,
+            'vacancy_text': strip_md_link(message_text),
+            'vacancy_scrap': vacancy_scraping,
+            'work_format': work_format,
+            'employment_type': employment_type,
+            'english_level': english_level,
+            'grade': grade,
+            'company_type': company_type,
+            'specializations': specialization,
+            'skills': skills,
+            'domains': domains,
+            'location': location,
+            'manager_username': manager_username,
+            'customer': customer,
+            'categories' : categories,
+            'subcategories' : subcategories,
+            'created_at': created_at,
+            'salary': salary
+        
+        })
+        
+        print(data)
+    
+       
+        status = requests.post('https://omegahire.tech/vacancy_create', json=data)
+        print(f"Статус отправки: {status.status_code}")
+        
+@telethon_client.on(events.NewMessage(chats=-1002658129391))
+async def channel_post_bot(event):
+    print('Новое сообщение')
+
+    message = event.message
+    text = message.text
+    data = []
+    
+    if not text:
+        return
+    if 'вакансия неактивна' in text.lower():
+        print('Вакансия неактивна')
+        return
+        
+    vac_id = extract_vacancy_id(text)
+    if not vac_id:
+        return
+            
+    message_text = remove_vacancy_id(text)
+    title = get_vacancy_title(message_text)
+    if not title:
+        return
+       
+    vacancy_scraping = await scrap_vacancy(message_text)
+    print(vacancy_scraping)
+    try:
+        vacancy_scraping = json.loads(vacancy_scraping)
+    except Exception as e:
+        print(f"❌ Ошибка при загрузке вакансии: {e}")
+        return
+    work_format = vacancy_scraping['work_format']
+    employment_type = vacancy_scraping['employment_type']
+    english_level = vacancy_scraping['english_level']
+    grade = vacancy_scraping['grade']
+    company_type = vacancy_scraping['company_type']
+    specialization = vacancy_scraping['specializations']
+    skills = vacancy_scraping['skills']
+    domains = vacancy_scraping['domains']
+    location = vacancy_scraping['location']
+    manager_username = vacancy_scraping['manager_username']
+    customer = vacancy_scraping['customer']
+    categories = vacancy_scraping['categories']
+    subcategories = vacancy_scraping['subcategories']
+    salary = vacancy_scraping.get('salary', '')
+    created_at = message.date.isoformat() if message.date else None
+    specialization = ', '.join(specialization) if specialization else None
+    skills = ', '.join(skills) if skills else None
+    domains = ', '.join(domains) if domains else None
+    location = ', '.join(location) if location else None
+    categories = ', '.join(categories) if categories else None
+    subcategories = ', '.join(subcategories) if subcategories else None
+
+    if not vacancy_scraping:
+            return
+
+    data.append({
+            'vacancy_id': vac_id,
+            'title': title,
+            'vacancy_text': strip_md_link(message_text),
+            'vacancy_scrap': vacancy_scraping,
+            'work_format': work_format,
+            'employment_type': employment_type,
+            'english_level': english_level,
+            'grade': grade,
+            'company_type': company_type,
+            'specializations': specialization,
+            'skills': skills,
+            'domains': domains,
+            'location': location,
+            'manager_username': manager_username,
+            'customer': customer,
+            'categories': categories,
+            'subcategories': subcategories,
+            'created_at': created_at,
+            'salary': salary
+        })
+        
+        
+    
+       
+    status = requests.post('https://omegahire.tech/vacancy_create', json=data)
+    print(f"Статус отправки: {status.status_code}")
+
+         
+     

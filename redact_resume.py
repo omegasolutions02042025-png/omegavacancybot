@@ -172,21 +172,36 @@ async def process_resume(text: str, file_name: str = "") -> dict | None:
 ```"""
 
     
-    model = genai.GenerativeModel("gemini-2.5-flash-lite")
+    model = genai.GenerativeModel("gemini-2.5-flash")
     
     try:
-        response = await model.generate_content_async(prompt)
+        # Добавляем таймаут для GPT запроса
+        import asyncio
+        response = await asyncio.wait_for(
+            model.generate_content_async(prompt),
+            timeout=120.0  # 2 минуты таймаут
+        )
         
         if response is None:
             print("❌ Ошибка: Gemini API вернул None")
             return None
         
         response_text = response.text.strip().replace("```json", "").replace("```", "").strip()
+    except asyncio.TimeoutError:
+        print("❌ Таймаут при вызове Gemini API (120 секунд)")
+        return None
     except AttributeError as e:
         print(f"❌ Ошибка при вызове Gemini API (AttributeError): {e}")
         print("🔄 Попытка использовать синхронный метод...")
-        response = model.generate_content(prompt)
-        response_text = response.text.strip().replace("```json", "").replace("```", "").strip()
+        try:
+            response = await asyncio.wait_for(
+                asyncio.to_thread(model.generate_content, prompt),
+                timeout=120.0
+            )
+            response_text = response.text.strip().replace("```json", "").replace("```", "").strip()
+        except asyncio.TimeoutError:
+            print("❌ Таймаут при синхронном вызове Gemini API")
+            return None
     except Exception as e:
         print(f"❌ Неожиданная ошибка при вызове Gemini API: {type(e).__name__}: {e}")
         import traceback
@@ -203,37 +218,68 @@ async def process_resume(text: str, file_name: str = "") -> dict | None:
 
 
 
-def ensure_dict(d):
+async def ensure_dict(d):
     return d if isinstance(d, dict) else {}
 
 async def save_resume_in_db(files, username, user_dir) -> None:
+    print(f"🔄 Начинаем обработку {len(files)} файлов для пользователя {username}")
+    
     for file_name, path in files:
         ext = path.split(".")[-1].lower()
+        print(f"📄 Обрабатываем файл: {file_name} ({ext})")
+        
+        # Проверяем, существует ли файл
+        if not os.path.exists(path):
+            print(f"❌ ФАЙЛ НЕ НАЙДЕН: {path}")
+            print(f"📁 Проверяем папку: {os.path.dirname(path)}")
+            if os.path.exists(os.path.dirname(path)):
+                files_in_dir = os.listdir(os.path.dirname(path))
+                print(f"📋 Файлы в папке: {files_in_dir}")
+            else:
+                print(f"❌ Папка не существует: {os.path.dirname(path)}")
+            continue
+            
+        print(f"✅ Файл найден: {path}")
 
         try:
+            import asyncio
+            # Обработка документа в отдельном потоке
             if ext == "pdf":
-                text = process_pdf(path)
+                print(f"📖 Извлекаем текст из PDF: {file_name}")
+                text = await asyncio.to_thread(process_pdf, path)
             elif ext == "docx":
-                text = process_docx(path)
+                print(f"📖 Извлекаем текст из DOCX: {file_name}")
+                text = await asyncio.to_thread(process_docx, path)
             elif ext == "doc":
-                text = process_doc(path)
+                print(f"📖 Извлекаем текст из DOC: {file_name}")
+                text = await asyncio.to_thread(process_doc, path)
             elif ext == "rtf":
-                text = process_rtf(path)
+                print(f"📖 Извлекаем текст из RTF: {file_name}")
+                text = await asyncio.to_thread(process_rtf, path)
             elif ext == "txt":
-                text = process_txt(path)
+                print(f"📖 Извлекаем текст из TXT: {file_name}")
+                text = await asyncio.to_thread(process_txt, path)
             else:
                 print(f"⚠️ Формат {ext} не поддерживается: {path}")
                 continue
 
+            print(f"✅ Текст извлечен, длина: {len(text)} символов")
+            print(f"🤖 Отправляем на обработку в GPT: {file_name}")
             resume_json = await process_resume(text, file_name)
             
 
             if resume_json is None:
                 print("⚠️ process_resume вернул None, пропускаем файл")
                 continue
-                
-            candidate_id = generate_random_id()
+            
+            print(f"✅ GPT обработка завершена для: {file_name}")
+            print(f"🆔 Генерируем ID кандидата...")
+            candidate_id = await generate_random_id()
+            print(f"🆔 ID кандидата: {candidate_id}")
+            
+            print(f"☁️ Загружаем в Google Drive: {file_name}")
             orig_url, resume_ru, resume_en = await add_resumes_to_google_drive(text, file_name, resume_json, path)
+            print(f"☁️ Загрузка в Google Drive завершена")
             
             ADMIN_USERNAME = ['kupimancik']
 
@@ -254,8 +300,8 @@ async def save_resume_in_db(files, username, user_dir) -> None:
             url_for_form_res_ru = resume_ru
             url_for_form_res_en = resume_en
             recruter_username = username
-            date_of_add = datetime.now()if username not in ADMIN_USERNAME else None
-            date_add_admin = datetime.now()if username in ADMIN_USERNAME else None
+            date_of_add = datetime.now() if username not in ADMIN_USERNAME else None
+            date_add_admin = datetime.now() if username in ADMIN_USERNAME else None
             
             
             # Пары (dict_из_резюме, MAP_канонический)
@@ -263,51 +309,56 @@ async def save_resume_in_db(files, username, user_dir) -> None:
 
             # Секции с булевыми значениями
             bool_sections = [
-                ("roles",               ensure_dict(resume_json.get("specialization")),   ROLES_MAP),
-                ("grades",              ensure_dict(resume_json.get("grade")),            GRADE_MAP),
-                ("programming_langs",   ensure_dict(resume_json.get("programmingLanguages")), PROGRAM_LANG_MAP),
-                ("frameworks",          ensure_dict(resume_json.get("frameworks")),       FRAMEWORKS_MAP),
-                ("technologies",        ensure_dict(resume_json.get("technologies")),     TECH_MAP),
-                ("project_industries",  ensure_dict(resume_json.get("projectIndustries")),PRODUCT_INDUSTRIES_MAP),
-                ("work_time",           ensure_dict(resume_json.get("workTime")),         WORK_TIME_MAP),
-                ("work_form",           ensure_dict(resume_json.get("workForm")),         WORK_FORM_MAP),
-                ("availability",        ensure_dict(resume_json.get("availability")),     AVAILABILITY_MAP),
+                ("roles",               await ensure_dict(resume_json.get("specialization")),   ROLES_MAP),
+                ("grades",              await ensure_dict(resume_json.get("grade")),            GRADE_MAP),
+                ("programming_langs",   await ensure_dict(resume_json.get("programmingLanguages")), PROGRAM_LANG_MAP),
+                ("frameworks",          await ensure_dict(resume_json.get("frameworks")),       FRAMEWORKS_MAP),
+                ("technologies",        await ensure_dict(resume_json.get("technologies")),     TECH_MAP),
+                ("project_industries",  await ensure_dict(resume_json.get("projectIndustries")),PRODUCT_INDUSTRIES_MAP),
+                ("work_time",           await ensure_dict(resume_json.get("workTime")),         WORK_TIME_MAP),
+                ("work_form",           await ensure_dict(resume_json.get("workForm")),         WORK_FORM_MAP),
+                ("availability",        await ensure_dict(resume_json.get("availability")),     AVAILABILITY_MAP),
             ]
-
+            
             named_rows = {}  # { "roles": {...}, "grades": {...}, ... }
 
             # Обрабатываем булевы секции
             for section_name, data_dict, MAP in bool_sections:
-                row = build_bool_row(data_dict, MAP)
+                row = await build_bool_row(data_dict, MAP)
                 named_rows[section_name] = row
 
     
-            contacts_dict = ensure_dict(resume_json.get("contacts"))
-            contacts_row = build_row_for_string_fields(contacts_dict, CONTACTS_MAP)
+            contacts_dict = await ensure_dict(resume_json.get("contacts"))
+            contacts_row = await build_row_for_string_fields(contacts_dict, CONTACTS_MAP)
             named_rows["contacts"] = contacts_row
             
-            languages_dict = ensure_dict(resume_json.get("languages"))
-            languages_row = build_row_for_string_fields(languages_dict, LANG_MAP)
+            languages_dict = await ensure_dict(resume_json.get("languages"))
+            languages_row = await build_row_for_string_fields(languages_dict, LANG_MAP)
             named_rows["languages"] = languages_row
             
-            portfolio_dict = ensure_dict(resume_json.get("portfolio"))
-            portfolio_row = build_row_for_string_fields(portfolio_dict, PORTFOLIO_MAP)
+            portfolio_dict = await ensure_dict(resume_json.get("portfolio"))
+            portfolio_row = await build_row_for_string_fields(portfolio_dict, PORTFOLIO_MAP)
             named_rows["portfolio"] = portfolio_row
             
+            print(f"💾 Сохраняем в базу данных: {file_name}")
             result = await add_to_candidate_table(candidate_id = candidate_id, name_ru = name_ru, name_en = name_en, surname_ru = surname_ru, surname_en = surname_en, patronymic_ru = patronymic_ru, patronymic_en = patronymic_en, location_ru = location_ru, location_en = location_en, city_ru = city_ru, city_en = city_en, total_experience = total_experience, special_experience = special_experience, date_of_exit = date_of_exit, url_for_origin_resume = url_for_origin_resume, url_for_form_res_ru = url_for_form_res_ru, url_for_form_res_en = url_for_form_res_en, recruter_username = recruter_username, date_of_add = date_of_add, date_add_admin = date_add_admin)
             if result is None:
                 print("❌ Резюме уже существует в БД")
                 continue
+            
+            print(f"💾 Записываем дополнительные данные кандидата...")
             await create_candidate_and_write(named_rows, result)
-            print("✅ Резюме успешно обработано и сохранено в БД")
+            print(f"✅ Резюме {file_name} успешно обработано и сохранено в БД")
 
         except Exception as e:
+            import traceback
             print(f"❌ Ошибка при обработке файла {path}: {e}")
+            print(f"Traceback: {traceback.format_exc()}")
             continue
-        try:
-            os.remove(path)
-        except Exception as e:
-            print(f"❌ Ошибка при удалении файла {path}: {e}")
+
+    # НЕ удаляем директорию здесь - она будет удалена вызывающей функцией
+    # после завершения всех асинхронных задач
+    print(f"✅ Обработка завершена для {len(files)} файлов")
         
 
 
@@ -317,14 +368,14 @@ async def save_resume_in_db(files, username, user_dir) -> None:
 #===================
 #Необходимые функции
 #===================
-def generate_random_id():
+async def generate_random_id():
     letter = random.choice(string.ascii_lowercase)  # случайная буква a-z
     number = random.randint(10000, 99999)           # случайное число 10000-99999
     return f"{letter}_{number}"
 
 from typing import Dict, Any
 
-def build_bool_row(data: Dict[str, Any], MAP: Dict[str, str]) -> Dict[str, bool]:
+async def build_bool_row(data: Dict[str, Any], MAP: Dict[str, str]) -> Dict[str, bool]:
     """
     Из data делает строку-флаги:
     — Все ключи из MAP → присутствуют в результате с True/False.
@@ -365,7 +416,7 @@ def build_bool_row(data: Dict[str, Any], MAP: Dict[str, str]) -> Dict[str, bool]
 
 
 
-def build_row_for_string_fields(data: dict, MAP: dict) -> dict:
+async def build_row_for_string_fields(data: dict, MAP: dict) -> dict:
     """
     Возвращает {CanonName: value_or_None} для строковых полей (contacts, languages, portfolio).
     Пустые значения преобразуются в None, а не в False.
@@ -383,7 +434,7 @@ def build_row_for_string_fields(data: dict, MAP: dict) -> dict:
 
 
 
-def translate_name_to_english(russian_name: str) -> str:
+async def translate_name_to_english(russian_name: str) -> str:
     """Переводит русское имя на английский язык"""
     
     # Словарь для транслитерации русских имен
@@ -639,17 +690,28 @@ Additional tools: open-source, mentoring, volunteering
 
   
   model = genai.GenerativeModel("gemini-2.5-flash")
-  response = await model.generate_content_async(prompt)
-  response_text = response.text.strip().replace("```json", "").replace("```", "").strip()
+  try:
+    import asyncio
+    response = await asyncio.wait_for(
+        model.generate_content_async(prompt),
+        timeout=120.0  # 2 минуты таймаут
+    )
+    response_text = response.text.strip().replace("```json", "").replace("```", "").strip()
+  except asyncio.TimeoutError:
+    print("❌ Таймаут при создании нового резюме (120 секунд)")
+    return {"russian": "Ошибка обработки резюме", "english": "Resume processing error"}
+  except Exception as e:
+    print(f"❌ Ошибка при создании нового резюме: {e}")
+    return {"russian": "Ошибка обработки резюме", "english": "Resume processing error"}
   
   try:
     response_json = json.loads(response_text)
     
     # Исправляем цветовые значения в HTML-тегах
     if "russian" in response_json:
-      response_json["russian"] = fix_color_formatting(response_json["russian"])
+      response_json["russian"] = await fix_color_formatting(response_json["russian"])
     if "english" in response_json:
-      response_json["english"] = fix_color_formatting(response_json["english"])
+      response_json["english"] = await fix_color_formatting(response_json["english"])
       
       # Переводим русские имена на английский в английской версии
       english_text = response_json["english"]
@@ -660,18 +722,18 @@ Additional tools: open-source, mentoring, volunteering
       # Расширенный паттерн для поиска русских имен, фамилий и отчеств (кириллица)
       russian_name_pattern = r'\b[А-ЯЁ][а-яё]{1,}(?:\s+[А-ЯЁ][а-яё]{1,})*\b'
       
-      def replace_russian_names(match):
-        russian_name = match.group(0)
-        # Если это составное имя (имя + фамилия), переводим каждую часть
+      # Находим все русские имена и заменяем их на английские
+      matches = re.findall(russian_name_pattern, english_text)
+      for russian_name in matches:
         if ' ' in russian_name:
           parts = russian_name.split()
-          english_parts = [translate_name_to_english(part) for part in parts]
-          return ' '.join(english_parts)
+          english_parts = []
+          for part in parts:
+            english_parts.append(await translate_name_to_english(part))
+          english_name = ' '.join(english_parts)
         else:
-          return translate_name_to_english(russian_name)
-      
-      # Заменяем все найденные русские имена на английские
-      english_text = re.sub(russian_name_pattern, replace_russian_names, english_text)
+          english_name = await translate_name_to_english(russian_name)
+        english_text = english_text.replace(russian_name, english_name)
       
       response_json["english"] = english_text
     
@@ -679,7 +741,7 @@ Additional tools: open-source, mentoring, volunteering
   except json.JSONDecodeError:
     print(f"Ошибка при разборе JSON ответа create_new_resume: {response_text}")
     # Возвращаем fallback структуру с исправленными цветами
-    fixed_text = fix_color_formatting(response_text)
+    fixed_text = await fix_color_formatting(response_text)
     return {
       "russian": fixed_text,
       "english": fixed_text
@@ -688,7 +750,7 @@ Additional tools: open-source, mentoring, volunteering
 
 
 
-def fix_color_formatting(text: str) -> str:
+async def fix_color_formatting(text: str) -> str:
     """Исправляет цветовые значения в HTML-тегах, добавляя # перед hex-кодами"""
     # Исправляем color="1F4E79" на color="#1F4E79"
     text = re.sub(r'color="([0-9A-Fa-f]{6})"', r'color="#\1"', text)
@@ -717,8 +779,8 @@ async def add_resumes_to_google_drive(resume_text, candidate_id, resume_data, lo
         new_resume_english = re.sub(r'#{1,6}\s*', '', new_resume_english)
         
         # Исправляем цветовые значения и убираем проблемные символы
-        new_resume_russian = fix_color_formatting(new_resume_russian)
-        new_resume_english = fix_color_formatting(new_resume_english)
+        new_resume_russian = await fix_color_formatting(new_resume_russian)
+        new_resume_english = await fix_color_formatting(new_resume_english)
         
         # Убираем символы ■ и другие проблемные символы
         new_resume_russian = new_resume_russian.replace('■', '').replace('\ufffd', '').replace('\u25a0', '')
@@ -736,8 +798,8 @@ async def add_resumes_to_google_drive(resume_text, candidate_id, resume_data, lo
         new_resume_english = re.sub(r'#{1,6}\s*', '', new_resume_english)
         
         # Исправляем цветовые значения и убираем проблемные символы
-        new_resume_russian = fix_color_formatting(new_resume_russian)
-        new_resume_english = fix_color_formatting(new_resume_english)
+        new_resume_russian = await fix_color_formatting(new_resume_russian)
+        new_resume_english = await fix_color_formatting(new_resume_english)
         
         # Убираем символы ■ и другие проблемные символы
         new_resume_russian = new_resume_russian.replace('■', '').replace('\ufffd', '').replace('\u25a0', '')
@@ -841,6 +903,138 @@ async def add_resumes_to_google_drive(resume_text, candidate_id, resume_data, lo
 
     return file_url, new_resume_url_russian, new_resume_url_english
 
+
+
+
+
+async def sverka_kandidate_in_basa(vacancy_text: str, candidates_text: str):
+    promt = f"""
+    Ты — система подбора IT-кандидатов. Твоя задача:
+
+Взять текст вакансии и извлечь из него технический стек (языки, фреймворки, БД, облака, DevOps-инструменты, тестовые фреймворки и т.п.).
+
+Взять список кандидатов (каждый кандидат содержит: id, fullName, techStack или skills) и сравнить стек вакансии со стеком каждого кандидата.
+
+Посчитать процент совпадения для каждого кандидата.
+
+Вернуть JSON со списком кандидатов, отсортированным по проценту совпадения по убыванию.
+
+В JSON на каждого кандидата вывести:
+
+fullName — ФИО кандидата
+
+percent — процент совпадения (целое число 0–100)
+
+id — id кандидата (как в исходных данных)
+
+Входные данные
+
+Я буду давать тебе в одном сообщении два блока:
+
+VACANCY: — текст вакансии {vacancy_text}
+
+CANDIDATES: — список кандидатов {candidates_text}
+
+Пример формата входа:
+
+VACANCY:
+Ищем Senior Java Developer. Стек: Java 17, Spring Boot, Hibernate, PostgreSQL, Kafka, Docker, Kubernetes, Git, Jenkins, REST, микросервисы.
+
+CANDIDATES:
+1) id: c_101, fullName: "Иван Петров", techStack: "Java, Spring, Spring Boot, Hibernate, PostgreSQL, MongoDB, Docker"
+2) id: c_102, fullName: "Sergey Sidorov", techStack: "Kotlin, Java, Micronaut, Kafka, PostgreSQL, Git, CI/CD"
+3) id: c_103, fullName: "Anna Dev", techStack: "Python, Django, PostgreSQL"
+
+Правила извлечения стека вакансии
+
+Извлекай только технологии, а не «soft skills», не «опыт от 3 лет», не «английский».
+
+Считай за технологии: языки (Java, Kotlin, Python…), фреймворки (Spring, Django…), БД (PostgreSQL, MySQL, MongoDB…), брокеры (Kafka, RabbitMQ), DevOps (Docker, Kubernetes, Jenkins, GitLab CI), облака (AWS, GCP, Azure), API (REST, gRPC).
+
+Нормализуй написание: Postgres → PostgreSQL, K8s → Kubernetes, JS → JavaScript, TS → TypeScript.
+
+Если в вакансии указано семейство (например, "Spring") и у кандидата "Spring Boot" — засчитывай как совпадение.
+
+Как считать процент совпадения
+
+Сначала сформируй множество технологий вакансии V.
+
+Для кандидата сформируй множество технологий кандидата C.
+
+Совпадение = (кол-во технологий из V, которые есть в C) / (кол-во технологий в V) * 100.
+
+Округляй до целого.
+
+Если у кандидата вообще нет техстека — процент = 0.
+
+Если кандидат указал технологию более конкретно (вакансия: Spring, кандидат: Spring Boot) — считай как совпадение.
+
+Если технологию можно считать эквивалентной (например, CI/CD в кандидате и Jenkins в вакансии) — засчитывай 1 совпадение.
+
+Не придумывай технологии, которых нет в данных.
+
+Формат ответа
+
+Ответ всегда в формате JSON, без пояснений, без маркдауна, без комментариев.
+
+Структура:
+
+{{
+  "vacancy_stack": ["Java", "Spring Boot", "Hibernate", "PostgreSQL", "Kafka", "Docker", "Kubernetes", "Git", "Jenkins", "REST"],
+  "candidates": [
+    {{
+      "fullName": "Иван Петров",
+      "percent": 90,
+      "id": "c_101"
+    }},
+    {{
+      "fullName": "Sergey Sidorov",
+      "percent": 80,
+      "id": "c_102"
+    }},
+    {{
+      "fullName": "Anna Dev",
+      "percent": 20,
+      "id": "c_103"
+    }}
+  ]
+}}
+
+
+Требования:
+
+candidates — отсортирован по percent по убыванию.
+
+Все проценты — целые.
+
+Если кандидат не совпал — тоже включи его, но с 0.
+
+Имена и id бери ровно из входных данных."""
+    
+
+    import json
+  
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    generation_config = genai.types.GenerationConfig(temperature=0.1, response_mime_type='application/json')
+    response = await model.generate_content_async(promt, generation_config=generation_config)
+
+    print(type(response.text))
+   
+    res = json.loads(response.text)
+    print(type(res))
+    return res
+  
+
+
+
+
+
+
+
+async def main():
+    """Основная функция для тестирования"""
+    print("Модуль redact_resume загружен успешно")
+    print("Все функции готовы к использованию")
 
 if __name__ == "__main__":
     import asyncio

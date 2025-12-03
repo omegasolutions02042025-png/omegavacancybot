@@ -11,6 +11,10 @@ import textract
 import logging
 
 from telethon_bot import ADMIN_ID
+import textract
+from textract.exceptions import ShellError
+
+from doc_text import process_docc
 load_dotenv()
 
 # Отключаем логирование pdfminer
@@ -23,24 +27,27 @@ logging.getLogger('pdfminer.pdfdocument').setLevel(logging.WARNING)
 
 CLIENT_CHANNEL = os.getenv('CLIENT_CHANNEL')
 
+import subprocess
+from pathlib import Path
+
+# УКАЖИ путь к antiword.exe и UTF-8.txt ПОД СЕБЯ:
+ANTIWORD_EXE = r"C:\antiword\antiword.exe"
+ANTIWORD_MAP = r"C:\antiword\UTF-8.txt"
+
+
+ANTIWORD_EXE = r"C:\antiword\antiword.exe"
+ANTIWORD_HOME = r"C:\antiword"
+
+
 def process_doc(path: str) -> str:
     """
-    Извлекает текст из .doc (старый формат Word 97–2003) с помощью textract.
+    Извлекает текст из .doc через antiword.
+    Требования:
+    — C:\antiword\antiword.exe существует
+    — в C:\antiword лежит mapping-файл (UTF-8.txt или cp1251.txt)
     Возвращает очищенный текст без пустых строк.
     """
-    try:
-        text = textract.process(path).decode("utf-8", errors="ignore")
-        lines = [line.strip() for line in text.splitlines() if line.strip()]
-        return "\n".join(lines)
-    except FileNotFoundError:
-        print(f"⚠️ Файл не найден: {path}")
-        return ""
-    except textract.exceptions.ShellError as e:
-        print(f"❌ Ошибка textract при обработке {path}: {e}")
-        return ""
-    except Exception as e:
-        print(f"⚠️ Ошибка при чтении DOC-файла {path}: {e}")
-        return ""
+    return process_docc(path)
 
 
 # PDF → текст
@@ -91,18 +98,29 @@ def process_pdf(path: str) -> str:
             print(f"⚠️ PyPDF2/pypdf упал: {e}")
 
     # --- 3) Ремонт через pikepdf и повтор ---
+    repaired_path = None
     try:
         import tempfile, pikepdf
+        
+        # Создаем временный файл и сразу закрываем его
+        tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+        repaired_path = tmp.name
+        tmp.close()  # Закрываем файл перед использованием pikepdf
+        
+        # Открываем и сохраняем PDF через pikepdf
         with pikepdf.open(path) as pdf:
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-                pdf.save(tmp.name)
-                repaired_path = tmp.name
+            pdf.save(repaired_path)
 
         # снова попробуем pdfminer
         try:
             from pdfminer.high_level import extract_text as pdfminer_extract_text
             txt = _clean(pdfminer_extract_text(repaired_path) or "")
             if txt:
+                # Удаляем временный файл перед возвратом
+                try:
+                    os.remove(repaired_path)
+                except:
+                    pass
                 return txt
         except Exception as e:
             print(f"⚠️ pdfminer после ремонта не справился: {e}")
@@ -112,12 +130,24 @@ def process_pdf(path: str) -> str:
             import textract
             raw = textract.process(repaired_path).decode("utf-8", errors="ignore")
             txt = _clean(raw)
+            # Удаляем временный файл перед возвратом
+            try:
+                os.remove(repaired_path)
+            except:
+                pass
             return txt
         except Exception as e:
             print(f"❌ textract тоже не смог: {e}")
 
     except Exception as e:
         print(f"❌ Ремонт PDF через pikepdf не удался: {e}")
+    finally:
+        # Удаляем временный файл в любом случае
+        if repaired_path and os.path.exists(repaired_path):
+            try:
+                os.remove(repaired_path)
+            except:
+                pass
 
     return ""
 
@@ -186,7 +216,7 @@ async def process_file_and_gpt(path: str, bot: Bot, user_id: int|str, vac_text: 
         else:
             await bot.send_message(user_id, f"⚠️ Формат {ext} не поддерживается: {path}")
             return
-        
+        print(text)
         data  = await background_sverka(resume_text=text, vacancy_text=vac_text, bot=bot, user_id=user_id, file_name=file_name)
         
         os.remove(path)

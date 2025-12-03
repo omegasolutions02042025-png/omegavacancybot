@@ -11,7 +11,7 @@ import os
 from send_email import send_email_gmail
 from dotenv import load_dotenv
 from funcs import *
-from gpt_gimini import  process_vacancy_with_gemini, format_vacancy_gemini, generate_mail_for_candidate_finalist, generate_mail_for_candidate_otkaz, generate_cover_letter_for_client
+from gpt_gimini import  *
 from googlesheets import search_and_extract_values
 from telethon_bot import telethon_client
 from db import *
@@ -21,8 +21,9 @@ from dotenv import load_dotenv
 import asyncio
 from telethon_bot import create_vacancy_thread, create_recruiter_forum , telethon_client
 from generate_wl_res import create_white_label_resume_once
-from utils import safe_send_message, extract_telegram_usernames
-from redact_resume import save_resume_in_db
+from utils import safe_send_message, extract_telegram_usernames, send_long_message, download_gdrive_files
+from redact_resume import save_resume_in_db, sverka_kandidate_in_basa
+from db_basa_resume import *
 load_dotenv()
 
 CLIENT_CHANNEL = os.getenv('CLIENT_CHANNEL')
@@ -54,6 +55,9 @@ class AddUtochnenie(StatesGroup):
 class AddContact(StatesGroup):
     waiting_for_contact = State()
 
+class Sverka(StatesGroup):
+    waiting_for_sverka = State()
+
 
 TOPIC_MAP = {
     (-1002189931727, 3): (-1002658129391, 4),
@@ -81,10 +85,7 @@ import re
 def escape_md(text):
     return re.sub(r'([_*[\]()`])', r'\\\1', text)
 
-@bot_router.message(Command('add_privyazka'))
-async def add_privyazka_for_admin(message: types.Message, state: FSMContext):
-    user_name = message.from_user.username
-    await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе", reply_markup = await service_kb(user_name))
+
 
 @bot_router.message(CommandStart())
 async def cmd_start(message: types.Message, command : CommandStart, state: FSMContext, bot: Bot):
@@ -100,7 +101,7 @@ async def cmd_start(message: types.Message, command : CommandStart, state: FSMCo
             return
         if not payload:
             if message.from_user.id  not in [6264939461,429765805]:
-                await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе", reply_markup = await service_kb(user_name))
+                await message.answer("Это бот для подбора кандидатов к вакансиям!\n\nДля использования бота необходимо нажать на кнопку под каждой вакансией в нашей группе")
                 return
             await message.answer(text="Основное меню", reply_markup = await main_kb())
             return
@@ -159,12 +160,12 @@ async def cmd_start(message: types.Message, command : CommandStart, state: FSMCo
                         )
                 )
                 await thread_state.update_data(vacancy = mes.message)
-                await thread_state.set_state(ScanVacRekr.waiting_for_vac)
+                #await thread_state.set_state(ScanVacRekr.waiting_for_vac)
                 
                 link_to_thread = f"https://t.me/c/{str(group_id)[4:]}/{topic_id}"
                 if not tread_create:
                     await message.answer(f"✅ Тред создан! Проверьте форум-группу для работы с вакансией {vac_id}", reply_markup = link_to_thread_kb(link_to_thread))
-                    await bot.send_message(chat_id = group_id, message_thread_id = topic_id, text = 'Отправьте резюме')
+                    await bot.send_message(chat_id = group_id, message_thread_id = topic_id, text = 'Выберете откуда взять резюме', reply_markup = for_basa_or_main_kb())
                 else:
                     await message.answer(f"✅ Тред уже был создан! Вот ссылка на тред", reply_markup = link_to_thread_kb(link_to_thread))
                     
@@ -178,6 +179,23 @@ async def cmd_start(message: types.Message, command : CommandStart, state: FSMCo
             await state.set_state(ScanVacRekr.waiting_for_vac)
         return
     
+
+@bot_router.message(Command('add'))
+async def start(message: types.Message):
+    user_name = message.from_user.username
+    if not user_name:
+        await message.answer("Для работы с ботом необходимо создать имя пользователя")
+        return
+    await message.answer("Выберете что хотите привязать к боту", reply_markup = await service_kb(user_name))
+
+
+@bot_router.callback_query(F.data == 'for_main')
+async def for_main(calback : CallbackQuery, state: FSMContext):
+    await calback.message.answer('Отправьте резюме')
+    await state.set_state(ScanVacRekr.waiting_for_vac)
+
+
+
 
 
 
@@ -330,6 +348,13 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                 f"{no_rate_delay}\n\n"
                 f"{text}"
                                 )
+            text_cleaned_part = (
+                f"🆔{vac_id}\n\n"
+                f"{vacancy}\n\n"
+                f"Ставка для подрядчиков до: смотрим ваши предложения\n\n"
+                f"{no_rate_delay}\n\n"
+                f"{text}"
+            )
         else:
             rate_rb = rate.get("РБ")
             rate_rf = rate.get("РФ")
@@ -343,6 +368,8 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
             rate_rf_ip = None
             rate_rb_contract = None
             rate_rb_ip = None
+            rate_partners_rb = None
+            rate_partners_rf = None
 
             # --- варианты для РФ ---
             if rf_loc:
@@ -352,7 +379,9 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                 rate_rf_ip = await search_and_extract_values(
                     'K', rate_rf, ['B', 'J'], 'Расчет ставки (ИП) ЮЛ РФ','https://docs.google.com/spreadsheets/d/1vjHlEdWO-IkzU5urYrorb0FlwMS7TPfnBDSAhnSYp98'
                 )
-                print(rate_rf_contract, rate_rf_ip)
+                rate_partners_rf = await search_and_extract_values(
+                    'H', rate_rf, ['L'], 'СНГ (РФ)','https://docs.google.com/spreadsheets/d/1M5YnAuCVghdjCBvCtoflTtRPm7lLHI98abuNyZpO3vc', partner=True
+                )
             # --- варианты для РБ ---
             if rb_loc:
                 rate_rb_contract = await search_and_extract_values(
@@ -361,7 +390,10 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                 rate_rb_ip = await search_and_extract_values(
                     'N', rate_rb, ['B', 'L'], 'Расчет ставки (Самозанятый/ИП) СНГ'
                 )
-
+                rate_partners_rb = await search_and_extract_values(
+                    'H', rate_rf, ['L'], 'СНГ (РБ)','https://docs.google.com/spreadsheets/d/1M5YnAuCVghdjCBvCtoflTtRPm7lLHI98abuNyZpO3vc', partner=True
+                )
+                
             # --- объединённая логика оформления ---
             def build_salary_block(flag_rf=False, flag_rb=False):
                 """Внутренняя функция для форматирования текста ставок"""
@@ -396,25 +428,19 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
                 # форматы актирования и зачёркиваний
                 if acts:
                     acts_text = "Актирование: поквартальное\n"
-                    state_contract_text = (
-                        f"<s>Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
-                        f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)</s>\n"
-                    )
+                   
                 else:
                     acts_text = "Актирование: ежемесячное\n"
-                    state_contract_text = (
+                state_contract_text = (
                         f"Вариант 1. Ежемесячная выплата Штат/Контракт (на руки) до: {rate_contract} RUB "
                         f"(с выплатой зарплаты 11 числа месяца следующего за отчетным)\n"
                     )
 
                 # зачёркивания по условиям
-                if short_project or long_payment:
-                    state_contract_text = f"<s>{state_contract_text}</s>"
+               
 
-                if only_fulltime:
-                    ip_text = f"<s>Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)</s>"
-                else:
-                    ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)'
+                
+                ip_text = f'Вариант 2. Выплата ИП/Самозанятый\n{delay_payment_text}({acts_text}):\n{gross} RUB/час (Gross)\nСправочно в месяц (при 170 раб. часов): {rate_ip} RUB(Gross)'
 
                 return (
                     f"{flag_text}"
@@ -425,7 +451,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
 
             # --- итоговое формирование ---
             salary_text = ""
-
+            print(f'Cтавки{rate_partners_rb}, {rate_partners_rf}')
             if rf_loc and rb_loc:
                 # обе страны
                 salary_text = build_salary_block(flag_rb=True) + "\n" + build_salary_block(flag_rf=True)
@@ -445,9 +471,24 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
 
             # --- финальное объединение ---
             text_cleaned = f"🆔{vac_id}\n\n{vacancy}\n\n{salary_text}\n{text}"
+            salary_p_text = ''
+            rate_partners_rf = rate_partners_rf.get('L', 'Ставка из исходного текста') if rate_partners_rf else None
+            rate_partners_rb = rate_partners_rb.get('L', 'Ставка из исходного текста') if rate_partners_rb else None
+            if rate_partners_rf and rate_partners_rb:
+                salary_p_text = f'Ставка для подрядчиков РФ: {rate_partners_rf}\nСтавка для подрядчиков РБ: {rate_partners_rb}'
+            elif rate_partners_rf:
+                salary_p_text = f'Ставка для подрядчиков РФ: {rate_partners_rf}'
+            elif rate_partners_rb:
+                salary_p_text = f'Ставка для подрядчиков РБ: {rate_partners_rb}'
+            else:
+                salary_p_text = ''
+            print(salary_p_text)
+            text_cleaned_part = f"🆔{vac_id}\n\n{vacancy}\n\n{salary_p_text}\n{text}"
             
         formatted_text = await format_vacancy_gemini(text_cleaned, vac_id)
+        formatted_text_part = await format_vacancy_gemini_for_partners(text_cleaned_part, vac_id)
         clean_text = remove_vacancy_id(formatted_text)
+        clean_text_part = remove_vacancy_id(formatted_text_part)
 
 
             
@@ -458,7 +499,7 @@ async def scan_hand_message(message: types.Message, state: FSMContext, bot: Bot)
         except Exception as e:
             await message.answer(f'Ошибка при отправке вакансии {e}')
             return
-        await state.update_data(vac_id=vac_id, vacancy_id=vac_id, clean_text=clean_text, vacancy=vacancy)
+        await state.update_data(vac_id=vac_id, vacancy_id=vac_id, clean_text=clean_text, vacancy=vacancy, clean_text_part=clean_text_part)
     except Exception as e:
         await message.answer(f'Ошибка при обработке вакансии {e}')
         return
@@ -474,18 +515,26 @@ async def scan_hand_topic(callback: CallbackQuery, state: FSMContext, bot: Bot):
     vac_id = data.get('vac_id')
     vacancy_id = data.get('vacancy_id')
     clean_text = data.get('clean_text')
-    vacancy = data.get('vacancy')
+    vacancy = data.get('vacancy')       
+    clean_text_part = data.get('clean_text_part')
     
     if not clean_text:
         await callback.message.answer('Нет текста')
         return
+
+    if not clean_text_part:
+        await callback.message.answer('Нет текста')
+        return
     message_id = await bot.send_message(chat_id=-1002658129391, text='.', message_thread_id=topic_id, parse_mode='HTML')
+    message_id_part = await bot.send_message(chat_id=-1003360331196, text='.', parse_mode='HTML')
     url_bot = f"https://t.me/omega_vacancy_bot?start={message_id.message_id}_{vac_id}"
     text_cleaned = f'<a href="{url_bot}">{vacancy_id}</a>\n{clean_text}'
     id_url = f"<a href='{url_bot}'>{vac_id}</a>"
     mess_url = f"https://t.me/c/2658129391/{topic_id}/{message_id.message_id}"
     title_url = f"<a href='{mess_url}'>{vacancy}</a>"
+    text_cleaned_part = f'<a href="{url_bot}">{vacancy_id}</a>\n{clean_text_part}'
     await bot.edit_message_text(chat_id=-1002658129391, message_id=message_id.message_id, text=text_cleaned,parse_mode='HTML')
+    await bot.edit_message_text(chat_id=-1003360331196, message_id=message_id_part.message_id, text=text_cleaned_part,parse_mode='HTML')
     user_name = extract_telegram_usernames(clean_text)
     await state.clear()
     await callback.message.answer('Вакансия отправлена')
@@ -512,17 +561,18 @@ async def scan_vac_rekr(message: Message, state: FSMContext, bot: Bot):
 
 ACTIVE_MEDIA_GROUPS = {}
 RESET_DELAY = 10.0
-UPLOAD_DELAY = 2.0  # сколько ждать после последнего файла, прежде чем ответить
+UPLOAD_DELAY = 5.0  # увеличиваем задержку до 5 секунд для надежности
 
 # глобальный буфер для пользователей (таймеры и задачи)
 USER_UPLOAD_TASKS = {}
 
-async def save_document(message: types.Message, state: FSMContext, bot):
+async def save_document(message: types.Message, state: FSMContext, bot : Bot):
     """
     Сохраняет документы пользователя.
     — Не спамит при массовой загрузке.
-    — После паузы 2 сек отправляет одно сообщение с кнопками "Добавить ещё файлы?".
+    — После паузы 5 сек отправляет одно сообщение с кнопками "Добавить ещё файлы?".
     — После 10 сек без новых загрузок — сбрасывает счётчик.
+    — Проверяет успешность скачивания каждого файла.
     """
 
     document = message.document
@@ -545,9 +595,21 @@ async def save_document(message: types.Message, state: FSMContext, bot):
 
     # Сохраняем файл
     if not os.path.exists(local_file_path):
-        file_info = await bot.get_file(document.file_id)
-        await bot.download_file(file_info.file_path, destination=local_file_path)
-        print(f"📁 [{user_id}] Файл сохранён: {file_name}")
+        try:
+            file_info = await bot.get_file(document.file_id)
+            await bot.download_file(file_info.file_path, destination=local_file_path)
+            
+            # Проверяем, что файл действительно скачался
+            if os.path.exists(local_file_path) and os.path.getsize(local_file_path) > 0:
+                print(f"📁 [{user_id}] Файл сохранён: {file_name} ({os.path.getsize(local_file_path)} байт)")
+            else:
+                print(f"❌ [{user_id}] Ошибка: файл не скачался или пустой: {file_name}")
+                await message.answer(f"❌ Ошибка при скачивании файла {file_name}")
+                return
+        except Exception as e:
+            print(f"❌ [{user_id}] Ошибка при скачивании {file_name}: {e}")
+            await message.answer(f"❌ Ошибка при скачивании файла {file_name}")
+            return
     else:
         print(f"⚠️ [{user_id}] Файл уже существует: {file_name}")
 
@@ -569,7 +631,8 @@ async def save_document(message: types.Message, state: FSMContext, bot):
             last_time = current_data.get("last_upload_time", 0)
 
             # Проверяем, прошло ли достаточно времени без новых файлов
-            if asyncio.get_event_loop().time() - last_time >= UPLOAD_DELAY - 0.1:
+            # Увеличиваем допуск для более надежной проверки
+            if asyncio.get_event_loop().time() - last_time >= UPLOAD_DELAY - 0.5:
                 if count >= 10:
                     text = f"📦 Загружено {count} файлов. Все сохранены ✅"
                 elif count > 1:
@@ -642,9 +705,9 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     user_dir_for_db = os.path.join(SAVE_DIR_FOR_DB, (str(user_id)+'_'+str(message_thread_id)))
     
     # Копируем всю папку для БД
-    if os.path.exists(user_dir_for_db):
-        shutil.rmtree(user_dir_for_db)
-    shutil.copytree(user_dir, user_dir_for_db)
+    # if os.path.exists(user_dir_for_db):
+    #     shutil.rmtree(user_dir_for_db)
+    # #shutil.copytree(user_dir, user_dir_for_db)
     
     data = await state.get_data()
     
@@ -659,11 +722,11 @@ async def scan_vac_rekr_n(callback: CallbackQuery, state: FSMContext, bot: Bot):
     except:
         pass
     asyncio.create_task(
-        process_vac_tuks(user_dir_for_db, user_dir, user_id, vac_text, bot, callback, state, a.message_id)
+        process_vac_tuks(user_dir, user_id, vac_text, bot, callback, user_dir_for_db)
     )
 
 
-async def process_vac_tuks(user_dir_for_db, user_dir, user_id, vac_text, bot: Bot, callback: CallbackQuery, state : FSMContext, mes_id):
+async def process_vac_tuks(user_dir, user_id, vac_text, bot: Bot, callback: CallbackQuery, user_dir_for_db = None, ):
     if not os.path.exists(user_dir):
         
         await callback.message.answer("❌ Нет загруженных файлов для обработки.")
@@ -674,17 +737,34 @@ async def process_vac_tuks(user_dir_for_db, user_dir, user_id, vac_text, bot: Bo
         for file_name in os.listdir(user_dir)
         if os.path.isfile(os.path.join(user_dir, file_name))
     ]
-    files_for_db = [
-     (file_name, os.path.join(user_dir_for_db, file_name))
-     for file_name in os.listdir(user_dir_for_db)
-     if os.path.isfile(os.path.join(user_dir_for_db, file_name))
-    ]
+    # if user_dir_for_db:
+    #     files_for_db = [
+    #      (file_name, os.path.join(user_dir_for_db, file_name))
+    #      for file_name in os.listdir(user_dir_for_db)
+    #      if os.path.isfile(os.path.join(user_dir_for_db, file_name))
+    #     ]
+    
+        # Запускаем обработку резюме и ждем завершения
+        # task = asyncio.create_task(
+        #     save_resume_in_db(files_for_db, callback.from_user.username, user_dir_for_db)
+        # )
+        
+        # Добавляем callback для очистки файлов после завершения
+        # def cleanup_files(task):
+        #     try:
+        #         if user_dir_for_db and os.path.exists(user_dir_for_db):
+        #             import shutil
+        #             shutil.rmtree(user_dir_for_db)
+        #             print(f"🧹 Удалена папка: {user_dir_for_db}")
+        #     except Exception as e:
+        #         print(f"⚠️ Ошибка при удалении папки {user_dir_for_db}: {e}")
+        
+        # task.add_done_callback(cleanup_files)
+
+
     if not files:
         await callback.message.answer("❌ Не найдено ни одного файла.")
         return
-    asyncio.create_task(
-        save_resume_in_db(files_for_db, callback.from_user.username, user_dir)
-    )
     result = []
     BATCH_SIZE = 20
     total = len(files)
@@ -770,8 +850,9 @@ async def process_vac_tuks(user_dir_for_db, user_dir, user_id, vac_text, bot: Bo
             chat_id = callback.message.chat.id
             thread_id = callback.message.message_thread_id
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb())
-            await add_candidate_resume(messs.message_id, messs.text, candidate_json, resume_text, sverka_text, False, False)
-            await add_contact(messs.message_id, candidate, telegram, email, phone)
+            mes_f_db = f"{callback.message.chat.id}_{messs.message_id}"
+            await add_candidate_resume(mes_f_db, messs.text, candidate_json, resume_text, sverka_text, False, False)
+            await add_contact(mes_f_db, candidate, telegram, email, phone)
             await asyncio.sleep(3.2)
             
 
@@ -819,8 +900,9 @@ async def process_vac_tuks(user_dir_for_db, user_dir, user_id, vac_text, bot: Bo
             thread_id = callback.message.message_thread_id
             
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb())
-            await add_candidate_resume(messs.message_id, messs.text, candidate_json, resume_text, sverka_text, False, False)
-            await add_contact(messs.message_id, candidate, telegram, email, phone)
+            mes_f_db = f"{callback.message.chat.id}_{messs.message_id}"
+            await add_candidate_resume(mes_f_db, messs.text, candidate_json, resume_text, sverka_text, False, False)
+            await add_contact(mes_f_db, candidate, telegram, email, phone)
             await asyncio.sleep(3.2)
           
             
@@ -870,8 +952,9 @@ async def process_vac_tuks(user_dir_for_db, user_dir, user_id, vac_text, bot: Bo
             
             
             messs = await callback.message.answer(kandidate_verdict, reply_markup=get_all_info_kb())
-            await add_candidate_resume(messs.message_id, messs.text, candidate_json, resume_text, sverka_text, False, False)
-            await add_contact(messs.message_id, candidate, telegram, email, phone)
+            mes_f_db = f"{callback.message.chat.id}_{messs.message_id}"
+            await add_candidate_resume(mes_f_db, messs.text, candidate_json, resume_text, sverka_text, False, False)
+            await add_contact(mes_f_db, candidate, telegram, email, phone)
             await asyncio.sleep(3.2)
             
     await asyncio.sleep(0.1)        
@@ -889,7 +972,7 @@ async def process_vac_tuks(user_dir_for_db, user_dir, user_id, vac_text, bot: Bo
 async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
     
-    message_id = callback.message.message_id
+    message_id = f"{callback.message.chat.id}_{callback.message.message_id}"
     verdict = callback.data.split(":")[1]
     data = await get_candidate_resume(message_id)
     
@@ -928,23 +1011,23 @@ async def generate_mail_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
     else:
         mail_text = "."
     if verdict == "PP":
-        await bot.edit_message_text(text = f"📨 Создано письмо для кандидата {candidate_name} !", chat_id=callback.message.chat.id, message_id=message_id)
+        await bot.edit_message_text(text = f"📨 Создано письмо для кандидата {candidate_name} !", chat_id=callback.message.chat.id, message_id=callback.message.message_id)
         await asyncio.sleep(3)
-        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text, reply_markup=send_mail_or_generate_client_mail_kb(mail = mail_text), parse_mode='HTML')
+        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text=mail_text, reply_markup=send_mail_or_generate_client_mail_kb(mail = mail_text), parse_mode='HTML')
         await update_candidate_is_finalist(message_id, True)
         
     elif verdict == 'CP':
         verdict = 'Частично подходит (нужны уточнения)'
-        await bot.edit_message_text(text = f"📨 Создано письмо для кандидата {candidate_name} !", chat_id=callback.message.chat.id, message_id=message_id)
+        await bot.edit_message_text(text = f"📨 Создано письмо для кандидата {candidate_name} !", chat_id=callback.message.chat.id, message_id=callback.message.message_id)
         await asyncio.sleep(3)
-        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text, reply_markup=send_mail_to_candidate_kb(verdict, mail_text), parse_mode='HTML')
+        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text=mail_text, reply_markup=send_mail_to_candidate_kb(verdict, mail_text), parse_mode='HTML')
         await update_candidate_is_utochnenie(message_id, True)
         
         
     else:
-        await bot.edit_message_text(text = f"📨 Создано письмо для кандидата {candidate_name} !", chat_id=callback.message.chat.id, message_id=message_id)
+        await bot.edit_message_text(text = f"📨 Создано письмо для кандидата {candidate_name} !", chat_id=callback.message.chat.id, message_id=callback.message.message_id)
         await asyncio.sleep(3)
-        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text, reply_markup=send_mail_to_candidate_kb(verdict, mail_text))
+        await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text=mail_text, reply_markup=send_mail_to_candidate_kb(verdict, mail_text))
     
     await update_candidate_messsage_text(message_id, mail_text)
 
@@ -958,7 +1041,8 @@ async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, b
         return
     vacancy_text = vac_info.vacancy_text
     message_id = callback.message.message_id
-    data = await get_candidate_resume(message_id)
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
     if not data:
         await callback.message.edit_text("❌ Не удалось найти данные для генерации письма клиента.", reply_markup=generate_klient_mail_kb())
         return
@@ -979,16 +1063,16 @@ async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, b
         if not resume_text:
             await callback.message.edit_text("❌ Не удалось найти резюме для генерации письма клиента.", reply_markup=send_mail_or_generate_client_mail_kb(mail = text_mail))
             return
-        wl_path = await asyncio.to_thread(create_white_label_resume_once, api_key, resume_text, vacancy_text, candidate_name)
+        wl_path = await asyncio.to_thread(create_white_label_resume_once, api_key, resume_text, vacancy_text, tg_username)
     except Exception as e:
         await callback.message.edit_text(f"⚠️ Ошибка при генерации письма клиента: {e}")
         return
 
-    await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=f"✅ Письмо для клиента по кандидату {candidate_name} создано!", reply_markup=None)
+    await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text=f"✅ Письмо для клиента по кандидату {candidate_name} создано!", reply_markup=None)
     await asyncio.sleep(3)
-    await update_candidate_wl_path(message_id, wl_path)
-    await update_candidate_mail(message_id, mail_text)
-    await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=mail_text, reply_markup=send_to_group_kb(), parse_mode='HTML')
+    await update_candidate_wl_path(mes_f_db, wl_path)
+    await update_candidate_mail(mes_f_db, mail_text)
+    await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text=mail_text, reply_markup=send_to_group_kb(mail_text), parse_mode='HTML')
 
 
 
@@ -1000,8 +1084,8 @@ async def generate_klient_mail_bot(callback: CallbackQuery, state: FSMContext, b
 async def get_all_info_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     
     message_id = callback.message.message_id
-    
-    sverka = await get_candidate_resume(message_id)
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    sverka = await get_candidate_resume(mes_f_db)
     if sverka:
         await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=message_id, text=sverka.sverka_text, reply_markup=generate_mail_kb())
     else:
@@ -1010,7 +1094,9 @@ async def get_all_info_bot(callback: CallbackQuery, state: FSMContext, bot: Bot)
 
 @bot_router.callback_query(F.data.startswith("send_mail_to_candidate"))
 async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    data = await get_candidate_resume(callback.message.message_id)
+    message_id = callback.message.message_id
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
     if not data:
         await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
         return
@@ -1018,7 +1104,7 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
     if isinstance(data_json, str):
         data_json = json.loads(data_json)
     candidate_name = data_json.get("candidate").get("full_name")
-    await callback.message.edit_text(f"Выберете куда отправить сообщение кандидату {candidate_name}", reply_markup=await create_contacts_kb(callback.message.message_id))
+    await callback.message.edit_text(f"Выберете куда отправить сообщение кандидату {candidate_name}", reply_markup=await create_contacts_kb(mes_f_db))
     
 
 @bot_router.callback_query(F.data.startswith("con:"))
@@ -1027,8 +1113,9 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
     
     source = callback.data.split(":")[1]
     contact = callback.data.split(":")[2]
-    
-    data = await get_candidate_resume(callback.message.message_id)
+    message_id = callback.message.message_id
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
     if not data:
         await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
         return
@@ -1056,14 +1143,14 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
         else:
             user_name = callback.from_user.username
             if not user_name:
-                await callback.message.edit_text("Для продолжения создайте имя пользователя в Telegram и отправте еще раз код подтверждения", reply_markup=await create_contacts_kb(callback.message.message_id))
+                await callback.message.edit_text("Для продолжения создайте имя пользователя в Telegram и отправте еще раз код подтверждения", reply_markup=await create_contacts_kb(mes_f_db))
                 return
 
             print(user_name)
             client = f'sessions/{user_name}'
             user = await get_tg_user(user_name)
             if not user:
-                await callback.message.edit_text("❌ У вас нет привязанного Telegram",reply_markup=await create_contacts_kb(callback.message.message_id))
+                await callback.message.edit_text("❌ У вас нет привязанного Telegram",reply_markup=await create_contacts_kb(mes_f_db))
                 return
                 
             api_id = user.api_id
@@ -1073,7 +1160,7 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
 
             await client.connect()
             if not await client.is_user_authorized():
-                await callback.message.edit_text("❌ Не удалось авторизоваться в Telegram",reply_markup=await create_contacts_kb(callback.message.message_id))
+                await callback.message.edit_text("❌ Не удалось авторизоваться в Telegram",reply_markup=await create_contacts_kb(mes_f_db))
                 return
         success = await send_message_by_username(contact, mail_text, client)
         if success:
@@ -1082,14 +1169,14 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
            
            if client != telethon_client:
                await client.disconnect()
-           await callback.message.edit_text(f"Выберете куда отправить сообщение {candidate_name}", reply_markup=await create_contacts_kb(callback.message.message_id))
+           await callback.message.edit_text(f"Выберете куда отправить сообщение {candidate_name}", reply_markup=await create_contacts_kb(mes_f_db))
         else:
-           await callback.message.edit_text(f"❌ Не удалось отправить сообщение пользователю {candidate_name}",reply_markup=await create_contacts_kb(callback.message.message_id))
+           await callback.message.edit_text(f"❌ Не удалось отправить сообщение пользователю {candidate_name}",reply_markup=await create_contacts_kb(mes_f_db))
     
     elif source == "e":
         email_and_pass = await get_email_user(callback.from_user.username)
         if not email_and_pass:
-            await callback.message.edit_text("❌ У вас нет привязанного email", reply_markup=await create_contacts_kb(callback.message.message_id))
+            await callback.message.edit_text("❌ У вас нет привязанного email", reply_markup=await create_contacts_kb(mes_f_db))
             return
         success = await send_email_gmail(
             sender_email=email_and_pass.user_email,
@@ -1103,15 +1190,15 @@ async def send_mail_to_candidate_bot(callback: CallbackQuery, state: FSMContext,
         if success:
            await callback.message.edit_text("✅ Сообщение отправлено пользователю")
            await asyncio.sleep(3)
-           await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=await create_contacts_kb(callback.message.message_id))
+           await callback.message.edit_text("Выберете куда отправить сообщение", reply_markup=await create_contacts_kb(mes_f_db))
         else:
-           await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю", reply_markup=await create_contacts_kb(callback.message.message_id))
+           await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю", reply_markup=await create_contacts_kb(mes_f_db))
     
     elif source == "p":
         try:
             await bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text=f"Нажмите на номер чтобы позвонить\n {contact}", reply_markup=back_to_contact_kb())
         except Exception as e:
-            await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю", reply_markup=await create_contacts_kb(callback.message.message_id))
+            await callback.message.edit_text("❌ Не удалось отправить сообщение пользователю", reply_markup=await create_contacts_kb(mes_f_db))
 
 
 
@@ -1134,9 +1221,16 @@ async def new_resume_after_scan(message: Message, bot: Bot, state: FSMContext):
 async def document_without_state(message: Message, bot: Bot, state: FSMContext):
     await message.answer("📄 Чтобы загрузить резюме, сначала выберите вакансию в боте.")
 
+from collections import defaultdict
+mess_for_db_ut = defaultdict()
+mess_tread_id = defaultdict()
+
+
 @bot_router.callback_query(F.data == "add_utochnenie")
-async def add_utochnenie_bot(callback: CallbackQuery, state: FSMContext):
-    data = await get_candidate_resume(callback.message.message_id)
+async def add_utochnenie_bot(callback: CallbackQuery, state: FSMContext, bot : Bot):
+    message_id = callback.message.message_id
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
     if not data:
         await callback.message.edit_text("❌ Нет данных")
         return
@@ -1145,28 +1239,40 @@ async def add_utochnenie_bot(callback: CallbackQuery, state: FSMContext):
         candidate_json = json.loads(candidate_json)
     
     candidate_full_name = candidate_json.get("candidate", {}).get("full_name", "не указано")
-    await callback.message.delete()
+    tread_id = callback.message.message_thread_id
     mes_id = callback.message.message_id
-    a = await callback.message.answer(f"Добавьте уточнение в резюме {candidate_full_name}")
+    print(mes_id)
+    mes_f_db = f"{callback.message.chat.id}_{mes_id}"
+    
+    a = await bot.send_message(callback.message.chat.id, f"Нажмите чтобы добавить уточнения", reply_markup=add_ut_kb())
+    await callback.message.edit_text('Нажмите чтобы перейти к добавлению уточнения', reply_markup=add_utochnenie_url_kb(callback.message.chat.id, a.message_id))
+    mess_for_db_ut[callback.from_user.id] = mes_f_db
+    print(mess_for_db_ut)
+    mess_tread_id[callback.from_user.id] = tread_id
+
+@bot_router.callback_query(F.data == "add_ut")
+async def add_ut_bot(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("Добавьте уточнения")
     await state.set_state(AddUtochnenie.waiting_for_utochnenie)
-    await state.update_data(mes_id_for_del=a.message_id, mes_id_for_db=mes_id, candidate_full_name=candidate_full_name)
+
 
 @bot_router.message(AddUtochnenie.waiting_for_utochnenie)
 async def add_utochnenie_after_scan(message: Message, state: FSMContext, bot: Bot):
     
-    data_state = await state.get_data()
-    candidate_full_name = data_state.get("candidate_full_name")
-    tread_id = message.message_thread_id
+    
+    
+    tread_id = mess_tread_id.get(message.from_user.id)
     chat_id = message.chat.id
-    a = await message.answer(f"Уточнения в резюме {candidate_full_name} скоро будут добавлены")
+    
     vac_info = await get_vacancy_thread(tread_id, chat_id)
     if not vac_info:
         await message.answer("❌ Нет данных для уточнения.")
         return
     vacancy = vac_info.vacancy_text
-    message_id = message.message_id
-    mes_id_for_del = data_state.get("mes_id_for_del")
-    mes_id_for_db = data_state.get("mes_id_for_db")
+    
+    mes_id_for_db = mess_for_db_ut.get(message.from_user.id)
+    print(mes_id_for_db)
+    message_id = mes_id_for_db.split("_")[1]
     data = await get_candidate_resume(mes_id_for_db)
     tg_username = message.from_user.username
     
@@ -1176,21 +1282,38 @@ async def add_utochnenie_after_scan(message: Message, state: FSMContext, bot: Bo
         candidate_json = json.loads(candidate)
     resume_text = data.resume_text
     candidate_name = candidate_json.get("candidate").get("full_name")
+    a = await message.answer(f"Уточнения в резюме {candidate_name} скоро будут добавлены")
+    await asyncio.sleep(3)
+    await bot.delete_message(chat_id=message.chat.id, message_id=a.message_id)
+    await message.answer('Нажмите чтобы вернутся к кандидату', reply_markup=back_to_ut_url_kb(message_id, chat_id))
     mail = await generate_cover_letter_for_client(candidate_json, tg_username, additional_notes=message.text)
     api_key = GEMINI_API_KEY
-    wl_path = await asyncio.to_thread(create_white_label_resume_once, api_key, resume_text, vacancy, candidate_name)
+    wl_path = await asyncio.to_thread(create_white_label_resume_once, api_key, resume_text, vacancy, message.text, tg_username)
     
-    await bot.delete_messages(chat_id=message.chat.id, message_ids=[mes_id_for_del, message_id])
-    await bot.edit_message_text(chat_id=message.chat.id, message_id=a.message_id, text=f"Уточнения в резюме {candidate_full_name} добавлены")
+    await bot.edit_message_text(chat_id=message.chat.id, message_id=message_id, text=f"Уточнения в резюме {candidate_name} добавлены")
     await asyncio.sleep(3)
-    await bot.edit_message_text(chat_id=message.chat.id, message_id=a.message_id, text=mail, reply_markup=send_to_group_kb(), parse_mode='HTML')
+    await bot.edit_message_text(chat_id=message.chat.id, message_id=message_id, text=mail, reply_markup=send_to_group_kb(mail), parse_mode='HTML')
     await update_candidate_wl_path(mes_id_for_db, wl_path)
-    await update_message_id(mes_id_for_db, a.message_id)
     
+
+@bot_router.callback_query(F.data == "back_to_utochnenie")
+async def back_to_ut_bot(callback: CallbackQuery, state: FSMContext):
+    message_id = callback.message.message_id
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
+    if not data:
+        await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
+        return
+    text = data.message_text
+    await callback.message.edit_text(text, reply_markup=send_mail_to_candidate_kb('Частично подходит (нужны уточнения)', text),parse_mode='HTML')
+
+
 
 @bot_router.callback_query(F.data == "back_to_mail")
 async def back_to_mail_bot(callback: CallbackQuery, state: FSMContext):
-    data = await get_candidate_resume(callback.message.message_id)
+    message_id = callback.message.message_id
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
     if not data:
         await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
         return
@@ -1206,7 +1329,9 @@ async def del_bot(callback: CallbackQuery, state: FSMContext):
     
 @bot_router.callback_query(F.data == "show_mail")
 async def accept_delete_email_bot(callback: CallbackQuery, state: FSMContext):
-    data = await get_candidate_resume(callback.message.message_id)
+    message_id = callback.message.message_id
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
     if not data:
         await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
         return
@@ -1228,7 +1353,9 @@ async def accept_delete_email_bot(callback: CallbackQuery, state: FSMContext):
 
 @bot_router.callback_query(F.data == "show_sverka")
 async def accept_delete_email_bot(callback: CallbackQuery, state: FSMContext):
-    data = await get_candidate_resume(callback.message.message_id)
+    message_id = callback.message.message_id
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
     if not data:
         await callback.message.edit_text("❌ Нет данных для отправки письма кандидату.")
         return
@@ -1241,7 +1368,9 @@ async def accept_delete_email_bot(callback: CallbackQuery, state: FSMContext):
 @bot_router.callback_query(F.data.startswith("send_to_group"))
 async def send_to_group_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
     mail = callback.message.text
-    data = await get_candidate_resume(callback.message.message_id)
+    message_id = callback.message.message_id
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
     wl_path = data.wl_path
     if not data:
         await callback.message.edit_text("❌ Нет данных")
@@ -1255,23 +1384,20 @@ async def send_to_group_bot(callback: CallbackQuery, state: FSMContext, bot: Bot
         except:
             await callback.message.edit_text("Файл был удален")
         await asyncio.sleep(3)
-        await callback.message.edit_text(data.message_text, reply_markup=send_to_group_kb(), parse_mode='HTML')
-        try:
-            os.remove(wl_path)
-        except:
-            pass
+        await callback.message.edit_text(data.message_text, reply_markup=send_to_group_kb(data.message_text), parse_mode='HTML')
 
     elif callback.data == "send_to_group_mail":
         await callback.message.edit_text("Письмо отправлено в группу")
         await bot.send_message(chat_id=CLIENT_CHANNEL, text=mail, parse_mode='HTML')
         await asyncio.sleep(3)
-        await callback.message.edit_text(data.message_text, reply_markup=send_to_group_kb(), parse_mode='HTML')
+        await callback.message.edit_text(data.message_text, reply_markup=send_to_group_kb(data.message_text), parse_mode='HTML')
 
     
 @bot_router.callback_query(F.data == "show_wl")
 async def show_wl_bot(callback: CallbackQuery, state: FSMContext):
-    
-    data = await get_candidate_resume(callback.message.message_id)
+    message_id = callback.message.message_id
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
     if not data:
         await callback.message.edit_text("❌ Нет данных")
         return
@@ -1290,12 +1416,14 @@ async def show_wl_bot(callback: CallbackQuery, state: FSMContext):
 
 @bot_router.callback_query(F.data == "back_to_group")
 async def back_to_group_bot(callback: CallbackQuery, state: FSMContext):
-    data = await get_candidate_resume(callback.message.message_id)
+    message_id = callback.message.message_id
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
     if not data:
         await callback.message.edit_text("❌ Нет данных")
         return
     mail = data.candidate_mail
-    await callback.message.edit_text(mail, reply_markup=send_to_group_kb(), parse_mode='HTML')
+    await callback.message.edit_text(mail, reply_markup=send_to_group_kb(mail), parse_mode='HTML')
 
 from collections import defaultdict
 chat_info_dict = defaultdict(dict)
@@ -1303,7 +1431,7 @@ contact_to_add_dict = defaultdict(dict)
 
 @bot_router.callback_query(F.data == "add_contacts")
 async def add_contact_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    mess_for_db = callback.message.message_id
+    mess_for_db = f"{callback.message.chat.id}_{callback.message.message_id}"
     data = await get_candidate_resume(mess_for_db)
     if not data:
         await callback.message.edit_text("❌ Нет данных")
@@ -1370,16 +1498,18 @@ async def add_contact_after_message(message: Message, state: FSMContext, bot: Bo
 
     contact_to_add_dict.pop(user_id)
     chat_info_dict.pop(user_id)
-    
-    await bot.edit_message_text(chat_id=chat_id, message_id=mess_for_db, text=f"Выберете куда отправить сообщение кандидату {candidate_name}", reply_markup=await create_contacts_kb(mess_for_db))
+    mess_id = mess_for_db.split("_")[1]
+    await bot.edit_message_text(chat_id=chat_id, message_id=mess_id, text=f"Выберете куда отправить сообщение кандидату {candidate_name}", reply_markup=await create_contacts_kb(mess_for_db))
     await message.answer(f"Контакт для {candidate_name} добавлен")
     await asyncio.sleep(1)
-    await message.answer(f'Нажмите чтобы вернутся к кандидату {candidate_name}', reply_markup=return_to_contact_kb(mess_for_db, chat_id_for_url))
+    await message.answer(f'Нажмите чтобы вернутся к кандидату {candidate_name}', reply_markup=return_to_contact_kb(mess_id, chat_id_for_url))
 
 
 @bot_router.callback_query(F.data == "hide")
 async def hide_message_bot(callback: CallbackQuery):
-    data = await get_candidate_resume(callback.message.message_id)
+    message_id = callback.message.message_id
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
     if not data:
         await callback.message.edit_text("❌ Нет данных", reply_markup=get_all_info_kb(), parse_mode='HTML')
         return
@@ -1412,7 +1542,9 @@ async def hide_message_bot(callback: CallbackQuery):
 
 @bot_router.callback_query(F.data == "back_to_contact")
 async def back_to_contact_bot(callback: CallbackQuery):
-    data = await get_candidate_resume(callback.message.message_id)
+    message_id = callback.message.message_id
+    mes_f_db = f"{callback.message.chat.id}_{message_id}"
+    data = await get_candidate_resume(mes_f_db)
     if not data:
         await callback.message.edit_text("❌ Нет данных")
         return
@@ -1420,10 +1552,75 @@ async def back_to_contact_bot(callback: CallbackQuery):
     if isinstance(data_json, str):
         data_json = json.loads(data_json)
     candidate_name = data_json.get("candidate", {}).get("full_name", "не указано")
-    await callback.message.edit_text(f"Выберете куда отправить сообщение кандидату {candidate_name}", reply_markup=await create_contacts_kb(callback.message.message_id))
+    await callback.message.edit_text(f"Выберете куда отправить сообщение кандидату {candidate_name}", reply_markup=await create_contacts_kb(mes_f_db))
 
 
 
 @bot_router.callback_query(F.data == "generate_mail_again")
 async def generate_mail_again_bot(callback: CallbackQuery):
     await callback.message.edit_text("Выберете тип письма", reply_markup=generate_mail_kb(True))
+
+
+@bot_router.callback_query(F.data == "for_basa")
+async def for_basa_bot(callback: CallbackQuery, bot: Bot, state: FSMContext):
+    await callback.message.answer('Загружаю из базы..')
+    tread_id = callback.message.message_thread_id
+    chat_id = callback.message.chat.id
+    vacancy = await get_vacancy_thread(tread_id, chat_id)
+    user_name = callback.from_user.username
+    print(user_name)
+    if not vacancy:
+        await callback.message.edit_text("❌ Нет данных об вакансии", reply_markup=for_basa_or_main_kb())
+        return
+    vacancy_text = vacancy.vacancy_text
+    candidate_list = await get_candidate_by_username(user_name)
+    if not candidate_list:
+        await callback.message.edit_text("❌ Нет данных об кандидате", reply_markup=for_basa_or_main_kb())
+        return
+
+    sverka_text = await sverka_kandidate_in_basa(candidate_list, vacancy_text)
+    mes_with_can = ''
+    candidates = sverka_text['candidates']
+    cand_ids = []
+    for can in candidates:
+        mes_with_can += f"ФИО: {can['fullName']}\nПроцент совпадения: {can['percent']}\n\n"
+        cand_ids.append(can['id'])
+    await send_long_message(bot, chat_id, mes_with_can, tread_id)
+    await callback.message.answer("Нажмите здесь чтобы запустить сверку", reply_markup=start_sverka_kb())
+    await state.update_data(cand_ids=cand_ids)
+    
+
+@bot_router.callback_query(F.data == "start_sverka")
+async def start_sverka_bot(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await callback.message.answer("Начинаю сверку", reply_markup=start_sverka_kb())
+    data = await state.get_data()
+    tread_id = callback.message.message_thread_id
+    chat_id = callback.message.chat.id
+    user_id = callback.from_user.id
+    
+    cand_ids = data.get('cand_ids')
+    if not cand_ids:
+        await callback.message.edit_text("❌ Нет данных об кандидатах", reply_markup=start_sverka_kb())
+        return
+
+    orig_urls = await get_orig_urls_for_candidate_ids(cand_ids)
+    await download_gdrive_files(orig_urls, user_id, tread_id)
+    vacancy = await get_vacancy_thread(tread_id, chat_id)
+    if not vacancy:
+        await callback.message.edit_text("❌ Нет данных об вакансии", reply_markup=start_sverka_kb())
+        return
+    vacancy_text = vacancy.vacancy_text
+    user_dir = os.path.join(SAVE_DIR, (str(user_id)+'_'+str(tread_id)))
+    await callback.message.answer("Сверка запущена")
+    asyncio.create_task(process_vac_tuks(user_dir, user_id, vacancy_text, bot, callback))
+    
+
+@bot_router.callback_query(F.data == "send_vac_to_site")
+async def send_vac_to_site_bot(callback: CallbackQuery):
+    await callback.message.answer("Отправляю вакансии на сайт")
+    asyncio.create_task(send_vac_to_site(telethon_client))
+
+
+
+    
+    

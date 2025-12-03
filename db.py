@@ -37,18 +37,8 @@ class Channel(Base):
     channel_name: Mapped[str] = mapped_column(String, nullable=True)
     
 
-class Filter(Base):
-    __tablename__ = 'filters'
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    filter_text: Mapped[str] = mapped_column(String, nullable=False)
 
 
-class Slova(Base):
-    __tablename__ = 'slova'
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    filter_text: Mapped[str] = mapped_column(String, nullable=False)
 
 
 
@@ -57,7 +47,7 @@ class CandidateResume(Base):
     __tablename__ = 'candidate_resume'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    message_id= Column(Integer, nullable=False)
+    message_id= Column(String, nullable=False)
     message_text = Column(String, nullable=False)
     json_text = Column(String, nullable=False)
     resume_text = Column(String, nullable=False)
@@ -70,7 +60,7 @@ class CandidateResume(Base):
 class Contact(Base):
     __tablename__ = 'contact'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    message_id = Column(Integer, nullable=False)
+    message_id = Column(String, nullable=False)
     candidate_fullname = Column(String, nullable=True)
     contact_tg = Column(String, nullable=True)
     contact_email = Column(String, nullable=True)
@@ -151,103 +141,9 @@ async def init_db():
     print("✅ Таблицы созданы (если их не было).")
 
 
-async def add_channel(channel_name: str, channel_id: int):
-    async with AsyncSessionLocal() as session:
-        query = select(Channel).where(Channel.channel_id == channel_id)
-        result = await session.execute(query)
-        if result.scalars().first():
-            return 'Такой канал уже есть'
-        else:
-            try:
-                channel = Channel(channel_name=channel_name, channel_id=channel_id)
-                session.add(channel)
-                await session.commit()
-                
-            except:
-                return "Канал не получилось добавить"
-        
-
-async def remove_channel(channel_id: str):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Channel).where(Channel.channel_id == channel_id)
-        )
-        channel = result.scalar_one_or_none()
-        if channel:
-            await session.delete(channel)
-            await session.commit()
-            print(f"Канал {channel_id} удалён из базы.")
-        else:
-            print(f"Канал {channel_id} не найден в базе.")
-
-
-async def get_all_channels():
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(select(Channel))
-        channels = result.scalars().all()
-        return channels
-    
-
-async def add_filter(filter_text):
-    async with AsyncSessionLocal() as session:
-        query = select(Filter).where(Filter.filter_text == filter_text)
-        result = await session.execute(query)
-        if result.scalars().first():
-            return True
-        else:
-            filter = Filter(filter_text=filter_text)
-            session.add(filter)
-            await session.commit()
-
-async def get_all_filters():
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(select(Filter))
-        filters = result.scalars().all()
-        return filters
-    
-async def remove_filter(id):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Filter).where(Filter.id == id)
-        )
-        filter = result.scalar_one_or_none()
-        if filter:
-            await session.delete(filter)
-            await session.commit()
 
 
 
-
-
-
-async def add_slovo(filter_text):
-    async with AsyncSessionLocal() as session:
-        query = select(Filter).where(Filter.filter_text == filter_text)
-        result = await session.execute(query)
-        if result.scalars().first():
-            return True
-        else:
-            filter = Slova(filter_text=filter_text)
-            session.add(filter)
-            await session.commit()
-
-
-async def get_all_slova():
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(select(Slova))
-        filters = result.scalars().all()
-        return filters
-
-
-async def remove_slovo(id):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Slova).where(Slova.id == id)
-        )
-        filter = result.scalar_one_or_none()
-        if filter:
-            await session.delete(filter)
-            await session.commit()
 
 
 
@@ -314,7 +210,7 @@ async def get_next_sequence_number() -> int:
 #  CANDIDATE RESUME (Кандидаты)
 # ===============================================================
 
-async def add_candidate_resume(message_id: int, message_text: str, json_text: dict, resume_text: str, sverka_text: str,is_finalist: bool, is_utochnenie: bool):
+async def add_candidate_resume(message_id: str, message_text: str, json_text: dict, resume_text: str, sverka_text: str,is_finalist: bool, is_utochnenie: bool):
     """
     Добавляет или обновляет запись CandidateResume.
     Если message_id уже существует — обновляет текст и JSON.
@@ -357,7 +253,7 @@ async def add_candidate_resume(message_id: int, message_text: str, json_text: di
             print(f"❌ Ошибка при добавлении/обновлении CandidateResume: {e}")
 
 
-async def get_candidate_resume(message_id: int):
+async def get_candidate_resume(message_id: str):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(CandidateResume).where(CandidateResume.message_id == message_id)
@@ -365,32 +261,32 @@ async def get_candidate_resume(message_id: int):
         return result.scalar_one_or_none()    
 
 
-async def update_candidate_messsage_text(message_id: int, message_text: str):
+async def update_candidate_messsage_text(message_id: str, message_text: str):
     async with AsyncSessionLocal() as session:
         await session.execute(update(CandidateResume).where(CandidateResume.message_id == message_id).values(message_text=message_text))
         await session.commit()
 
-async def update_candidate_is_finalist(message_id: int, is_finalist: bool):
+async def update_candidate_is_finalist(message_id: str, is_finalist: bool):
     async with AsyncSessionLocal() as session:
         await session.execute(update(CandidateResume).where(CandidateResume.message_id == message_id).values(is_finalist=is_finalist))
         await session.commit()
         
-async def update_candidate_wl_path(message_id: int, wl_path: str):
+async def update_candidate_wl_path(message_id: str, wl_path: str):
     async with AsyncSessionLocal() as session:
         await session.execute(update(CandidateResume).where(CandidateResume.message_id == message_id).values(wl_path=wl_path))
         await session.commit()
 
-async def update_candidate_is_utochnenie(message_id: int, is_utochnenie: bool):
+async def update_candidate_is_utochnenie(message_id: str, is_utochnenie: bool):
     async with AsyncSessionLocal() as session:
         await session.execute(update(CandidateResume).where(CandidateResume.message_id == message_id).values(is_utochnenie=is_utochnenie))
         await session.commit()
 
-async def update_candidate_mail(message_id: int, candidate_mail: str):
+async def update_candidate_mail(message_id: str, candidate_mail: str):
     async with AsyncSessionLocal() as session:
         await session.execute(update(CandidateResume).where(CandidateResume.message_id == message_id).values(candidate_mail=candidate_mail))
         await session.commit()
 
-async def update_message_id(message_id: int, new_message_id: int):
+async def update_message_id(message_id: str, new_message_id: str):
     async with AsyncSessionLocal() as session:
         await session.execute(update(CandidateResume).where(CandidateResume.message_id == message_id).values(message_id=new_message_id))
         await session.commit()
@@ -399,21 +295,21 @@ async def update_message_id(message_id: int, new_message_id: int):
 #Контакты
 #
 
-async def add_contact(message_id: int, candidate_fullname: str, contact_tg: str = None, contact_email: str = None, contact_phone: str = None):
+async def add_contact(message_id: str, candidate_fullname: str, contact_tg: str = None, contact_email: str = None, contact_phone: str = None):
     async with AsyncSessionLocal() as session:
        
         contact = Contact(message_id=message_id, candidate_fullname=candidate_fullname, contact_tg=contact_tg, contact_email=contact_email, contact_phone=contact_phone)
         session.add(contact)
         await session.commit()
 
-async def get_contact(message_id: int):
+async def get_contact(message_id: str):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Contact).where(Contact.message_id == message_id)
         )
         return result.scalar_one_or_none()
 
-async def update_contact(message_id: int, contact_tg: str = None, contact_email: str = None, contact_phone: str = None):
+async def update_contact(message_id: str, contact_tg: str = None, contact_email: str = None, contact_phone: str = None):
     async with AsyncSessionLocal() as session:
         # Обновляем только те поля, которые переданы (не None)
         update_values = {}
@@ -428,7 +324,7 @@ async def update_contact(message_id: int, contact_tg: str = None, contact_email:
             await session.execute(update(Contact).where(Contact.message_id == message_id).values(**update_values))
             await session.commit()
 
-async def update_contact_message_id(message_id: int, new_message_id: int):
+async def update_contact_message_id(message_id: str, new_message_id: str):
     async with AsyncSessionLocal() as session:
         await session.execute(update(Contact).where(Contact.message_id == message_id).values(message_id=new_message_id))
         await session.commit()
@@ -650,15 +546,16 @@ from aiogram import Bot
 
 
 async def update_actual_vacancy(bot: Bot, client: TelegramClient):
+    from utils import send_long_message
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(ActualVacancy.user_name_tg)
+            select(ActualVacancy.user_name_tg).distinct()
         )
         res_one = result.all()
         if res_one:
             for (user_name_tg,) in res_one:
-                print(user_name_tg)
-                print(type(user_name_tg))
+                
                 res = await session.execute(
                     select(ActualVacancy.vacancy_id, ActualVacancy.title, ActualVacancy.message_id)
                     .where(ActualVacancy.user_name_tg == user_name_tg)
@@ -666,39 +563,43 @@ async def update_actual_vacancy(bot: Bot, client: TelegramClient):
                 res = res.all()
                 if res:
                     # Удаляем старые сообщения этого пользователя
-                    async for msg in client.iter_messages(-1002658129391, reply_to=3388):
+                    async for msg in client.iter_messages(-1002658129391, reply_to=11481):
                         
-                        if msg.id == 3388:
+                        if msg.id == 11481:
                             break
                         if user_name_tg in msg.text:    
                             try:
-                                await bot.delete_message(
-                                    chat_id=-1002658129391,
-                                    message_id=msg.id
+                                await client.delete_messages(
+                                    entity=-1002658129391,
+                                    message_ids=msg.id
                                 )
                             except Exception as e:
                                 print(f"Ошибка при удалении сообщения {msg.id}: {e}")
 
-                    text = f'Вакансии рекрутера {user_name_tg}:\n'
-                    for row in res:
-                        vac_id = row[0]
-                        title = row[1]
-                        message_id = row[2]
-                        url = f"https://t.me/omega_vacancy_bot?start={message_id}_{vac_id}"
-                        id_url = f"<a href='{url}'>{vac_id}</a>"
-                        mess_url = f"https://t.me/c/2658129391/{message_id}"
-                        title_url = f"<a href='{mess_url}'>{title}</a>"
-                        
-                        text += f"🆔{id_url} 🥇{title_url}\n"
-                        
-                    await bot.send_message(
-                            chat_id=-1002658129391,
-                            text=text,
-                            message_thread_id=3388,
-                            parse_mode="HTML",
-                            disable_web_page_preview=True,
-                            disable_notification=True
-                        )
+                    text = f'Вакансии менеджера {user_name_tg}:\n'
+                    i = 0
+                    message_send = False
+                    try:
+                        for row in res:
+                            i += 1
+                            vac_id = row[0]
+                            title = row[1]
+                            message_id = row[2]
+                            url = f"https://t.me/omega_vacancy_bot?start={message_id}_{vac_id}"
+                            id_url = f"<a href='{url}'>{vac_id}</a>"
+                            mess_url = f"https://t.me/c/2658129391/{message_id}"
+                            title_url = f"<a href='{mess_url}'>{title}</a>"
+                            
+                            text += f"🆔{id_url} 🥇{title_url}\n"
+                            if i == 40:
+                                await bot.send_message(-1002658129391, text, message_thread_id=11481, parse_mode="HTML",disable_notification=True)
+                                i = 0
+                                message_send = True
+                                text = ''
+                        if not message_send:
+                            await bot.send_message(-1002658129391, text, message_thread_id=11481, parse_mode="HTML",disable_notification=True)
+                    except Exception as e:
+                        print(f"❌ Ошибка при отправке сообщения:  {e}")
         
 
 async def remove_actual_vacancy(vacancy_id: int, bot: Bot, client: TelegramClient):

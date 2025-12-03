@@ -14,6 +14,7 @@ async def main_kb():
     builder.button(text='Сканировать RedlabPartners 21 день', callback_data='scan_redlab_21')
     builder.button(text='Сканировать RedlabPartners(1 день)', callback_data='scan_redlab_day')
     builder.button(text = 'Добавить вакансию вручную', callback_data='scan_hand')
+    builder.button(text="Отправить вакансии на сайт(Не НАЖИМАТЬ!)", callback_data="send_vac_to_site")
     
     builder.adjust(1)
     return builder.as_markup()
@@ -121,6 +122,9 @@ def generate_mail_kb(again = False):
     builder.button(text='Сгенерировать письмо финалиста', callback_data=f'generate_mail:PP')
     builder.button(text='Сгенерировать уточняющее письмо', callback_data=f'generate_mail:CP')
     builder.button(text='Сгенерировать отказ', callback_data=f'generate_mail:NP')
+    builder.button(text='Сгенерировать письмо для клиента', callback_data=f'generate_klient_mail')
+    builder.button(text='Назад к письму', callback_data='back_to_mail')
+
     if not again:
         builder.button(text='Свернуть', callback_data=f'hide')
     builder.adjust(1)
@@ -150,7 +154,7 @@ def send_mail_to_candidate_kb(verdict: str, mail: str):
     if verdict == 'Частично подходит (нужны уточнения)':
         builder.button(text='Добавить уточнения и сделать WL', callback_data='add_utochnenie')
     elif verdict == 'Полностью подходит':
-        builder.button(text='Вернуться к отправке в группу', callback_data='back_to_group')
+        builder.button(text='Вернуться к письму для клиента', callback_data='back_to_group')
         
     
     builder.button(text='Отправить письмо кандидату', callback_data=f'send_mail_to_candidate')
@@ -269,13 +273,14 @@ def show_mail_kb():
     builder.adjust(1)
     return builder.as_markup()
 
-def send_to_group_kb():
+def send_to_group_kb(mail):
     builder = InlineKeyboardBuilder()
-    builder.button(text='Отправить в группу письмо и WL резюме', callback_data='send_to_group')
-    builder.button(text='Отправить в группу только письмо', callback_data='send_to_group_mail')
-    builder.button(text='Посмотреть WL резюме', callback_data='show_wl')
-    builder.button(text='Удалить кандидата из списка', callback_data='del')
+    #builder.button(text='Отправить в группу письмо и WL резюме', callback_data='send_to_group')
+    #builder.button(text='Отправить в группу только письмо', callback_data='send_to_group_mail')
+    builder.button(text='Скачать WL резюме', callback_data='show_wl')
+    builder.button(text='Копировать', switch_inline_query_current_chat=f'{mail}')
     builder.button(text='Назад к письму', callback_data='back_to_mail')
+    builder.button(text='Удалить кандидата из списка', callback_data='del')
     builder.adjust(1)
     return builder.as_markup()
 
@@ -296,5 +301,44 @@ def add_con_url_kb(chat_id):
 
 def return_to_contact_kb(mess_id,chat_id):
     builder = InlineKeyboardBuilder()
+    
     builder.button(text='Вернуться к кандидату', url=f'https://t.me/c/{chat_id}/{mess_id}')
     return builder.as_markup()
+
+
+def for_basa_or_main_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Загрузить из базы', callback_data='for_basa')
+    builder.button(text='Загрузить вручную', callback_data='for_main')
+    builder.adjust(1)
+    return builder.as_markup()
+
+def start_sverka_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Начать сверку', callback_data='start_sverka')
+    return builder.as_markup()
+
+
+
+def add_utochnenie_url_kb(chat_id, mess_id):
+    chat_id = str(chat_id)
+    chat_id = chat_id.replace("-100", "")
+    builder = InlineKeyboardBuilder()
+    builder.button(text='Перейти', url=f'https://t.me/c/{chat_id}/{mess_id}')
+    builder.button(text="Назад", callback_data="back_to_utochnenie")
+    return builder.as_markup()
+
+def add_ut_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Добавить уточнения", callback_data="add_ut")
+    return builder.as_markup()
+
+
+def back_to_ut_url_kb(mess_id, chat_id):
+    chat_id = str(chat_id)
+    chat_id = chat_id.replace("-100", "")
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Назад", url=f'https://t.me/c/{chat_id}/{mess_id}')
+    return builder.as_markup()
+
+

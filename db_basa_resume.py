@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from sqlalchemy import Integer, String, Column, Boolean, ForeignKey, DateTime
 from datetime import datetime
 from sqlalchemy import select, insert, update, delete,union
+from utils import to_csv
 
 # === Ваши MAP'ы ===
 from maps_for_gpt import (
@@ -253,11 +254,11 @@ for raw_key in AVAILABILITY_MAP.keys():
 
 
 # ---------- инициализация БД ----------
-# async def init_db_basa_resume():
-#     async with async_engine_basa.begin() as conn:
-#         await conn.run_sync(Base_basa.metadata.drop_all)
-#         await conn.run_sync(Base_basa.metadata.create_all)
-#     print("✅ База данных инициализирована")
+async def init_db_basa_resume():
+    async with async_engine_basa.begin() as conn:
+        #await conn.run_sync(Base_basa.metadata.drop_all)
+        await conn.run_sync(Base_basa.metadata.create_all)
+    print("✅ База данных инициализирована")
 
 # Не вызываем init_db_basa_resume() при импорте модуля!
 # Это создаёт конфликты event loop.
@@ -380,13 +381,13 @@ async def create_candidate_and_write(section_rows: Dict[str, Dict[str, Any]], ca
 async def add_to_candidate_table(candidate_id :str , name_ru :str , name_en :str , surname_ru :str , surname_en :str , patronymic_ru :str , patronymic_en :str , location_ru :str , location_en :str , city_ru :str , city_en :str , total_experience :str , special_experience :str , date_of_exit :str , url_for_origin_resume :str , url_for_form_res_ru :str , url_for_form_res_en :str , recruter_username :str , date_of_add , date_add_admin):
     async with AsyncSessionLocal_basa() as session:
         res = await session.execute(
-            select(Candidates.name_ru, Candidates.surname_ru).where((Candidates.name_ru == name_ru) & (Candidates.surname_ru == surname_ru))
+            select(Candidates.name_ru, Candidates.surname_ru).where((Candidates.name_ru == name_ru) & (Candidates.surname_ru == surname_ru) & (Candidates.recruter_username == recruter_username))
         )
         if res.scalar_one_or_none() is not None:
             print('Такой кандидат уже есть')
             return None
         res2 = await session.execute(
-            select(Candidates.name_en, Candidates.surname_en).where((Candidates.name_en == name_en) & (Candidates.surname_en == surname_en))
+            select(Candidates.name_en, Candidates.surname_en).where((Candidates.name_en == name_en) & (Candidates.surname_en == surname_en) & (Candidates.recruter_username == recruter_username))
         )
         if res2.scalar_one_or_none() is not None:
             print('Такой кандидат уже есть')
@@ -496,13 +497,13 @@ def filter_fields(obj):
 
 
 
-async def get_candidate_by_id(candidate_id: str) -> dict | None:
+async def get_candidate_by_username( recruter_username: str) -> dict | None:
     """
     Получает кандидата по ID со всеми связанными данными.
     Возвращает словарь с основной информацией и отфильтрованными данными (только True/непустые значения).
     
     Args:
-        candidate_id: ID кандидата (например, "a_12345")
+        recruter_username: имя рекрутера
     
     Returns:
         Словарь с данными кандидата или None если не найден
@@ -511,7 +512,7 @@ async def get_candidate_by_id(candidate_id: str) -> dict | None:
         # Загружаем кандидата со всеми связанными таблицами
         result = await session.execute(
             select(Candidates)
-            .where(Candidates.candidate_id == candidate_id)
+            .where(Candidates.recruter_username == recruter_username)
             .options(
                 selectinload(Candidates.salary),
                 selectinload(Candidates.roles),
@@ -528,55 +529,69 @@ async def get_candidate_by_id(candidate_id: str) -> dict | None:
                 selectinload(Candidates.availability)
             )
         )
-        candidate = result.scalar_one_or_none()
+        candidate = result.scalars().all()
         
-        if candidate is None:
-            return None
-        
-        
-        
-        # Формируем результат
-        result_dict = {
-            'id': candidate.id,
-            'candidate_id': candidate.candidate_id,
-            'surname_ru': candidate.surname_ru,
-            'surname_en': candidate.surname_en,
-            'name_ru': candidate.name_ru,
-            'name_en': candidate.name_en,
-            'patronymic_ru': candidate.patronymic_ru,
-            'patronymic_en': candidate.patronymic_en,
-            'location_ru': candidate.location_ru,
-            'location_en': candidate.location_en,
-            'city_ru': candidate.city_ru,
-            'city_en': candidate.city_en,
-            'total_experience': candidate.total_experience,
-            'special_experience': candidate.special_experience,
-            'date_of_exit': candidate.date_of_exit,
-            'url_for_origin_resume': candidate.url_for_origin_resume,
-            'url_for_form_res_ru': candidate.url_for_form_res_ru,
-            'url_for_form_res_en': candidate.url_for_form_res_en,
-            'recruter_username': candidate.recruter_username,
-            'date_add_recruiter': candidate.date_add_recruiter,
-            'date_add_admin': candidate.date_add_admin,
+        # if candidate is None:
+        #     return None
+        def csv_from_dict(d) -> str:
+            d = d or {}
+            return ", ".join(
+                str(k).strip().capitalize()
+                for k, v in d.items()
+                if v and str(k).strip()
+            )
+
+        result_str = ""
+        for can in candidate:
             
-            # Связанные данные (отфильтрованные)
-            'salary': filter_fields(candidate.salary),
-            'roles': filter_fields(candidate.roles),
-            'grades': filter_fields(candidate.grades),
-            'programming_languages': filter_fields(candidate.programming_languages_rel),
-            'frameworks': filter_fields(candidate.frameworks_rel),
-            'technologies': filter_fields(candidate.technologies_rel),
-            'industries': filter_fields(candidate.industries_rel),
-            'contacts': filter_fields(candidate.contacts_rel),
-            'languages': filter_fields(candidate.languages_rel),
-            'portfolio': filter_fields(candidate.portfolio_rel),
-            'work_time': filter_fields(candidate.work_time),
-            'work_form': filter_fields(candidate.work_form),
-            'availability': filter_fields(candidate.availability)
-        }
-        
-        return result_dict
+
+            prog_lang = csv_from_dict(filter_fields(can.programming_languages_rel))
+            frameworks = csv_from_dict(filter_fields(can.frameworks_rel))
+            tech = csv_from_dict(filter_fields(can.technologies_rel))
+            #grade = csv_from_dict(filter_fields(can.grades))
+            tech_skills = ", ".join(s for s in [prog_lang, frameworks, tech] if s)
+            candidate_id = can.candidate_id
+            #total_experience = can.total_experience
+            
+            #if total_experience:
+                
+                #total_experience = float(total_experience)
+                #if total_experience == 1:
+                    # kolvo_let = 'год'
+            #     elif total_experience < 5:
+            #         kolvo_let = 'года'
+            #     else:
+            #         kolvo_let = 'лет'
+            # else:
+            #     total_experience = 'Не указан'
+            #     kolvo_let = ""
+
+            tech_skills = f'Технические навыки: {tech_skills}\n'
+
+            #result_str += "-"*20 + "\n"
+            result_str += f'ФИО: {can.name_ru} {can.surname_ru} {can.patronymic_ru if can.patronymic_ru else ""}\n'
+            #result_str += f'Локация: {can.location_ru if can.location_ru else ""} {can.city_ru if can.city_ru else ""}\n'
+            #result_str += f'Опыт работы: {total_experience} {kolvo_let}\n'
+            result_str += tech_skills
+            result_str += f'ID: {candidate_id}\n\n'
+            #result_str += f'Грейд: {grade}\n'
+            #result_str += "-"*20 + "\n"
+            
+        return result_str
 
 # import asyncio
-# can = asyncio.run(get_candidate_by_id("g_90467"))
+# can = asyncio.run(get_candidate_by_username("kupitmancik"))
 # print(can)
+
+
+
+async def get_orig_urls_for_candidate_ids(candidate_ids: list) -> dict | None:
+    async with AsyncSessionLocal_basa() as session:
+        result = await session.execute(
+            select(Candidates.url_for_origin_resume)
+            .where(Candidates.candidate_id.in_(candidate_ids))
+        )
+        candidate = result.scalars().all()
+        
+        return candidate
+                                            

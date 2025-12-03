@@ -1,0 +1,213 @@
+[2025-11-20 01:33:59] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-20 01:33:59] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-20 01:37:27] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-20 01:37:27] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-20 01:37:27] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-20 01:37:40] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-20 01:37:40] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-20 16:55:43] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-20 16:55:44] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-20 16:55:44] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-20 16:56:01] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-20 16:56:01] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-21 05:28:19] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-21 05:28:19] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-21 05:28:19] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-21 05:28:34] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-21 05:28:34] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-22 04:49:57] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-22 04:49:57] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-22 04:49:57] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-22 04:50:13] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-22 04:50:13] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-24 14:59:30] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-24 14:59:30] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-24 14:59:30] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-24 15:00:43] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-24 15:00:43] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-24 15:02:00] [ERROR] omega_bot: Глобальная ошибка event loop: ConnectionError(MaxRetryError('HTTPSConnectionPool(host=\'omegahire.tec\', port=443): Max retries exceeded with url: /vacancy_create (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000020806B3D290>: Failed to resolve \'omegahire.tec\' ([Errno 11001] getaddrinfo failed)"))')), контекст: {'message': 'Task exception was never retrieved', 'future': '<Task finished name=\'Task-81\' coro=<send_vac_to_site() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\telethon_bot.py:912> exception=ConnectionError(MaxRetryError(\'HTTPSConnectionPool(host=\\\'omegahire.tec\\\', port=443): Max retries exceeded with url: /vacancy_create (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000020806B3D290>: Failed to resolve \\\'omegahire.tec\\\' ([Errno 11001] getaddrinfo failed)"))\'))>'}
+[2025-11-24 15:02:00] [ERROR] omega_bot: Ошибка в error_worker: TypeError("report_error() got an unexpected keyword argument 'admin_id'")
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\omegavacancybot\error_monitor.py", line 109, in error_worker
+    await report_error(
+          ^^^^^^^^^^^^^
+TypeError: report_error() got an unexpected keyword argument 'admin_id'
+[2025-11-24 15:02:34] [ERROR] omega_bot: Глобальная ошибка event loop: ConnectionError(MaxRetryError('HTTPSConnectionPool(host=\'omegahire.tec\', port=443): Max retries exceeded with url: /vacancy_create (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x00000208065C0310>: Failed to resolve \'omegahire.tec\' ([Errno 11001] getaddrinfo failed)"))')), контекст: {'message': 'Task exception was never retrieved', 'future': '<Task finished name=\'Task-112\' coro=<send_vac_to_site() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\telethon_bot.py:912> exception=ConnectionError(MaxRetryError(\'HTTPSConnectionPool(host=\\\'omegahire.tec\\\', port=443): Max retries exceeded with url: /vacancy_create (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x00000208065C0310>: Failed to resolve \\\'omegahire.tec\\\' ([Errno 11001] getaddrinfo failed)"))\'))>'}
+[2025-11-24 15:02:34] [ERROR] omega_bot: Ошибка в error_worker: TypeError("report_error() got an unexpected keyword argument 'admin_id'")
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\omegavacancybot\error_monitor.py", line 109, in error_worker
+    await report_error(
+          ^^^^^^^^^^^^^
+TypeError: report_error() got an unexpected keyword argument 'admin_id'
+[2025-11-24 15:03:43] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-24 15:03:43] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-24 15:03:43] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-24 15:03:54] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-24 15:03:54] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-24 15:04:12] [ERROR] omega_bot: Глобальная ошибка event loop: ConnectionError(MaxRetryError('HTTPSConnectionPool(host=\'omegahire.tec\', port=443): Max retries exceeded with url: /vacancy_create (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000021999845E90>: Failed to resolve \'omegahire.tec\' ([Errno 11001] getaddrinfo failed)"))')), контекст: {'message': 'Task exception was never retrieved', 'future': '<Task finished name=\'Task-31\' coro=<send_vac_to_site() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\telethon_bot.py:912> exception=ConnectionError(MaxRetryError(\'HTTPSConnectionPool(host=\\\'omegahire.tec\\\', port=443): Max retries exceeded with url: /vacancy_create (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000021999845E90>: Failed to resolve \\\'omegahire.tec\\\' ([Errno 11001] getaddrinfo failed)"))\'))>'}
+[2025-11-24 15:04:12] [ERROR] omega_bot: Ошибка в event_loop: ConnectionError(MaxRetryError('HTTPSConnectionPool(host=\'omegahire.tec\', port=443): Max retries exceeded with url: /vacancy_create (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000021999845E90>: Failed to resolve \'omegahire.tec\' ([Errno 11001] getaddrinfo failed)"))'))
+[2025-11-24 15:04:12] [ERROR] omega_bot: Traceback (event_loop):
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\urllib3\connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\urllib3\util\connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 11001] getaddrinfo failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\urllib3\connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\urllib3\connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\urllib3\connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\urllib3\connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\urllib3\connection.py", line 753, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\urllib3\connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x0000021999845E90>: Failed to resolve 'omegahire.tec' ([Errno 11001] getaddrinfo failed)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\requests\adapters.py", line 644, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\urllib3\connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\urllib3\util\retry.py", line 519, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='omegahire.tec', port=443): Max retries exceeded with url: /vacancy_create (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000021999845E90>: Failed to resolve 'omegahire.tec' ([Errno 11001] getaddrinfo failed)"))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Desktop\omegavacancybot\telethon_bot.py", line 988, in send_vac_to_site
+    status = requests.post('https://omegahire.tec/vacancy_create', json=data)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\requests\api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\requests\api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\requests\sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\requests\sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\Desktop\omegavacancybot\venv\Lib\site-packages\requests\adapters.py", line 677, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='omegahire.tec', port=443): Max retries exceeded with url: /vacancy_create (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000021999845E90>: Failed to resolve 'omegahire.tec' ([Errno 11001] getaddrinfo failed)"))
+
+[2025-11-24 15:04:12] [ERROR] omega_bot: Контекст (event_loop): {'message': 'Task exception was never retrieved', 'future': '<Task finished name=\'Task-31\' coro=<send_vac_to_site() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\telethon_bot.py:912> exception=ConnectionError(MaxRetryError(\'HTTPSConnectionPool(host=\\\'omegahire.tec\\\', port=443): Max retries exceeded with url: /vacancy_create (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000021999845E90>: Failed to resolve \\\'omegahire.tec\\\' ([Errno 11001] getaddrinfo failed)"))\'))>'}
+[2025-11-24 15:07:23] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-24 15:07:23] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-24 15:07:23] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-24 15:07:34] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-24 15:07:34] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-25 15:00:08] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-25 15:00:08] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-25 15:06:27] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-25 15:06:27] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-25 17:11:16] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-25 17:11:16] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-25 17:11:16] [ERROR] omega_bot: Глобальная ошибка event loop: RuntimeError('Task was destroyed but it is pending!'), контекст: {'message': 'Task was destroyed but it is pending!', 'task': "<Task cancelling name='Task-1' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()]> cb=[gather.<locals>._done_callback() at C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\asyncio\\tasks.py:764]>"}
+[2025-11-25 17:20:28] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-25 17:20:28] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-27 09:34:40] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-27 09:34:41] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-27 09:34:41] [ERROR] omega_bot: Глобальная ошибка event loop: RuntimeError('Task was destroyed but it is pending!'), контекст: {'message': 'Task was destroyed but it is pending!', 'task': "<Task cancelling name='Task-1' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()]> cb=[gather.<locals>._done_callback() at C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\asyncio\\tasks.py:764]>"}
+[2025-11-27 09:34:55] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-27 09:34:55] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-27 09:37:10] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-27 09:37:10] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-27 09:37:10] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-27 09:37:22] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-27 09:37:22] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-27 09:41:04] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-27 09:41:04] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-27 09:41:04] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-27 09:41:16] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-27 09:41:16] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-27 09:42:03] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-27 09:42:03] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-27 09:42:03] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-27 09:47:37] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-27 09:47:37] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-27 09:48:09] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-27 09:48:10] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-27 09:48:10] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-27 09:51:48] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-27 09:51:48] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-27 09:52:56] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-27 09:52:56] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-27 09:52:56] [ERROR] omega_bot: Глобальная ошибка event loop: RuntimeError('Task was destroyed but it is pending!'), контекст: {'message': 'Task was destroyed but it is pending!', 'task': "<Task cancelling name='Task-1' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()]> cb=[gather.<locals>._done_callback() at C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\asyncio\\tasks.py:764]>"}
+[2025-11-27 09:54:32] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-27 09:54:32] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-27 09:55:37] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-27 09:55:37] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-27 09:55:38] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-27 09:56:14] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-27 09:56:14] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-27 09:57:25] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-27 09:57:25] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-27 09:57:25] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-27 10:02:13] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-27 10:02:13] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-27 10:14:07] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-27 10:14:07] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-30 22:22:51] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-30 22:22:51] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-30 22:25:02] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-30 22:25:02] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-30 22:25:02] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-30 22:25:12] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-30 22:25:12] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-30 22:31:19] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-30 22:31:19] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-30 22:31:19] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-30 22:35:28] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-30 22:35:28] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-30 23:02:00] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-30 23:02:00] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-30 23:02:00] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-11-30 23:02:14] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-11-30 23:02:14] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-11-30 23:03:14] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-11-30 23:03:15] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-11-30 23:03:15] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-12-01 12:09:11] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-12-01 12:09:11] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-12-01 13:41:05] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-12-01 13:41:05] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-12-02 06:11:34] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-12-02 06:11:34] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-12-02 06:11:34] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-12-02 06:11:49] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-12-02 06:11:49] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-12-02 16:37:58] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-12-02 16:37:59] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-12-02 16:37:59] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-12-02 16:38:19] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-12-02 16:38:19] [INFO] omega_bot: Telethon: run_until_disconnected() старт
+[2025-12-02 16:51:56] [INFO] omega_bot: ⏹ error_worker остановлен (CancelledError)
+[2025-12-02 16:51:56] [INFO] omega_bot: 🔄 Завершаем фоновые задачи...
+[2025-12-02 16:51:56] [ERROR] omega_bot: Глобальная ошибка event loop: NameError("name 'async_engine' is not defined"), контекст: {'message': 'unhandled exception during asyncio.run() shutdown', 'task': '<Task finished name=\'Task-1\' coro=<main() done, defined at C:\\Users\\Administrator\\Desktop\\omegavacancybot\\main.py:131> exception=NameError("name \'async_engine\' is not defined")>'}
+[2025-12-02 16:52:08] [INFO] omega_bot: ✅ Redis подключен успешно
+[2025-12-02 16:52:09] [INFO] omega_bot: 🚨 error_worker запущен
+[2025-12-02 16:52:09] [INFO] omega_bot: Telethon: run_until_disconnected() старт

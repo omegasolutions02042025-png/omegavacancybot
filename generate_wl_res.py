@@ -206,7 +206,7 @@ def _render_primichanie(doc: Document, color_hex: str, font_size_headings: int, 
     for it in items:
         _add_text(doc, f"Добавлено: {it}")
 
-def render_resume_docx(payload: dict, vacancy_text: str = "", utochnenie=None) -> str:
+def render_resume_docx(payload: dict, vacancy_text: str = "", utochnenie=None, username = "") -> str:
     cfg = payload.get("config", {})
     cnt = payload.get("content", {})
     doc = Document()
@@ -219,6 +219,22 @@ def render_resume_docx(payload: dict, vacancy_text: str = "", utochnenie=None) -
     ])
     fio = cnt.get("fio") or {}
     # Убираем отдельное отображение ФИО в начале - оно будет в секции РЕЗЮМЕ
+    # Если модель убрала секцию "Дополнительная информация" (О себе),
+    # но есть поле extra в content, принудительно добавим секцию,
+    # чтобы пользовательский текст "О себе" не терялся.
+    try:
+        if cnt.get("extra"):
+            upper_sections = [s.upper() for s in sections]
+            if not any(s in ("ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ", "О СЕБЕ") for s in upper_sections):
+                # Вставляем перед 'ПРОЕКТЫ', если она есть, иначе в конец
+                try:
+                    idx = upper_sections.index("ПРОЕКТЫ")
+                except ValueError:
+                    idx = len(sections)
+                sections.insert(idx, "Дополнительная информация")
+    except Exception:
+        # В случае неожиданных типов оставляем поведение без изменений
+        pass
     
     for sec in sections:
         su = sec.upper()
@@ -243,8 +259,15 @@ def render_resume_docx(payload: dict, vacancy_text: str = "", utochnenie=None) -
         elif su == "ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ":
             extra = cnt.get("extra")
             if isinstance(extra, list):
-                for ln in extra: _add_text(doc, str(ln))
-            elif extra: _add_text(doc, str(extra))
+                combined_text = ", ".join(str(ln) for ln in extra if ln)
+                if combined_text:
+                    _add_text(doc, combined_text)
+            elif isinstance(extra, str) and extra.strip():
+                import re
+                # убираем лишние переводы строк и двойные пробелы
+                cleaned = re.sub(r"\s*\n\s*", " ", extra.strip())
+                cleaned = re.sub(r"\s{2,}", " ", cleaned)
+                _add_text(doc, cleaned)
         elif su == "ПРОЕКТЫ":
             _render_projects(doc, cnt.get("projects"))
     _post_fix_bold_skills(doc)
@@ -262,9 +285,11 @@ def render_resume_docx(payload: dict, vacancy_text: str = "", utochnenie=None) -
     date_str = datetime.now().strftime("%Y-%m-%d")
     # Use current directory instead of Linux path
     import os
-    fn = os.path.join(os.getcwd(), f"WhiteLabel_Resume_{name_for_file.replace(' ', '_')}_{date_str}.docx")
-    doc.save(fn)
-    return fn
+    dir_path = "WhiteLabel_Resume"
+    os.makedirs(dir_path, exist_ok=True)
+    wlfn = os.path.join(dir_path, f"WhiteLabel_Resume_{name_for_file.replace(' ', '_')}_{date_str}_{username}.docx")
+    doc.save(wlfn)
+    return wlfn
 
 def parse_json_loose(raw):
     if isinstance(raw, dict):
@@ -435,6 +460,7 @@ White Label: не включай контакты и email. Сохрани ВС�
 ГРЕЙД: определи только как Senior, Middle или Junior на основе опыта работы.
 ГРАЖДАНСТВО: определи из локации и укажи как РФ (для России/Москвы), РБ (для Беларуси/Минска), или возьми из резюме если указано.
 ПРОЕКТЫ обязательны: найди все даже если они спрятаны в обязанностях/Обо мне.
+ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ (О себе): форматируй компактно, объединяй характеристики в связный текст без лишних переносов строк.
 Схема:
 {{
  "config": {{
@@ -458,7 +484,7 @@ White Label: не включай контакты и email. Сохрани ВС�
    "skills": {{}},
    "experience":[{{"company":"","position":"","period":"","responsibilities":[],"technologies":[],"achievements":[]}}],
    "education":[{{"institution":"","degree":"","years":"","details":""}}],
-   "extra": [],
+   "extra": "текст О себе одним абзацем или список коротких фраз",
    "projects":[{{"title":"","role":"","period":"","description":"","technologies":[],"results":""}}]
  }}
 }}
@@ -507,9 +533,10 @@ def generate_payload_once(api_key: str,
 def create_white_label_resume_once(api_key: str,
                                    candidate_text: str,
                                    vacancy_text: str,
-                                   utochnenie=None):
+                                   utochnenie=None,
+                                   username = ""):
     payload = generate_payload_once(api_key, candidate_text, vacancy_text)
-    filename = render_resume_docx(payload, vacancy_text, utochnenie=utochnenie)
+    filename = render_resume_docx(payload, vacancy_text, utochnenie=utochnenie, username = username)
     return filename
 
 #===== Пример использования (раскомментируй, подставь API ключ и тексты) =====

@@ -79,6 +79,7 @@ async def search_and_extract_values(
     extract_columns: List[str],
     worksheet_name: str = "Resume_Database",
     sheet_url: str = SHEET_URL,
+    partner : bool = False
 ) -> Optional[Dict[str, Any]]:
     """Асинхронно ищет значение и извлекает данные из указанных колонок.
     Сначала ищет точное совпадение, если не находит - ищет ближайшее значение."""
@@ -160,7 +161,10 @@ async def search_and_extract_values(
                 col_index = ord(col_letter.upper()) - ord("A")
                 if len(target_row) > col_index:
                     clean_value = target_row[col_index].replace("\xa0", "").strip()
-                    
+                    if partner:
+                        clean_value = clean_value.replace(" ", "")
+                        result["extracted_values"][col_letter] = clean_value
+                        return result["extracted_values"]
                     if len(extract_columns) == 1:
                         rounded = (int(clean_value) // 1000) * 1000
                         clean_value = f"{rounded:,}".replace(",", " ")

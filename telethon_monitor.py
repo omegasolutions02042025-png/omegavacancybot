@@ -54,23 +54,7 @@ def has_strikethrough(message):
             return True
     return False
 
-async def list_all_dialogs(telethon_client, PHONE_NUMBER):
-    await telethon_client.start(phone=PHONE_NUMBER)
 
-    async for dialog in telethon_client.iter_dialogs():
-        entity = dialog.entity
-
-        if isinstance(entity, Channel):
-            kind = 'Канал'
-        elif isinstance(entity, Chat):
-            kind = 'Группа'
-        elif isinstance(entity, User):
-            kind = 'Пользователь'
-        else:
-            kind = 'Другое'
-
-        print(f"{kind}: {dialog.name} — ID: {entity.id}")
-        
         
         
 from datetime import datetime, timezone
@@ -264,9 +248,50 @@ async def check_and_delete_duplicates(teleton_client: TelegramClient, channel_id
         
         await asyncio.sleep(60)
 
+async def check_and_delete_duplicates_partners(teleton_client: TelegramClient, channel_id: int, bot: Bot):
+    """Проверяет последние сообщения канала на дубликаты по ID в тексте"""
+    seen_ids = set()
+    
+    
+    
+    while True:
+        try:
+            async for message in teleton_client.iter_messages(channel_id):
+                    if not message.text:
+                        continue
+                    
+                    vacancy_id = extract_vacancy_id(message.text)
+                    if not vacancy_id:
+                        vacancy_id = extract_vacancy_id(message.message)
+                        if not vacancy_id:
+                            continue
+                    
+            
+                    stop_pattern = re.compile(
+                        r'(🛑.*(?:СТОП|STOP).*🛑|\bстоп\b|\bstop\b)',
+                        re.IGNORECASE
+                    )
+                    
+                    if stop_pattern.search(message.text):
+                        await bot.send_message(ADMIN_ID, f'❌ Стоп-слово найдено в сообщении {vacancy_id} {message.id} в канале {channel_id} функция check_and_delete_duplicates')
+                        await message.delete()
+                        continue
+                    
+                    
+                    if vacancy_id in seen_ids:
+                        
+                        await bot.send_message(ADMIN_ID, f'❌ Дубликат найден: {vacancy_id}, удаляю сообщение {message.id} в канале {channel_id} функция check_and_delete_duplicates')
+                        await message.delete()
+                    else:
+                        seen_ids.add(vacancy_id)
+        except Exception as e:
+            await bot.send_message(ADMIN_ID, 'Ошибка при проверке функции check_and_delete_duplicates', e)
+        # очищаем сет в конце итерации
+        seen_ids.clear()
+        
+        await asyncio.sleep(60)
 
-
-async def mark_as_deleted(client: TelegramClient,  chat_id: int, vacancy_id: str, name_vac: str, bot: Bot, teleton_client: TelegramClient):
+async def mark_as_deleted(client: TelegramClient,  chat_id: int, vacancy_id: str, name_vac: str, bot: Bot):
     try:
         async for message in client.iter_messages(chat_id):
             if vacancy_id in message.text:
@@ -284,7 +309,7 @@ async def mark_as_deleted(client: TelegramClient,  chat_id: int, vacancy_id: str
             new_text = "Вакансия неактивна"
             vacancy_id = None
         await client.delete_messages(chat_id, msg_id)
-        await remove_actual_vacancy(vacancy_id, bot, teleton_client)
+        await remove_actual_vacancy(vacancy_id, bot, client)
         message = await client.send_message(chat_id, new_text)
 
         # Закрепляем
@@ -330,10 +355,10 @@ async def check_old_messages_and_mark(teleton_client: TelegramClient, channel_id
             
 
             if age > max_age:
-                await bot.send_message(ADMIN_ID, f'⚠️Удалено сообщение {message.id} старше 21 дня ({age.days} дней). Помечаем...')
+                #await bot.send_message(ADMIN_ID, f'⚠️Удалено сообщение {message.id} старше 21 дня ({age.days} дней). Помечаем...')
                 message_text = message.text
                 vacancy_id = extract_vacancy_id(message_text)
-                await remove_actual_vacancy(vacancy_id)
+                await remove_actual_vacancy(vacancy_id, bot, teleton_client)
                 await teleton_client.delete_messages(channel_id, message.id)
                 
         await asyncio.sleep(3600)
@@ -384,3 +409,5 @@ async def ensure_connected(client):
             print(f"[!] Ошибка подключения Telethon: {e}")
             return False
     return True
+
+
