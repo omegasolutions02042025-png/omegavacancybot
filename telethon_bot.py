@@ -370,9 +370,7 @@ async def forward_messages_from_chats(telethon_client, CHAT_LIST, AsyncSessionLo
                 else:
                     offer = None
                 
-                vac_id = extract_vacancy_id(text)
-                if not vac_id:
-                    continue
+                
                     
                 message_text = remove_vacancy_id(text)
                 
