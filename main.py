@@ -145,7 +145,7 @@ async def restart_telethon_client():
             # Перерегистрируем слушателей после перезагрузки
             await register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal, bot)
             await register_simple_edit_listener(telethon_client, -1002189931727, bot)
-            await register_chat_listener(telethon_client, [-1001259051878], -1002658129391, 13390, AsyncSessionLocal, bot)
+            await register_chat_listener(telethon_client, [-1001259051878, -1001898906854, -1001527372844], bot)
             logger.info("✅ Слушатели Telethon перерегистрированы")
             
     except Exception as e:
