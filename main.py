@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import subprocess
+from datetime import datetime, timedelta, time
 
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -10,7 +11,7 @@ from aiogram import Bot, Dispatcher
 from telethon_bot import *
 import os
 from dotenv import load_dotenv
-from telethon_monitor import check_and_delete_duplicates, monitor_and_cleanup, check_old_messages_and_mark, check_and_delete_duplicates_partners
+from telethon_monitor import check_and_delete_duplicates, monitor_and_cleanup, check_old_messages_and_mark, check_and_delete_duplicates_partners, forward_messages_from_chats, register_chat_listener
 from aiogram_bot import bot_router, TOPIC_MAP
 from googlesheets import update_currency_sheet
 from telethon_monitor import register_simple_edit_listener
@@ -120,6 +121,65 @@ async def telethon_runner():
     await asyncio.sleep(60)
 
 
+async def restart_telethon_client():
+    """Перезагружает telethon client: отключает и подключает заново"""
+    try:
+        logger.info("🔄 Начинаю перезагрузку Telethon client...")
+        
+        # Отключаем клиент, если подключен
+        if telethon_client.is_connected():
+            await telethon_client.disconnect()
+            logger.info("✅ Telethon client отключен")
+            await asyncio.sleep(2)
+        
+        # Подключаем заново
+        await telethon_client.connect()
+        
+        # Проверяем авторизацию
+        if not await telethon_client.is_user_authorized():
+            logger.error("❌ Telethon: сессия не авторизована после перезагрузки")
+            await bot.send_message(ADMIN_ID, "⚠️ Telethon: требуется повторная авторизация после перезагрузки")
+        else:
+            logger.info("✅ Telethon client успешно перезагружен и авторизован")
+            
+            # Перерегистрируем слушателей после перезагрузки
+            await register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal, bot)
+            await register_simple_edit_listener(telethon_client, -1002189931727, bot)
+            await register_chat_listener(telethon_client, [-1001259051878], -1002658129391, 13390, AsyncSessionLocal, bot)
+            logger.info("✅ Слушатели Telethon перерегистрированы")
+            
+    except Exception as e:
+        logger.exception(f"❌ Ошибка при перезагрузке Telethon client: {e}")
+        await bot.send_message(ADMIN_ID, f"❌ Ошибка при перезагрузке Telethon: {e}")
+
+
+async def daily_telethon_restart():
+    """Планирует перезагрузку telethon client раз в день в 03:00"""
+    while True:
+        try:
+            # Вычисляем время до следующей 03:00
+            now = datetime.now()
+            target_time = time(3, 0)  # 03:00
+            
+            # Если уже прошло 03:00 сегодня, планируем на завтра
+            if now.time() >= target_time:
+                next_restart = datetime.combine(now.date() + timedelta(days=1), target_time)
+            else:
+                next_restart = datetime.combine(now.date(), target_time)
+            
+            wait_seconds = (next_restart - now).total_seconds()
+            logger.info(f"⏰ Следующая перезагрузка Telethon запланирована на {next_restart.strftime('%Y-%m-%d %H:%M:%S')} (через {wait_seconds/3600:.1f} часов)")
+            
+            await asyncio.sleep(wait_seconds)
+            
+            # Выполняем перезагрузку
+            await restart_telethon_client()
+            
+        except Exception as e:
+            logger.exception(f"❌ Ошибка в планировщике перезагрузки Telethon: {e}")
+            await asyncio.sleep(3600)  # Ждем час перед повторной попыткой
+
+
 # ————————————————
 # Инициализация FSM-хранилища
 # ————————————————
@@ -192,7 +252,9 @@ async def main():
         # --- Регистрируем слушателей Telethon ---
         await register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal, bot)
         await register_simple_edit_listener(telethon_client, -1002189931727, bot)
-
+        #await forward_messages_from_chats(telethon_client, CHAT_LIST, AsyncSessionLocal, bot)
+        await register_chat_listener(telethon_client, [-1001259051878, -1001898906854, -1001527372844], AsyncSessionLocal, bot)
+        #await forward_messages_from_chats(telethon_client, [-1001259051878], AsyncSessionLocal, bot)
         # --- Aiogram: снимаем вебхук и включаем long polling ---
         await bot.delete_webhook(drop_pending_updates=True)
 
@@ -223,6 +285,10 @@ async def main():
             create_monitored_task(
                 check_and_delete_duplicates_partners(telethon_client, -1003360331196, bot),
                 name="check_and_delete_duplicates_partners",
+            ),
+            create_monitored_task(
+                daily_telethon_restart(),
+                name="daily_telethon_restart",
             ),
             # пример на будущее:
             # create_monitored_task(

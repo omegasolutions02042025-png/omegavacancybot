@@ -7,12 +7,13 @@ from aiogram.types import CopyTextButton
 async def main_kb():
     builder = InlineKeyboardBuilder()
     #builder.button(text="Управление обязательными словами", callback_data='slova_info')
-    
+    builder.button(text='Сканировать SkillStaff 1 день', callback_data='scan_chats_1')
     #builder.button(text="Подключение канала", callback_data='channels_info')
     #builder.button(text='Сканировать каналы', callback_data='scan_channels')
     builder.button(text='Сканировать RedlabPartners 14 дней', callback_data='scan_redlab')
     builder.button(text='Сканировать RedlabPartners 21 день', callback_data='scan_redlab_21')
     builder.button(text='Сканировать RedlabPartners(1 день)', callback_data='scan_redlab_day')
+
     builder.button(text = 'Добавить вакансию вручную', callback_data='scan_hand')
     builder.button(text="Отправить вакансии на сайт(Не НАЖИМАТЬ!)", callback_data="send_vac_to_site")
     

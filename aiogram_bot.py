@@ -60,6 +60,7 @@ class Sverka(StatesGroup):
 
 
 TOPIC_MAP = {
+    
     (-1002189931727, 3): (-1002658129391, 4),
     (-1002189931727, 1): (-1002658129391, 1),
     (-1002189931727, 14): (-1002658129391, 6),
@@ -239,7 +240,18 @@ async def scan_redlab_21(calback : CallbackQuery, bot : Bot):
         await calback.message.answer(f"❌ Ошибка при сканировании: {str(e)}")
 
 
-
+@bot_router.callback_query(F.data == 'scan_chats_1')
+async def scan_chats_1(calback : CallbackQuery, bot : Bot):
+    try:
+        if not telethon_client.is_connected():
+            await calback.message.answer("❌ Telethon клиент не подключен. Попробуйте позже.")
+            return
+        await calback.message.answer('Начинаю сканирование...')
+        await forward_messages_from_chats(telethon_client, [-1001259051878, -1001898906854, -1001527372844], AsyncSessionLocal, bot = bot, days=1)
+    except ConnectionError:
+        await calback.message.answer("❌ Ошибка соединения с Telegram. Попробуйте позже.")
+    except Exception as e:
+        await calback.message.answer(f"❌ Ошибка при сканировании: {str(e)}")
 
 
 @bot_router.callback_query(F.data == "back_to_menu")
