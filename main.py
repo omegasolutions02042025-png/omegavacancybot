@@ -11,7 +11,7 @@ from aiogram import Bot, Dispatcher
 from telethon_bot import *
 import os
 from dotenv import load_dotenv
-from telethon_monitor import check_and_delete_duplicates, monitor_and_cleanup, check_old_messages_and_mark, check_and_delete_duplicates_partners, forward_messages_from_chats, register_chat_listener
+from telethon_monitor import check_and_delete_duplicates, monitor_and_cleanup, check_old_messages_and_mark, check_and_delete_duplicates_partners
 from aiogram_bot import bot_router, TOPIC_MAP
 from googlesheets import update_currency_sheet
 from telethon_monitor import register_simple_edit_listener
@@ -253,7 +253,7 @@ async def main():
         await register_topic_listener(telethon_client, TOPIC_MAP, AsyncSessionLocal, bot)
         await register_simple_edit_listener(telethon_client, -1002189931727, bot)
         #await forward_messages_from_chats(telethon_client, CHAT_LIST, AsyncSessionLocal, bot)
-        await register_chat_listener(telethon_client, [-1001259051878, -1001898906854, -1001527372844], AsyncSessionLocal, bot)
+        await register_chat_listener(telethon_client, [-1001259051878, -1001898906854, -1001527372844], bot)
         #await forward_messages_from_chats(telethon_client, [-1001259051878], AsyncSessionLocal, bot)
         # --- Aiogram: снимаем вебхук и включаем long polling ---
         await bot.delete_webhook(drop_pending_updates=True)
