@@ -1894,6 +1894,48 @@ async def scrap_vacancy(vacancy_text: str):
 "none"        — если явно сказано, что английский не требуется
 "unspecified" — если уровень не указан
 
+"language" — язык и уровень языка (строка в формате "Language_Level")
+
+Извлеки из текста вакансии информацию о требуемых языках (кроме английского) и их уровнях.
+Формат: "Language_Level", например "German_B2", "French_C1", "Russian_B1".
+
+Допустимые языки (СТРОГО из этого списка):
+"English"
+"Chinese"
+"Hindi"
+"Spanish"
+"Arabic"
+"French"
+"Turkish"
+"Bengali"
+"Portuguese"
+"Russian"
+"Indonesian"
+"German"
+"Japanese"
+"Persian"
+"Italian"
+"Polish"
+"Serbian"
+
+Допустимые уровни:
+"A1", "A2", "B1", "B2", "C1", "C2"
+
+Правила:
+— Если в тексте вакансии указан язык и его уровень (например, "немецкий B2", "German B2", "французский C1"), верни строку в формате "Language_Level" (например, "German_B2", "French_C1").
+— Если указан язык без уровня, верни "Language_unspecified" (например, "German_unspecified").
+— Если указано несколько языков, верни только первый найденный язык с уровнем (или без уровня, если уровень не указан).
+— Если язык не указан или не найден среди допустимых языков → "language": "unspecified".
+— Используй только языки из строго заданного списка выше. Если в тексте упомянут язык, которого нет в списке, верни "unspecified".
+— Нормализация названий языков:
+  * "немецкий", "Deutsch", "German" → "German"
+  * "французский", "Français", "French" → "French"
+  * "испанский", "Español", "Spanish" → "Spanish"
+  * "итальянский", "Italiano", "Italian" → "Italian"
+  * "польский", "Polski", "Polish" → "Polish"
+  * "русский", "Russian" → "Russian"
+  * и т.д. по аналогии с допустимым списком.
+
 "grade" — грейд кандидата
 
 Допустимые значения (СТРОГО как в системе):
@@ -2156,7 +2198,7 @@ async def scrap_vacancy(vacancy_text: str):
     для "location" при полном отсутствии информации или при формулировках про отсутствие ограничений
     НУЖНО возвращать ["Глобально"].
 — Строго следуй допустимым значениям для:
-  "work_format", "employment_type", "english_level", "grade", "company_type".
+  "work_format", "employment_type", "english_level", "language", "grade", "company_type".
 — В "specializations" ВСЕГДА используй только английский язык (латиницу), без русских букв.
 — НЕ добавляй "похожие" значения только по смыслу, если в тексте нет соответствующих формулировок.
 
@@ -2168,6 +2210,7 @@ async def scrap_vacancy(vacancy_text: str):
   "work_format": "...",
   "employment_type": "...",
   "english_level": "...",
+  "language": "...",
   "grade": "...",
   "company_type": "...",
   "specializations": [...],
@@ -2244,6 +2287,48 @@ async def scrap_vacancy_for_new_gr(vacancy_text: str, offer: str):
 "A1", "A2", "B1", "B2", "C1", "C2"
 "none"        — если явно сказано, что английский не требуется
 "unspecified" — если уровень не указан
+
+"language" — язык и уровень языка (строка в формате "Language_Level")
+
+Извлеки из текста вакансии информацию о требуемых языках (кроме английского) и их уровнях.
+Формат: "Language_Level", например "German_B2", "French_C1", "Russian_B1".
+
+Допустимые языки (СТРОГО из этого списка):
+"English"
+"Chinese"
+"Hindi"
+"Spanish"
+"Arabic"
+"French"
+"Turkish"
+"Bengali"
+"Portuguese"
+"Russian"
+"Indonesian"
+"German"
+"Japanese"
+"Persian"
+"Italian"
+"Polish"
+"Serbian"
+
+Допустимые уровни:
+"A1", "A2", "B1", "B2", "C1", "C2"
+
+Правила:
+— Если в тексте вакансии указан язык и его уровень (например, "немецкий B2", "German B2", "французский C1"), верни строку в формате "Language_Level" (например, "German_B2", "French_C1").
+— Если указан язык без уровня, верни "Language_unspecified" (например, "German_unspecified").
+— Если указано несколько языков, верни только первый найденный язык с уровнем (или без уровня, если уровень не указан).
+— Если язык не указан или не найден среди допустимых языков → "language": "unspecified".
+— Используй только языки из строго заданного списка выше. Если в тексте упомянут язык, которого нет в списке, верни "unspecified".
+— Нормализация названий языков:
+  * "немецкий", "Deutsch", "German" → "German"
+  * "французский", "Français", "French" → "French"
+  * "испанский", "Español", "Spanish" → "Spanish"
+  * "итальянский", "Italiano", "Italian" → "Italian"
+  * "польский", "Polski", "Polish" → "Polish"
+  * "русский", "Russian" → "Russian"
+  * и т.д. по аналогии с допустимым списком.
 
 "grade" — грейд кандидата
 
@@ -2507,7 +2592,7 @@ async def scrap_vacancy_for_new_gr(vacancy_text: str, offer: str):
     для "location" при полном отсутствии информации или при формулировках про отсутствие ограничений
     НУЖНО возвращать ["Глобально"].
 — Строго следуй допустимым значениям для:
-  "work_format", "employment_type", "english_level", "grade", "company_type".
+  "work_format", "employment_type", "english_level", "language", "grade", "company_type".
 — В "specializations" ВСЕГДА используй только английский язык (латиницу), без русских букв.
 — НЕ добавляй "похожие" значения только по смыслу, если в тексте нет соответствующих формулировок.
 
@@ -2521,6 +2606,7 @@ async def scrap_vacancy_for_new_gr(vacancy_text: str, offer: str):
   "work_format": "...",
   "employment_type": "...",
   "english_level": "...",
+  "language": "...",
   "grade": "...",
   "company_type": "...",
   "specializations": [...],
