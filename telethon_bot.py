@@ -399,6 +399,7 @@ async def forward_messages_from_chats(telethon_client, CHAT_LIST, AsyncSessionLo
                 work_format = vacancy_scraping['work_format']
                 employment_type = vacancy_scraping['employment_type']
                 english_level = vacancy_scraping['english_level']
+                language = vacancy_scraping.get('language', 'unspecified')
                 grade = vacancy_scraping['grade']
                 company_type = vacancy_scraping['company_type']
                 specialization = vacancy_scraping['specializations']
@@ -429,6 +430,7 @@ async def forward_messages_from_chats(telethon_client, CHAT_LIST, AsyncSessionLo
                     'work_format': work_format,
                     'employment_type': employment_type,
                     'english_level': english_level,
+                    'language': language,
                     'grade': grade,
                     'company_type': company_type,
                     'specializations': specialization,
@@ -806,6 +808,7 @@ async def register_chat_listener(telethon_client, src_chat_list, bot: Bot):
         work_format = vacancy_scraping['work_format']
         employment_type = vacancy_scraping['employment_type']
         english_level = vacancy_scraping['english_level']
+        language = vacancy_scraping.get('language', 'unspecified')
         grade = vacancy_scraping['grade']
         company_type = vacancy_scraping['company_type']
         specialization = vacancy_scraping['specializations']
@@ -836,6 +839,7 @@ async def register_chat_listener(telethon_client, src_chat_list, bot: Bot):
             'work_format': work_format,
             'employment_type': employment_type,
             'english_level': english_level,
+            'language': language,
             'grade': grade,
             'company_type': company_type,
             'specializations': specialization,
@@ -1200,6 +1204,7 @@ async def send_vac_to_site(client: TelegramClient):
         work_format = vacancy_scraping['work_format']
         employment_type = vacancy_scraping['employment_type']
         english_level = vacancy_scraping['english_level']
+        language = vacancy_scraping.get('language', 'unspecified')
         grade = vacancy_scraping['grade']
         company_type = vacancy_scraping['company_type']
         specialization = vacancy_scraping['specializations']
@@ -1233,6 +1238,7 @@ async def send_vac_to_site(client: TelegramClient):
             'work_format': work_format,
             'employment_type': employment_type,
             'english_level': english_level,
+            'language': language,
             'grade': grade,
             'company_type': company_type,
             'specializations': specialization,
@@ -1287,6 +1293,7 @@ async def channel_post_bot(event):
     work_format = vacancy_scraping['work_format']
     employment_type = vacancy_scraping['employment_type']
     english_level = vacancy_scraping['english_level']
+    language = vacancy_scraping.get('language', 'unspecified')
     grade = vacancy_scraping['grade']
     company_type = vacancy_scraping['company_type']
     specialization = vacancy_scraping['specializations']
@@ -1317,6 +1324,7 @@ async def channel_post_bot(event):
             'work_format': work_format,
             'employment_type': employment_type,
             'english_level': english_level,
+            'language': language,
             'grade': grade,
             'company_type': company_type,
             'specializations': specialization,
