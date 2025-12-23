@@ -13,6 +13,9 @@ from gpt_gimini import process_vacancy_with_gemini, format_vacancy_gemini, scrap
 from telethon_monitor import has_strikethrough
 from utils import extract_telegram_usernames
 import traceback
+import uuid
+import tempfile
+from PyPDF2 import PdfReader
 
 VACANCY_ID_REGEX = re.compile(
     r"(?:🆔\s*)?(?:[\w\-\u0400-\u04FF]+[\s\-]*)?\d+", 
@@ -321,6 +324,18 @@ async def forward_messages_from_topics(telethon_client, TOPIC_MAP, AsyncSessionL
     
 
 
+async def extract_text_from_pdf(pdf_path: str) -> str:
+    """Извлекает текст из PDF файла"""
+    try:
+        reader = PdfReader(pdf_path)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() + "\n"
+        return text.strip()
+    except Exception as e:
+        print(f"❌ Ошибка при извлечении текста из PDF: {e}")
+        return ""
+
 async def forward_messages_from_chats(telethon_client, CHAT_LIST, AsyncSessionLocal, bot : Bot, days=14):
     """
     Обрабатывает сообщения из списка чатов за последние N дней.
@@ -350,8 +365,67 @@ async def forward_messages_from_chats(telethon_client, CHAT_LIST, AsyncSessionLo
             msgs.sort(key=lambda m: m.date)
             
             for msg in msgs:
-                text = msg.text
+                text = msg.text or ""
                 data = []
+                
+                # Определяем offer по chat_id
+                if src_chat == -1001898906854:
+                    offer = 'Ekleft'
+                elif src_chat == -1001527372844:
+                    offer = 'VOLNA'
+                elif src_chat == -1001259051878:
+                    offer = 'SkillStaff'
+                elif src_chat == -1001870091031:
+                    offer = 'Novelect'
+                else:
+                    offer = None
+                
+                # Для канала Novelect обрабатываем PDF файл
+                if src_chat == -1001870091031 and msg.media:
+                    try:
+                        # Проверяем, что это документ (PDF)
+                        if isinstance(msg.media, types.MessageMediaDocument):
+                            document = msg.media.document
+                            if document.mime_type == 'application/pdf':
+                                # Создаем временный файл для PDF
+                                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                                    pdf_path = tmp_file.name
+                                
+                                try:
+                                    # Скачиваем PDF файл
+                                    await telethon_client.download_media(msg.media, pdf_path)
+                                    
+                                    # Извлекаем текст из PDF
+                                    pdf_text = await extract_text_from_pdf(pdf_path)
+                                    
+                                    if pdf_text:
+                                        # Генерируем случайный ID
+                                        random_id = str(uuid.uuid4())[:8].upper()
+                                        
+                                        # Добавляем ID в начало текста
+                                        text = f"🆔 {random_id}\n\n{pdf_text}"
+                                        
+                                        await bot.send_message(ADMIN_ID, f'✅ PDF файл обработан для канала Novelect (сообщение {msg.id}), ID: {random_id}')
+                                    else:
+                                        await bot.send_message(ADMIN_ID, f'⚠️ Не удалось извлечь текст из PDF для сообщения {msg.id}')
+                                        continue
+                                except Exception as e:
+                                    await bot.send_message(ADMIN_ID, f'❌ Ошибка при обработке PDF для сообщения {msg.id}: {e}')
+                                    continue
+                                finally:
+                                    # Удаляем временный файл
+                                    if os.path.exists(pdf_path):
+                                        os.remove(pdf_path)
+                            else:
+                                await bot.send_message(ADMIN_ID, f'⚠️ В сообщении {msg.id} канала Novelect не PDF файл, пропускаем')
+                                continue
+                        else:
+                            # Если нет медиа или это не документ, проверяем есть ли текст
+                            if not text:
+                                continue
+                    except Exception as e:
+                        await bot.send_message(ADMIN_ID, f'❌ Ошибка при проверке медиа для сообщения {msg.id}: {e}')
+                        continue
                 
                 if not text:
                     continue
@@ -359,17 +433,6 @@ async def forward_messages_from_chats(telethon_client, CHAT_LIST, AsyncSessionLo
                 if 'вакансия неактивна' in text.lower():
                     print('Вакансия неактивна')
                     continue
-                
-                # Определяем offer по chat_id
-                if src_chat == -1001898906854:
-                    offer = 'Ekleft Job'
-                elif src_chat == -1001527372844:
-                    offer = 'VOLNA'
-                elif src_chat == -1001259051878:
-                    offer = 'SkillStaff'
-                else:
-                    offer = None
-                
                 
                     
                 message_text = remove_vacancy_id(text)
@@ -383,8 +446,10 @@ async def forward_messages_from_chats(telethon_client, CHAT_LIST, AsyncSessionLo
                         continue
                     
                     # Используем scrap_vacancy или scrap_vacancy_for_new_gr в зависимости от наличия offer
-                  
-                    vacancy_scraping = await scrap_vacancy_for_new_gr(text, offer)
+                    if offer:
+                        vacancy_scraping = await scrap_vacancy_for_new_gr(text, offer)
+                    else:
+                        vacancy_scraping = await scrap_vacancy(text)
                    
                     
                     print(vacancy_scraping)
